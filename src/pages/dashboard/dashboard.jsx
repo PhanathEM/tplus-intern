@@ -2224,8 +2224,8 @@ function BorrowHistoryView({
                         {column.key === "loan_status" ? (
                           <span
                             className={`rounded-full px-2.5 py-1 text-xs font-semibold ${record.loan_status === "Returned"
-                                ? "bg-emerald-50 text-emerald-700"
-                                : "bg-amber-50 text-amber-700"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-amber-50 text-amber-700"
                               }`}
                           >
                             {record.loan_status}
@@ -3086,18 +3086,6 @@ function EmployeeDetailModal({ employee, devices, isLoading, error, onRetry, onC
 function SidebarNavigation({ collapsed = false, activeView, onSelect }) {
   const [expandedLabels, setExpandedLabels] = useState(() => new Set());
 
-  function toggleExpanded(label) {
-    setExpandedLabels((current) => {
-      const next = new Set(current);
-      if (next.has(label)) {
-        next.delete(label);
-      } else {
-        next.add(label);
-      }
-      return next;
-    });
-  }
-
   return (
     <nav className={`scrollbar-thin-dark flex-1 overflow-y-auto py-4 ${collapsed ? "px-3" : "px-4"}`}>
       {navSections.map((section, sectionIdx) => (
@@ -3119,13 +3107,26 @@ function SidebarNavigation({ collapsed = false, activeView, onSelect }) {
               const isExpanded = expandedLabels.has(item.label) || isChildActive;
 
               return (
-                <div key={item.label}>
+                <div
+                  key={item.label}
+                  onMouseEnter={() => {
+                    if (hasChildren && !collapsed) {
+                      setExpandedLabels((current) => new Set(current).add(item.label));
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (!hasChildren || collapsed) return;
+                    if (isChildActive) return;
+                    setExpandedLabels((current) => {
+                      const next = new Set(current);
+                      next.delete(item.label);
+                      return next;
+                    });
+                  }}
+                >
                   <button
                     type="button"
-                    onClick={() => {
-                      onSelect(item.label);
-                      if (hasChildren && !collapsed) toggleExpanded(item.label);
-                    }}
+                    onClick={() => onSelect(item.label)}
                     title={collapsed ? item.label : undefined}
                     className={`group relative flex w-full items-center rounded-lg py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${collapsed ? "justify-center px-0" : "gap-3 px-3 text-left"
                       } ${isActive
@@ -3164,8 +3165,8 @@ function SidebarNavigation({ collapsed = false, activeView, onSelect }) {
                             type="button"
                             onClick={() => onSelect(child.label)}
                             className={`group relative flex w-full items-center gap-2.5 rounded-lg py-2 pl-2 pr-3 text-left text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${isChildItemActive
-                                ? "bg-orange-500/15 text-white"
-                                : "text-slate-400 hover:bg-white/5 hover:text-slate-100"
+                              ? "bg-orange-500/15 text-white"
+                              : "text-slate-400 hover:bg-white/5 hover:text-slate-100"
                               }`}
                           >
                             {isChildItemActive && (
