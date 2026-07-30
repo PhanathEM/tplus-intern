@@ -30,26 +30,35 @@
   }
 }
 
-/* Thin, pill-shaped scrollbar for dark surfaces (e.g. the sidebar) */
+/* Thin, pill-shaped scrollbar for scrollable containers */
 @supports (scrollbar-width: thin) {
+  .scrollbar-thin,
   .scrollbar-thin-dark {
     scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
   }
 }
 
+.scrollbar-thin::-webkit-scrollbar,
 .scrollbar-thin-dark::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+  height: 8px;
 }
 
+.scrollbar-thin::-webkit-scrollbar-track,
 .scrollbar-thin-dark::-webkit-scrollbar-track {
   background: transparent;
 }
 
+.scrollbar-thin::-webkit-scrollbar-thumb,
 .scrollbar-thin-dark::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.25);
+  background-color: rgba(148, 163, 184, 0.45);
   border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
+.scrollbar-thin::-webkit-scrollbar-thumb:hover,
 .scrollbar-thin-dark::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(148, 163, 184, 0.65);
 }
