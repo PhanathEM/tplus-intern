@@ -1,9 +1,7 @@
 import { useState } from "react";
-import {
-  FiChevronDown as ChevronDown,
-  FiShield as Shield,
-} from "react-icons/fi";
+import { FiChevronDown as ChevronDown } from "react-icons/fi";
 import { TbLayoutSidebar } from "react-icons/tb";
+import tplusLogo from "../../../assets/tplus-logo.png";
 import { navSections } from "../dashboard.config";
 
 export function SidebarNavigation({ collapsed = false, activeView, onSelect }) {
@@ -121,8 +119,12 @@ export function SidebarBrand({ collapsed, onToggleCollapse }) {
         }`}
     >
       <div className={`flex min-w-0 items-center ${collapsed ? "" : "gap-3"}`}>
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-orange-500 text-white">
-          <Shield className="text-lg" />
+        <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-white/5 ring-1 ring-white/10">
+          <img
+            src={tplusLogo}
+            alt="TPLUS"
+            className="h-full w-full object-cover"
+          />
         </div>
         {!collapsed && (
           <div className="min-w-0">

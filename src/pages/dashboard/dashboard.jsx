@@ -60,6 +60,13 @@ import {
   navItemsByLabel,
 } from "./dashboard.config";
 import { getEmployeeDepartmentCode, normalizeRecordList } from "./dashboard.utils";
+import {
+  DASHBOARD_DEFAULT_VIEW,
+  getDashboardTitle,
+  getDashboardViewFromPath,
+  getInitialDashboardView,
+  syncDashboardPath,
+} from "./dashboard.routes";
 import { ConfirmDialog, EmptyState } from "./components/SharedControls";
 import { SidebarBrand, SidebarNavigation } from "./components/Sidebar";
 import {
@@ -97,9 +104,10 @@ import {
 } from "./features/employees/EmployeeViews";
 
 function Dashboard({ user, onLogout }) {
+  const initialDashboardView = getInitialDashboardView();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [activeView, setActiveView] = useState("Employee");
+  const [activeView, setActiveView] = useState(initialDashboardView);
   const [notifications, setNotifications] = useState(initialNotifications);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -107,7 +115,7 @@ function Dashboard({ user, onLogout }) {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [equipmentCategories, setEquipmentCategories] = useState([]);
   const [equipmentCategory, setEquipmentCategory] = useState("All");
-  const [isEquipmentLoading, setIsEquipmentLoading] = useState(false);
+  const [isEquipmentLoading, setIsEquipmentLoading] = useState(initialDashboardView === "Equipment");
   const [equipmentError, setEquipmentError] = useState(null);
   const [equipmentFetchToken, setEquipmentFetchToken] = useState(0);
   const [equipmentDetailCategory, setEquipmentDetailCategory] = useState(null);
@@ -123,43 +131,49 @@ function Dashboard({ user, onLogout }) {
   const [isSavingEquipment, setIsSavingEquipment] = useState(false);
   const [equipmentFormError, setEquipmentFormError] = useState(null);
   const [departments, setDepartments] = useState([]);
-  const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(false);
+  const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(initialDashboardView === "Departments");
   const [departmentsError, setDepartmentsError] = useState(null);
   const [departmentsFetchToken, setDepartmentsFetchToken] = useState(0);
   const [replacements, setReplacements] = useState([]);
-  const [isReplacementsLoading, setIsReplacementsLoading] = useState(false);
+  const [isReplacementsLoading, setIsReplacementsLoading] = useState(
+    initialDashboardView === "Device Replacement"
+  );
   const [replacementsError, setReplacementsError] = useState(null);
   const [replacementsFetchToken, setReplacementsFetchToken] = useState(0);
   const [ssdUpgrades, setSsdUpgrades] = useState([]);
-  const [isSsdUpgradesLoading, setIsSsdUpgradesLoading] = useState(false);
+  const [isSsdUpgradesLoading, setIsSsdUpgradesLoading] = useState(initialDashboardView === "SSD Upgrade");
   const [ssdUpgradesError, setSsdUpgradesError] = useState(null);
   const [ssdUpgradesFetchToken, setSsdUpgradesFetchToken] = useState(0);
   const [ssdProcurements, setSsdProcurements] = useState([]);
-  const [isSsdProcurementLoading, setIsSsdProcurementLoading] = useState(false);
+  const [isSsdProcurementLoading, setIsSsdProcurementLoading] = useState(
+    initialDashboardView === "SSD Procurement"
+  );
   const [ssdProcurementError, setSsdProcurementError] = useState(null);
   const [ssdProcurementFetchToken, setSsdProcurementFetchToken] = useState(0);
   const [antivirusInstalls, setAntivirusInstalls] = useState([]);
-  const [isAntivirusLoading, setIsAntivirusLoading] = useState(false);
+  const [isAntivirusLoading, setIsAntivirusLoading] = useState(initialDashboardView === "Antivirus Install");
   const [antivirusError, setAntivirusError] = useState(null);
   const [antivirusFetchToken, setAntivirusFetchToken] = useState(0);
   const [licenses, setLicenses] = useState([]);
-  const [isLicensesLoading, setIsLicensesLoading] = useState(false);
+  const [isLicensesLoading, setIsLicensesLoading] = useState(initialDashboardView === "License");
   const [licensesError, setLicensesError] = useState(null);
   const [licensesFetchToken, setLicensesFetchToken] = useState(0);
   const [cloudRates, setCloudRates] = useState([]);
-  const [isCloudRatesLoading, setIsCloudRatesLoading] = useState(false);
+  const [isCloudRatesLoading, setIsCloudRatesLoading] = useState(initialDashboardView === "Cloud Rate");
   const [cloudRatesError, setCloudRatesError] = useState(null);
   const [cloudRatesFetchToken, setCloudRatesFetchToken] = useState(0);
   const [serverUsage, setServerUsage] = useState([]);
-  const [isServerUsageLoading, setIsServerUsageLoading] = useState(false);
+  const [isServerUsageLoading, setIsServerUsageLoading] = useState(initialDashboardView === "Service Usage");
   const [serverUsageError, setServerUsageError] = useState(null);
   const [serverUsageFetchToken, setServerUsageFetchToken] = useState(0);
   const [cloudUsage, setCloudUsage] = useState([]);
-  const [isCloudUsageLoading, setIsCloudUsageLoading] = useState(false);
+  const [isCloudUsageLoading, setIsCloudUsageLoading] = useState(initialDashboardView === "Cloud Usage");
   const [cloudUsageError, setCloudUsageError] = useState(null);
   const [cloudUsageFetchToken, setCloudUsageFetchToken] = useState(0);
   const [availableStock, setAvailableStock] = useState([]);
-  const [isAvailableStockLoading, setIsAvailableStockLoading] = useState(false);
+  const [isAvailableStockLoading, setIsAvailableStockLoading] = useState(
+    initialDashboardView === "Stock Available"
+  );
   const [availableStockError, setAvailableStockError] = useState(null);
   const [availableStockFetchToken, setAvailableStockFetchToken] = useState(0);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -174,7 +188,9 @@ function Dashboard({ user, onLogout }) {
   const [isBorrowing, setIsBorrowing] = useState(false);
   const [borrowError, setBorrowError] = useState(null);
   const [currentBorrows, setCurrentBorrows] = useState([]);
-  const [isCurrentBorrowsLoading, setIsCurrentBorrowsLoading] = useState(false);
+  const [isCurrentBorrowsLoading, setIsCurrentBorrowsLoading] = useState(
+    initialDashboardView === "Currently Borrowed"
+  );
   const [currentBorrowsError, setCurrentBorrowsError] = useState(null);
   const [currentBorrowsFetchToken, setCurrentBorrowsFetchToken] = useState(0);
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
@@ -183,7 +199,9 @@ function Dashboard({ user, onLogout }) {
   const [isReturning, setIsReturning] = useState(false);
   const [returnError, setReturnError] = useState(null);
   const [borrowHistory, setBorrowHistory] = useState([]);
-  const [isBorrowHistoryLoading, setIsBorrowHistoryLoading] = useState(false);
+  const [isBorrowHistoryLoading, setIsBorrowHistoryLoading] = useState(
+    initialDashboardView === "Borrow History"
+  );
   const [borrowHistoryError, setBorrowHistoryError] = useState(null);
   const [borrowHistoryFetchToken, setBorrowHistoryFetchToken] = useState(0);
   const [borrowHistoryFilters, setBorrowHistoryFilters] = useState(BORROW_HISTORY_INITIAL_FILTERS);
@@ -193,7 +211,7 @@ function Dashboard({ user, onLogout }) {
   const [employeeSearchError, setEmployeeSearchError] = useState(null);
   const [hasSearchedEmployees, setHasSearchedEmployees] = useState(false);
   const [employees, setEmployees] = useState([]);
-  const [isEmployeesLoading, setIsEmployeesLoading] = useState(true);
+  const [isEmployeesLoading, setIsEmployeesLoading] = useState(initialDashboardView === "Employee");
   const [employeesError, setEmployeesError] = useState(null);
   const [employeesFetchToken, setEmployeesFetchToken] = useState(0);
   const [employeeSort, setEmployeeSort] = useState({ key: null, direction: "asc" });
@@ -232,6 +250,7 @@ function Dashboard({ user, onLogout }) {
   const [deleteCategoryError, setDeleteCategoryError] = useState(null);
   const notificationsRef = useRef(null);
   const profileMenuRef = useRef(null);
+  const selectViewRef = useRef(null);
   const displayName = user?.name || "Admin User";
   const initials = displayName
     .split(" ")
@@ -563,7 +582,9 @@ function Dashboard({ user, onLogout }) {
     setEmployeeDetailTarget(null);
   }
 
-  function handleSelectView(label) {
+  function handleSelectView(label, { updateUrl = true } = {}) {
+    if (!navItemsByLabel[label]) return;
+
     if (label === "Equipment" && label !== activeView) {
       setIsEquipmentLoading(true);
       setEquipmentError(null);
@@ -623,9 +644,14 @@ function Dashboard({ user, onLogout }) {
     if (activeView === "Equipment" && label !== "Equipment") {
       setEquipmentDetailCategory(null);
     }
+    if (updateUrl) {
+      syncDashboardPath(label);
+    }
     setActiveView(label);
     setIsMobileSidebarOpen(false);
   }
+
+  selectViewRef.current = handleSelectView;
 
   function handleMarkAllNotificationsRead() {
     setNotifications((current) => current.map((item) => ({ ...item, unread: false })));
@@ -657,6 +683,21 @@ function Dashboard({ user, onLogout }) {
         clearTimeout(profileMenuCloseTimeout.current);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    document.title = getDashboardTitle(activeView);
+    syncDashboardPath(activeView, "replace");
+  }, [activeView]);
+
+  useEffect(() => {
+    function handlePopState() {
+      const view = getDashboardViewFromPath(window.location.pathname) || DASHBOARD_DEFAULT_VIEW;
+      selectViewRef.current?.(view, { updateUrl: false });
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   const activeNavItem = navItemsByLabel[activeView];
