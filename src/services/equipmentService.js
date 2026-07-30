@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "../lib/apiClient";
+import { apiGet, apiPost, apiPut } from "../lib/apiClient";
 
 export function fetchEquipmentCategorySummary() {
   return apiGet("/api/equipment/categories");
@@ -16,6 +16,10 @@ export function fetchEquipmentStatuses() {
 
 export function createEquipment(payload) {
   return apiPost("/api/stock/add", payload);
+}
+
+export function updateEquipment(equipmentId, payload) {
+  return apiPut(`/api/equipment/${equipmentId}`, payload);
 }
 
 export function fetchAvailableStock() {

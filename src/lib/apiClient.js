@@ -61,3 +61,13 @@ export async function apiPost(path, body, { skipCredentials = false } = {}) {
   });
   return handleResponse(response);
 }
+
+export async function apiPut(path, body, { skipCredentials = false } = {}) {
+  const url = skipCredentials ? path : appendTempCredentials(path);
+  const response = await fetch(`${API_BASE_URL}${url}`, {
+    method: "PUT",
+    headers: buildHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(body),
+  });
+  return handleResponse(response);
+}

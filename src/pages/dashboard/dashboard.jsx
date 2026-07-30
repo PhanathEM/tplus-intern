@@ -28,10 +28,16 @@ import {
   fetchEquipmentByCategory,
   fetchEquipmentStatuses,
   createEquipment,
+  updateEquipment,
   fetchAvailableStock,
   assignEquipment,
 } from "../../services/equipmentService";
-import { fetchEmployees, searchEmployees } from "../../services/employeeService";
+import {
+  fetchEmployees,
+  searchEmployees,
+  createEmployee,
+  updateEmployee,
+} from "../../services/employeeService";
 import { fetchReplacements } from "../../services/replacementService";
 import { fetchSsdUpgrades } from "../../services/ssdUpgradeService";
 import { fetchSsdProcurement } from "../../services/ssdProcurementService";
@@ -41,7 +47,12 @@ import { fetchCloudRates } from "../../services/cloudRateService";
 import { fetchServerUsage } from "../../services/serverUsageService";
 import { fetchCloudUsage } from "../../services/cloudUsageService";
 import { fetchDepartments } from "../../services/departmentService";
-import { createBorrow, fetchCurrentBorrows, returnBorrow } from "../../services/borrowService";
+import {
+  createBorrow,
+  fetchCurrentBorrows,
+  returnBorrow,
+  fetchBorrowHistory,
+} from "../../services/borrowService";
 
 // ---------------------------------------------------------------------------
 // Design tokens (kept local so the whole thing stays a single-file artifact)
@@ -64,6 +75,7 @@ const navSections = [
         children: [
           { label: "Stock Available", icon: Box },
           { label: "Currently Borrowed", icon: RefreshCw },
+          { label: "Borrow History", icon: Search },
         ],
       },
       { label: "Device Replacement", icon: RefreshCw },
@@ -379,9 +391,43 @@ const currentBorrowColumns = [
   { key: "remark", label: "Remark" },
 ];
 
+const borrowHistoryColumns = [
+  { key: "borrow_id", label: "Borrow ID" },
+  { key: "category_name", label: "Category" },
+  { key: "device_model", label: "Device Model" },
+  { key: "computer_name", label: "Computer Name" },
+  { key: "equipment_code", label: "Equipment Code" },
+  { key: "borrower_name", label: "Borrower" },
+  { key: "borrower_department", label: "Department" },
+  { key: "loan_status", label: "Status" },
+  { key: "borrow_date", label: "Borrow Date" },
+  { key: "expected_return_date", label: "Expected Return" },
+  { key: "return_date", label: "Return Date" },
+  { key: "condition_on_borrow", label: "Condition (Borrow)" },
+  { key: "condition_on_return", label: "Condition (Return)" },
+  { key: "purpose", label: "Purpose" },
+  { key: "remark", label: "Remark" },
+];
+
+const BORROW_HISTORY_INITIAL_FILTERS = {
+  borrower_id: "",
+  from: "",
+  to: "",
+};
+
 const RETURN_EQUIPMENT_INITIAL_VALUES = {
   return_date: "",
   condition_on_return: "",
+};
+
+const EMPLOYEE_FORM_INITIAL_VALUES = {
+  full_name: "",
+  position: "",
+  department: "",
+  location: "",
+  staff_code: "",
+  phone: "",
+  sex: "",
 };
 
 const EMPLOYEES_PAGE_SIZE = 8;
@@ -494,8 +540,9 @@ function FormField({ label, htmlFor, children }) {
 const formInputClass =
   "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100";
 
-function AddEquipmentModal({
+function EquipmentFormModal({
   isOpen,
+  mode,
   values,
   onChange,
   onSubmit,
@@ -504,6 +551,7 @@ function AddEquipmentModal({
   error,
   departments,
   statuses,
+  categoryOptions,
 }) {
   useEffect(() => {
     function handleKeyDown(event) {
@@ -514,6 +562,8 @@ function AddEquipmentModal({
   }, [onClose]);
 
   if (!isOpen) return null;
+
+  const isEdit = mode === "edit";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -526,8 +576,12 @@ function AddEquipmentModal({
       <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">Add new equipment</h2>
-            <p className="mt-0.5 text-[13px] text-slate-500">New items start unassigned in stock.</p>
+            <h2 className="text-[15px] font-semibold text-slate-950">
+              {isEdit ? "Edit equipment" : "Add new equipment"}
+            </h2>
+            <p className="mt-0.5 text-[13px] text-slate-500">
+              {isEdit ? "Update this item's details." : "New items start unassigned in stock."}
+            </p>
           </div>
           <button
             type="button"
@@ -559,7 +613,7 @@ function AddEquipmentModal({
                   disabled={isSubmitting}
                 >
                   <option value="">Select category</option>
-                  {EQUIPMENT_CATEGORY_OPTIONS.map((option) => (
+                  {categoryOptions.map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>
@@ -701,7 +755,7 @@ function AddEquipmentModal({
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting ? "Adding..." : "Add equipment"}
+              {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add equipment"}
             </button>
           </div>
         </form>
@@ -710,7 +764,7 @@ function AddEquipmentModal({
   );
 }
 
-function EmployeeSelectDropdown({ employees, selectedId, onSelect, disabled }) {
+function EmployeeSelectDropdown({ employees, selectedId, onSelect, disabled, placeholder = "Select employee" }) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef(null);
@@ -753,7 +807,7 @@ function EmployeeSelectDropdown({ employees, selectedId, onSelect, disabled }) {
         <span className={`truncate ${selectedEmployee ? "text-slate-900" : "text-slate-400"}`}>
           {selectedEmployee
             ? `${selectedEmployee.full_name}${selectedEmployee.position ? ` · ${selectedEmployee.position}` : ""}`
-            : "Select employee"}
+            : placeholder}
         </span>
         <ChevronDown
           size={14}
@@ -1250,6 +1304,7 @@ function EquipmentItemsTable({
   statusOptions,
   statusFilter,
   onFilterStatus,
+  onEdit,
 }) {
   const columns = useMemo(() => getRecordColumns(items, equipmentItemColumns), [items]);
 
@@ -1307,6 +1362,7 @@ function EquipmentItemsTable({
                       {column.label}
                     </th>
                   ))}
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -1321,6 +1377,15 @@ function EquipmentItemsTable({
                         <RecordCellValue value={item[column.key]} />
                       </td>
                     ))}
+                    <td className="whitespace-nowrap px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(item)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                      >
+                        Edit
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1346,6 +1411,7 @@ function EquipmentView({
   onViewCategory,
   onBackToCategories,
   onAddNew,
+  onEdit,
   statuses,
   statusFilter,
   onFilterStatus,
@@ -1390,6 +1456,7 @@ function EquipmentView({
         statusOptions={statusOptions}
         statusFilter={statusFilter}
         onFilterStatus={onFilterStatus}
+        onEdit={onEdit}
       />
     );
   }
@@ -1866,6 +1933,155 @@ function CurrentBorrowsView({ loans, isLoading, error, onRetry, onReturn }) {
   );
 }
 
+function BorrowHistoryView({
+  history,
+  isLoading,
+  error,
+  onRetry,
+  employees,
+  filters,
+  onFilterChange,
+  onClearFilters,
+}) {
+  const columns = useMemo(() => getRecordColumns(history, borrowHistoryColumns), [history]);
+  const hasActiveFilters = Boolean(filters.borrower_id || filters.from || filters.to);
+
+  return (
+    <div className="px-4 py-6 sm:px-6 lg:px-8">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+          <div>
+            <h2 className="text-[15px] font-semibold text-slate-950">Borrow history</h2>
+            {!isLoading && !error && (
+              <p className="mt-0.5 text-[13px] text-slate-500">
+                {history.length} record{history.length === 1 ? "" : "s"}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={isLoading}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+            Refresh
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/60 px-5 py-4">
+          <div className="w-56">
+            <label className="mb-1.5 block text-xs font-semibold text-slate-600">Borrower</label>
+            <EmployeeSelectDropdown
+              employees={employees}
+              selectedId={filters.borrower_id}
+              onSelect={(employee) => onFilterChange("borrower_id", String(employee.employee_id))}
+              placeholder="All employees"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-600" htmlFor="history-from">
+              From
+            </label>
+            <input
+              id="history-from"
+              type="date"
+              autoComplete="off"
+              value={filters.from}
+              onChange={(e) => onFilterChange("from", e.target.value)}
+              className={formInputClass}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-slate-600" htmlFor="history-to">
+              To
+            </label>
+            <input
+              id="history-to"
+              type="date"
+              autoComplete="off"
+              value={filters.to}
+              onChange={(e) => onFilterChange("to", e.target.value)}
+              className={formInputClass}
+            />
+          </div>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="inline-flex h-10 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+
+        {isLoading ? (
+          <div className="px-5 py-10 text-center text-[13px] text-slate-500">Loading borrow history...</div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500">
+              <AlertTriangle size={18} />
+            </div>
+            <p className="text-[13px] font-semibold text-slate-700">Couldn&apos;t load borrow history</p>
+            <p className="text-xs text-slate-500">{error}</p>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            >
+              <RefreshCw size={13} />
+              Retry
+            </button>
+          </div>
+        ) : history.length === 0 ? (
+          <EmptyState icon={Search} title="No borrow history" description="Loan records will appear here." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px]">
+              <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+                <tr>
+                  {columns.map((column) => (
+                    <th key={column.key} className="whitespace-nowrap px-4 py-3 font-semibold">
+                      {column.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {history.map((record, index) => (
+                  <tr key={record.borrow_id ?? index} className="transition hover:bg-slate-50/70">
+                    {columns.map((column) => (
+                      <td
+                        key={column.key}
+                        className={`px-4 py-3 text-slate-600 ${column.key === "remark" ? "min-w-72 whitespace-normal" : "whitespace-nowrap"
+                          }`}
+                      >
+                        {column.key === "loan_status" ? (
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${record.loan_status === "Returned"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-amber-50 text-amber-700"
+                              }`}
+                          >
+                            {record.loan_status}
+                          </span>
+                        ) : (
+                          <RecordCellValue value={record[column.key]} />
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Employee search
 // ---------------------------------------------------------------------------
@@ -2016,6 +2232,184 @@ function EmployeeSearchPanel({
   );
 }
 
+function EmployeeFormModal({
+  isOpen,
+  mode,
+  values,
+  onChange,
+  onSubmit,
+  onClose,
+  isSubmitting,
+  error,
+  departments,
+}) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  if (!isOpen) return null;
+
+  const isEdit = mode === "edit";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-slate-950/60"
+        onClick={onClose}
+        aria-label="Close"
+      />
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+          <div>
+            <h2 className="text-[15px] font-semibold text-slate-950">
+              {isEdit ? "Edit employee" : "Add new employee"}
+            </h2>
+            <p className="mt-0.5 text-[13px] text-slate-500">
+              {isEdit ? "Update this employee's details." : "Add a new employee to the directory."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+          <div className="overflow-y-auto px-6 py-5">
+            {error && (
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+                {error}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <FormField label="Full Name *" htmlFor="employee-full_name">
+                  <input
+                    id="employee-full_name"
+                    type="text"
+                    required
+                    autoComplete="off"
+                    value={values.full_name}
+                    onChange={(e) => onChange("full_name", e.target.value)}
+                    className={formInputClass}
+                    disabled={isSubmitting}
+                  />
+                </FormField>
+              </div>
+
+              <FormField label="Position" htmlFor="employee-position">
+                <input
+                  id="employee-position"
+                  type="text"
+                  autoComplete="off"
+                  value={values.position}
+                  onChange={(e) => onChange("position", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+
+              <FormField label="Department" htmlFor="employee-department">
+                <select
+                  id="employee-department"
+                  autoComplete="off"
+                  value={values.department}
+                  onChange={(e) => onChange("department", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                >
+                  <option value="">—</option>
+                  {departments.map((dept) => (
+                    <option key={dept.department_id} value={dept.department_code}>
+                      {dept.department_name}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+
+              <FormField label="Location" htmlFor="employee-location">
+                <input
+                  id="employee-location"
+                  type="text"
+                  autoComplete="off"
+                  value={values.location}
+                  onChange={(e) => onChange("location", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+
+              <FormField label="Staff Code" htmlFor="employee-staff_code">
+                <input
+                  id="employee-staff_code"
+                  type="text"
+                  autoComplete="off"
+                  value={values.staff_code}
+                  onChange={(e) => onChange("staff_code", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+
+              <FormField label="Phone" htmlFor="employee-phone">
+                <input
+                  id="employee-phone"
+                  type="text"
+                  autoComplete="off"
+                  value={values.phone}
+                  onChange={(e) => onChange("phone", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+
+              <FormField label="Sex" htmlFor="employee-sex">
+                <input
+                  id="employee-sex"
+                  type="text"
+                  autoComplete="off"
+                  value={values.sex}
+                  onChange={(e) => onChange("sex", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add employee"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function EmployeeDirectoryTable({
   employees,
   totalCount,
@@ -2029,6 +2423,8 @@ function EmployeeDirectoryTable({
   onPageChange,
   pageSize,
   onViewDetail,
+  onAddNew,
+  onEdit,
 }) {
   const columns = [
     { key: "full_name", label: "Name" },
@@ -2046,6 +2442,14 @@ function EmployeeDirectoryTable({
             <p className="mt-0.5 text-[13px] text-slate-500">{totalCount} employees</p>
           )}
         </div>
+        <button
+          type="button"
+          onClick={onAddNew}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+        >
+          <PlusCircle size={15} />
+          Add New Employee
+        </button>
       </div>
 
       {isLoading ? (
@@ -2090,7 +2494,7 @@ function EmployeeDirectoryTable({
                       </th>
                     );
                   })}
-                  <th className="px-5 py-3 font-semibold text-right">Detail</th>
+                  <th className="px-5 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -2105,13 +2509,22 @@ function EmployeeDirectoryTable({
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{employee.location || "—"}</td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => onViewDetail(employee)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                      >
-                        View Detail
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onViewDetail(employee)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                        >
+                          View Detail
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onEdit(employee)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                        >
+                          Edit
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -2443,10 +2856,12 @@ function Dashboard({ user, onLogout }) {
   const [equipmentItemsError, setEquipmentItemsError] = useState(null);
   const [equipmentStatuses, setEquipmentStatuses] = useState([]);
   const [equipmentStatusFilter, setEquipmentStatusFilter] = useState("All");
-  const [isAddEquipmentOpen, setIsAddEquipmentOpen] = useState(false);
-  const [addEquipmentValues, setAddEquipmentValues] = useState(ADD_EQUIPMENT_INITIAL_VALUES);
-  const [isCreatingEquipment, setIsCreatingEquipment] = useState(false);
-  const [createEquipmentError, setCreateEquipmentError] = useState(null);
+  const [isEquipmentFormOpen, setIsEquipmentFormOpen] = useState(false);
+  const [equipmentFormMode, setEquipmentFormMode] = useState("add");
+  const [equipmentFormTarget, setEquipmentFormTarget] = useState(null);
+  const [equipmentFormValues, setEquipmentFormValues] = useState(ADD_EQUIPMENT_INITIAL_VALUES);
+  const [isSavingEquipment, setIsSavingEquipment] = useState(false);
+  const [equipmentFormError, setEquipmentFormError] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [replacements, setReplacements] = useState([]);
   const [isReplacementsLoading, setIsReplacementsLoading] = useState(false);
@@ -2504,6 +2919,11 @@ function Dashboard({ user, onLogout }) {
   const [returnValues, setReturnValues] = useState(RETURN_EQUIPMENT_INITIAL_VALUES);
   const [isReturning, setIsReturning] = useState(false);
   const [returnError, setReturnError] = useState(null);
+  const [borrowHistory, setBorrowHistory] = useState([]);
+  const [isBorrowHistoryLoading, setIsBorrowHistoryLoading] = useState(false);
+  const [borrowHistoryError, setBorrowHistoryError] = useState(null);
+  const [borrowHistoryFetchToken, setBorrowHistoryFetchToken] = useState(0);
+  const [borrowHistoryFilters, setBorrowHistoryFilters] = useState(BORROW_HISTORY_INITIAL_FILTERS);
   const [employeeSearchTerm, setEmployeeSearchTerm] = useState("");
   const [employeeSearchResults, setEmployeeSearchResults] = useState([]);
   const [isEmployeeSearchLoading, setIsEmployeeSearchLoading] = useState(false);
@@ -2519,6 +2939,12 @@ function Dashboard({ user, onLogout }) {
   const [employeeDetailDevices, setEmployeeDetailDevices] = useState([]);
   const [isEmployeeDetailLoading, setIsEmployeeDetailLoading] = useState(false);
   const [employeeDetailError, setEmployeeDetailError] = useState(null);
+  const [isEmployeeFormOpen, setIsEmployeeFormOpen] = useState(false);
+  const [employeeFormMode, setEmployeeFormMode] = useState("add");
+  const [employeeFormTarget, setEmployeeFormTarget] = useState(null);
+  const [employeeFormValues, setEmployeeFormValues] = useState(EMPLOYEE_FORM_INITIAL_VALUES);
+  const [isSavingEmployee, setIsSavingEmployee] = useState(false);
+  const [employeeFormError, setEmployeeFormError] = useState(null);
   const notificationsRef = useRef(null);
   const profileMenuRef = useRef(null);
   const displayName = user?.name || "Admin User";
@@ -2529,6 +2955,14 @@ function Dashboard({ user, onLogout }) {
     .slice(0, 2)
     .toUpperCase();
   const hasUnreadNotifications = notifications.some((item) => item.unread);
+
+  const equipmentFormCategoryOptions = useMemo(() => {
+    const names = new Set(EQUIPMENT_CATEGORY_OPTIONS);
+    equipmentCategories.forEach((item) => names.add(item.category));
+    if (equipmentFormTarget?.category_name) names.add(equipmentFormTarget.category_name);
+    if (equipmentFormTarget?.category) names.add(equipmentFormTarget.category);
+    return [...names].sort();
+  }, [equipmentCategories, equipmentFormTarget]);
 
   const sortedEmployees = useMemo(() => {
     if (!employeeSort.key) return employees;
@@ -2557,6 +2991,75 @@ function Dashboard({ user, onLogout }) {
     setIsEmployeesLoading(true);
     setEmployeesError(null);
     setEmployeesFetchToken((value) => value + 1);
+  }
+
+  function handleOpenAddEmployee() {
+    setEmployeeFormMode("add");
+    setEmployeeFormTarget(null);
+    setEmployeeFormValues(EMPLOYEE_FORM_INITIAL_VALUES);
+    setEmployeeFormError(null);
+    setIsEmployeeFormOpen(true);
+
+    fetchDepartments()
+      .then((data) => setDepartments(Array.isArray(data) ? data : []))
+      .catch(() => setDepartments([]));
+  }
+
+  function handleOpenEditEmployee(employee) {
+    setEmployeeFormMode("edit");
+    setEmployeeFormTarget(employee);
+    setEmployeeFormValues({
+      full_name: employee.full_name || "",
+      position: employee.position || "",
+      department: getEmployeeDepartmentCode(employee) || "",
+      location: employee.location || "",
+      staff_code: employee.staff_code || "",
+      phone: employee.phone || "",
+      sex: employee.sex || "",
+    });
+    setEmployeeFormError(null);
+    setIsEmployeeFormOpen(true);
+
+    fetchDepartments()
+      .then((data) => setDepartments(Array.isArray(data) ? data : []))
+      .catch(() => setDepartments([]));
+  }
+
+  function handleCloseEmployeeForm() {
+    setIsEmployeeFormOpen(false);
+  }
+
+  function handleEmployeeFormFieldChange(key, value) {
+    setEmployeeFormValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleSubmitEmployeeForm(event) {
+    event.preventDefault();
+
+    if (!employeeFormValues.full_name.trim()) {
+      setEmployeeFormError("Please enter a full name.");
+      return;
+    }
+
+    setIsSavingEmployee(true);
+    setEmployeeFormError(null);
+
+    const payload = Object.fromEntries(
+      Object.entries(employeeFormValues).filter(([, value]) => value.trim() !== "")
+    );
+
+    const request =
+      employeeFormMode === "edit"
+        ? updateEmployee(employeeFormTarget.employee_id, payload)
+        : createEmployee(payload);
+
+    request
+      .then(() => {
+        setIsEmployeeFormOpen(false);
+        handleRetryEmployees();
+      })
+      .catch((error) => setEmployeeFormError(error.message || "Something went wrong."))
+      .finally(() => setIsSavingEmployee(false));
   }
 
   function handleViewEmployeeDetail(employee) {
@@ -2627,6 +3130,10 @@ function Dashboard({ user, onLogout }) {
       setIsCurrentBorrowsLoading(true);
       setCurrentBorrowsError(null);
     }
+    if (label === "Borrow History" && label !== activeView) {
+      setIsBorrowHistoryLoading(true);
+      setBorrowHistoryError(null);
+    }
     if (label === "Employee" && label !== activeView) {
       setIsEmployeesLoading(true);
       setEmployeesError(null);
@@ -2680,6 +3187,7 @@ function Dashboard({ user, onLogout }) {
   const isCloudUsageView = activeView === "Cloud Usage";
   const isAvailableStockView = activeView === "Stock Available";
   const isCurrentBorrowsView = activeView === "Currently Borrowed";
+  const isBorrowHistoryView = activeView === "Borrow History";
 
   useEffect(() => {
     if (!isEquipmentView) return;
@@ -2987,16 +3495,60 @@ function Dashboard({ user, onLogout }) {
     };
   }, [isCurrentBorrowsView, currentBorrowsFetchToken]);
 
+  useEffect(() => {
+    if (!isBorrowHistoryView) return;
+
+    let ignore = false;
+
+    fetchEmployees()
+      .then((data) => {
+        if (!ignore) setAssignEmployeeOptions(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!ignore) setAssignEmployeeOptions([]);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isBorrowHistoryView]);
+
+  useEffect(() => {
+    if (!isBorrowHistoryView) return;
+
+    let ignore = false;
+
+    fetchBorrowHistory(borrowHistoryFilters)
+      .then((data) => {
+        if (!ignore) {
+          setBorrowHistory(Array.isArray(data?.history) ? data.history : []);
+          setBorrowHistoryError(null);
+        }
+      })
+      .catch((error) => {
+        if (!ignore) setBorrowHistoryError(error.message || "Something went wrong.");
+      })
+      .finally(() => {
+        if (!ignore) setIsBorrowHistoryLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isBorrowHistoryView, borrowHistoryFetchToken, borrowHistoryFilters]);
+
   function handleRetryEquipment() {
     setIsEquipmentLoading(true);
     setEquipmentError(null);
     setEquipmentFetchToken((value) => value + 1);
   }
 
-  function handleOpenAddEquipment() {
-    setAddEquipmentValues(ADD_EQUIPMENT_INITIAL_VALUES);
-    setCreateEquipmentError(null);
-    setIsAddEquipmentOpen(true);
+  function handleOpenAddEquipmentItem() {
+    setEquipmentFormMode("add");
+    setEquipmentFormTarget(null);
+    setEquipmentFormValues(ADD_EQUIPMENT_INITIAL_VALUES);
+    setEquipmentFormError(null);
+    setIsEquipmentFormOpen(true);
 
     fetchDepartments()
       .then((data) => setDepartments(Array.isArray(data) ? data : []))
@@ -3007,30 +3559,77 @@ function Dashboard({ user, onLogout }) {
       .catch(() => setEquipmentStatuses([]));
   }
 
-  function handleCloseAddEquipment() {
-    setIsAddEquipmentOpen(false);
+  function handleOpenEditEquipmentItem(item) {
+    setEquipmentFormMode("edit");
+    setEquipmentFormTarget(item);
+    setEquipmentFormValues({
+      category: item.category_name || item.category || "",
+      device_type: item.device_type || "",
+      device_model: item.device_model || "",
+      manufacturer: item.manufacturer || "",
+      equipment_code: item.equipment_code || "",
+      service_tag: item.service_tag || "",
+      serial_no: item.serial_no || "",
+      product_id: item.product_id || "",
+      mac_address: item.mac_address || "",
+      ip_address: item.ip_address || "",
+      os_type: item.os_type || "",
+      os_version: item.os_version || "",
+      cpu: item.cpu || "",
+      ram: item.ram || "",
+      hd: item.hd || "",
+      windows_license: item.windows_license || "",
+      av_license: item.av_license || "",
+      purchase_date: item.purchase_date ? item.purchase_date.slice(0, 10) : "",
+      received_date: item.received_date ? item.received_date.slice(0, 10) : "",
+      department: item.department_code || item.department || "",
+      status: item.status || item.status_name || "",
+      remark: item.remark || "",
+    });
+    setEquipmentFormError(null);
+    setIsEquipmentFormOpen(true);
+
+    fetchDepartments()
+      .then((data) => setDepartments(Array.isArray(data) ? data : []))
+      .catch(() => setDepartments([]));
+
+    fetchEquipmentStatuses()
+      .then((data) => setEquipmentStatuses(Array.isArray(data) ? data : []))
+      .catch(() => setEquipmentStatuses([]));
   }
 
-  function handleAddEquipmentFieldChange(key, value) {
-    setAddEquipmentValues((current) => ({ ...current, [key]: value }));
+  function handleCloseEquipmentForm() {
+    setIsEquipmentFormOpen(false);
   }
 
-  function handleSubmitAddEquipment(event) {
+  function handleEquipmentFormFieldChange(key, value) {
+    setEquipmentFormValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleSubmitEquipmentForm(event) {
     event.preventDefault();
-    setIsCreatingEquipment(true);
-    setCreateEquipmentError(null);
+    setIsSavingEquipment(true);
+    setEquipmentFormError(null);
 
     const payload = Object.fromEntries(
-      Object.entries(addEquipmentValues).filter(([, value]) => value.trim() !== "")
+      Object.entries(equipmentFormValues).filter(([, value]) => value.trim() !== "")
     );
 
-    createEquipment(payload)
+    const request =
+      equipmentFormMode === "edit"
+        ? updateEquipment(equipmentFormTarget.equipment_id, payload)
+        : createEquipment(payload);
+
+    request
       .then(() => {
-        setIsAddEquipmentOpen(false);
+        setIsEquipmentFormOpen(false);
         handleRetryEquipment();
+        if (equipmentDetailCategory) {
+          handleViewEquipmentCategory(equipmentDetailCategory, equipmentStatusFilter);
+        }
       })
-      .catch((error) => setCreateEquipmentError(error.message || "Something went wrong."))
-      .finally(() => setIsCreatingEquipment(false));
+      .catch((error) => setEquipmentFormError(error.message || "Something went wrong."))
+      .finally(() => setIsSavingEquipment(false));
   }
 
   function handleRetryReplacements() {
@@ -3091,6 +3690,24 @@ function Dashboard({ user, onLogout }) {
     setIsCurrentBorrowsLoading(true);
     setCurrentBorrowsError(null);
     setCurrentBorrowsFetchToken((value) => value + 1);
+  }
+
+  function handleRetryBorrowHistory() {
+    setIsBorrowHistoryLoading(true);
+    setBorrowHistoryError(null);
+    setBorrowHistoryFetchToken((value) => value + 1);
+  }
+
+  function handleBorrowHistoryFilterChange(key, value) {
+    setIsBorrowHistoryLoading(true);
+    setBorrowHistoryError(null);
+    setBorrowHistoryFilters((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleClearBorrowHistoryFilters() {
+    setIsBorrowHistoryLoading(true);
+    setBorrowHistoryError(null);
+    setBorrowHistoryFilters(BORROW_HISTORY_INITIAL_FILTERS);
   }
 
   function handleOpenReturnEquipment(loan) {
@@ -3545,7 +4162,8 @@ function Dashboard({ user, onLogout }) {
               itemsError={equipmentItemsError}
               onViewCategory={handleViewEquipmentCategory}
               onBackToCategories={handleBackToEquipmentCategories}
-              onAddNew={handleOpenAddEquipment}
+              onAddNew={handleOpenAddEquipmentItem}
+              onEdit={handleOpenEditEquipmentItem}
               statuses={equipmentStatuses}
               statusFilter={equipmentStatusFilter}
               onFilterStatus={handleFilterEquipmentStatus}
@@ -3645,6 +4263,19 @@ function Dashboard({ user, onLogout }) {
             />
           )}
 
+          {isBorrowHistoryView && (
+            <BorrowHistoryView
+              history={borrowHistory}
+              isLoading={isBorrowHistoryLoading}
+              error={borrowHistoryError}
+              onRetry={handleRetryBorrowHistory}
+              employees={assignEmployeeOptions}
+              filters={borrowHistoryFilters}
+              onFilterChange={handleBorrowHistoryFilterChange}
+              onClearFilters={handleClearBorrowHistoryFilters}
+            />
+          )}
+
           {!isEmployeeView &&
             !isEquipmentView &&
             !isReplacementView &&
@@ -3656,7 +4287,8 @@ function Dashboard({ user, onLogout }) {
             !isServerUsageView &&
             !isCloudUsageView &&
             !isAvailableStockView &&
-            !isCurrentBorrowsView && (
+            !isCurrentBorrowsView &&
+            !isBorrowHistoryView && (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
                 <div className="rounded-xl border border-slate-200 bg-white">
                   <EmptyState
@@ -3696,6 +4328,8 @@ function Dashboard({ user, onLogout }) {
                 onPageChange={setEmployeePage}
                 pageSize={EMPLOYEES_PAGE_SIZE}
                 onViewDetail={handleViewEmployeeDetail}
+                onAddNew={handleOpenAddEmployee}
+                onEdit={handleOpenEditEmployee}
               />
             </div>
           )}
@@ -3713,16 +4347,18 @@ function Dashboard({ user, onLogout }) {
         />
       )}
 
-      <AddEquipmentModal
-        isOpen={isAddEquipmentOpen}
-        values={addEquipmentValues}
-        onChange={handleAddEquipmentFieldChange}
-        onSubmit={handleSubmitAddEquipment}
-        onClose={handleCloseAddEquipment}
-        isSubmitting={isCreatingEquipment}
-        error={createEquipmentError}
+      <EquipmentFormModal
+        isOpen={isEquipmentFormOpen}
+        mode={equipmentFormMode}
+        values={equipmentFormValues}
+        onChange={handleEquipmentFormFieldChange}
+        onSubmit={handleSubmitEquipmentForm}
+        onClose={handleCloseEquipmentForm}
+        isSubmitting={isSavingEquipment}
+        error={equipmentFormError}
         departments={departments}
         statuses={equipmentStatuses}
+        categoryOptions={equipmentFormCategoryOptions}
       />
 
       <AssignEquipmentModal
@@ -3762,6 +4398,18 @@ function Dashboard({ user, onLogout }) {
         onClose={handleCloseReturnEquipment}
         isSubmitting={isReturning}
         error={returnError}
+      />
+
+      <EmployeeFormModal
+        isOpen={isEmployeeFormOpen}
+        mode={employeeFormMode}
+        values={employeeFormValues}
+        onChange={handleEmployeeFormFieldChange}
+        onSubmit={handleSubmitEmployeeForm}
+        onClose={handleCloseEmployeeForm}
+        isSubmitting={isSavingEmployee}
+        error={employeeFormError}
+        departments={departments}
       />
     </div>
   );
