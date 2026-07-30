@@ -4,11 +4,10 @@ import {
     FiEye,
     FiEyeOff,
     FiKey,
-    FiLock,
-    FiShield,
     FiUser,
 } from "react-icons/fi";
 import { login } from "../../services/authService";
+import tplusLogo from "../../assets/tplus-logo.png";
 
 function getPasswordScore(password) {
     let score = 0;
@@ -72,30 +71,20 @@ export default function Login({ onLogin }) {
 
             <div className="flex min-h-screen flex-col items-center justify-center px-5 py-12 sm:px-8 relative">
                 <div className="mx-auto w-full max-w-md">
-                    {/* Logo Header */}
-                    <div className="mb-10 flex items-center gap-4">
-                        <div className="grid h-14 w-14 place-items-center rounded-2xl bg-linear-to-br from-yellow-400 to-amber-500 text-slate-950 shadow-xl shadow-yellow-500/30">
-                            <FiShield className="text-3xl" />
-                        </div>
-                        <div>
-                            <p className="text-3xl font-bold tracking-tighter">TPLUS</p>
-                            <p className="text-sm text-slate-500 -mt-1">Management System</p>
-                        </div>
-                    </div>
-
                     {/* Main Card */}
                     <div className="rounded-3xl border border-yellow-100 bg-white/90 backdrop-blur-xl p-8 shadow-2xl shadow-yellow-500/10 sm:p-10">
-                        <div className="mb-8">
-                            <div className="mb-4 inline-flex items-center gap-2 rounded-2xl border border-yellow-300 bg-linear-to-r from-yellow-100 to-amber-100 px-4 py-2 text-sm font-semibold text-yellow-800 shadow-inner">
-                                <FiLock className="text-lg" />
-                                Secure Sign In
+                        <div className="mb-8 flex items-center gap-4">
+                            <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-xl shadow-yellow-500/20 ring-1 ring-yellow-100">
+                                <img
+                                    src={tplusLogo}
+                                    alt="TPLUS"
+                                    className="h-full w-full object-cover"
+                                />
                             </div>
-                            <h1 className="text-4xl font-semibold tracking-tighter text-slate-900">
-                                Welcome back
-                            </h1>
-                            <p className="mt-3 text-slate-600 leading-relaxed">
-                                Sign in to access your protected workspace
-                            </p>
+                            <div className="min-w-0">
+                                <h1 className="text-3xl font-bold tracking-tight text-slate-950">TPLUS</h1>
+                                <p className="mt-0.5 text-sm font-medium text-slate-500">Management System</p>
+                            </div>
                         </div>
 
                         {error && (
@@ -219,11 +208,6 @@ export default function Login({ onLogin }) {
                                 )}
                             </button>
                         </form>
-                    </div>
-
-                    {/* Footer hint */}
-                    <div className="mt-8 text-center text-xs text-slate-400">
-                        Protected by enterprise-grade encryption
                     </div>
                 </div>
             </div>
