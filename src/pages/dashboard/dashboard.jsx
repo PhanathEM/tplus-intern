@@ -20,6 +20,7 @@ import {
   FiShoppingCart as ShoppingCart,
   FiUser as UserIcon,
   FiUsers as Users,
+  FiLayers as Layers,
   FiX as X,
 } from "react-icons/fi";
 import { TbLayoutSidebar } from "react-icons/tb";
@@ -47,7 +48,13 @@ import { fetchLicenses } from "../../services/licenseService";
 import { fetchCloudRates } from "../../services/cloudRateService";
 import { fetchServerUsage } from "../../services/serverUsageService";
 import { fetchCloudUsage } from "../../services/cloudUsageService";
-import { fetchDepartments } from "../../services/departmentService";
+import {
+  fetchDepartments,
+  createDepartment,
+  updateDepartment,
+  deleteDepartment,
+} from "../../services/departmentService";
+import { createCategory, updateCategory, deleteCategory } from "../../services/categoryService";
 import {
   createBorrow,
   fetchCurrentBorrows,
@@ -65,7 +72,10 @@ import {
 const navSections = [
   {
     label: "Workforce",
-    items: [{ label: "Employee", icon: Users }],
+    items: [
+      { label: "Employee", icon: Users },
+      { label: "Departments", icon: Layers },
+    ],
   },
   {
     label: "Hardware",
@@ -187,6 +197,14 @@ const replacementColumns = [
   { key: "new_keyboard", label: "New Keyboard" },
   { key: "new_owner_location", label: "New Owner Location" },
   { key: "replacement_date", label: "Replacement Date" },
+];
+
+const departmentColumns = [
+  { key: "department_id", label: "Department ID" },
+  { key: "department_code", label: "Department Code" },
+  { key: "department_name", label: "Department Name" },
+  { key: "employee_count", label: "Employees" },
+  { key: "equipment_count", label: "Equipment" },
 ];
 
 const ssdUpgradeColumns = [
@@ -1480,6 +1498,9 @@ function EquipmentView({
   statuses,
   statusFilter,
   onFilterStatus,
+  onAddCategory,
+  onEditCategory,
+  onDeleteCategory,
 }) {
   const statusOptions = useMemo(() => ["All", ...statuses.map((item) => item.status_name)], [statuses]);
 
@@ -1548,6 +1569,14 @@ function EquipmentView({
               <PlusCircle size={15} />
               Add New Item
             </button>
+            <button
+              type="button"
+              onClick={onAddCategory}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            >
+              <PlusCircle size={15} />
+              Add New Category
+            </button>
             <CategoryDropdown options={categoryOptions} selected={selectedCategory} onSelect={onSelectCategory} />
           </div>
         </div>
@@ -1609,14 +1638,32 @@ function EquipmentView({
                         </div>
                       </td>
                       <td className="whitespace-nowrap px-5 py-3.5 text-right">
-                        <button
-                          type="button"
-                          onClick={() => onViewCategory(item.category)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                        >
-                          View All Items
-                          <ChevronDown size={12} className="-rotate-90" />
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onViewCategory(item.category)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                          >
+                            View All Items
+                            <ChevronDown size={12} className="-rotate-90" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => onEditCategory(item)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => onDeleteCategory(item)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1685,6 +1732,7 @@ function RecordsTableView({
   isLoading,
   error,
   onRetry,
+  headerActions,
   renderRowActions,
 }) {
   const columns = useMemo(() => getRecordColumns(records, columnsConfig), [records, columnsConfig]);
@@ -1701,15 +1749,18 @@ function RecordsTableView({
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onRetry}
-            disabled={isLoading}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-            Refresh
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {headerActions}
+            <button
+              type="button"
+              onClick={onRetry}
+              disabled={isLoading}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -1927,6 +1978,54 @@ function CloudUsageView({ usage, isLoading, error, onRetry }) {
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}
+    />
+  );
+}
+
+function DepartmentsView({ departments, isLoading, error, onRetry, onAddNew, onEdit, onDelete }) {
+  return (
+    <RecordsTableView
+      records={departments}
+      columnsConfig={departmentColumns}
+      title="Departments"
+      recordLabel="department"
+      loadingText="Loading departments..."
+      errorTitle="Couldn't load departments"
+      emptyIcon={Users}
+      emptyTitle="No departments found"
+      emptyDescription="Department records will appear here."
+      rowKey={(department, index) => department.department_id ?? department.department_code ?? index}
+      isLoading={isLoading}
+      error={error}
+      onRetry={onRetry}
+      headerActions={
+        <button
+          type="button"
+          onClick={onAddNew}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+        >
+          <PlusCircle size={14} />
+          Add Department
+        </button>
+      }
+      renderRowActions={(department) => (
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => onEdit(department)}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(department)}
+            className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+          >
+            Delete
+          </button>
+        </div>
+      )}
     />
   );
 }
@@ -2475,6 +2574,222 @@ function EmployeeFormModal({
   );
 }
 
+function DepartmentFormModal({
+  isOpen,
+  mode,
+  values,
+  onChange,
+  onSubmit,
+  onClose,
+  isSubmitting,
+  error,
+}) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  if (!isOpen) return null;
+
+  const isEdit = mode === "edit";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-slate-950/60"
+        onClick={onClose}
+        aria-label="Close"
+      />
+      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+          <div>
+            <h2 className="text-[15px] font-semibold text-slate-950">
+              {isEdit ? "Edit department" : "Add new department"}
+            </h2>
+            <p className="mt-0.5 text-[13px] text-slate-500">
+              {isEdit ? "Update this department's details." : "Create a new department."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+          <div className="overflow-y-auto px-6 py-5">
+            {error && (
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+                {error}
+              </div>
+            )}
+            <div className="grid gap-4">
+              <FormField label="Department Code *" htmlFor="department-code">
+                <input
+                  id="department-code"
+                  type="text"
+                  required
+                  autoComplete="off"
+                  value={values.department_code}
+                  onChange={(e) => onChange("department_code", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+              <FormField label="Department Name *" htmlFor="department-name">
+                <input
+                  id="department-name"
+                  type="text"
+                  required
+                  autoComplete="off"
+                  value={values.department_name}
+                  onChange={(e) => onChange("department_name", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add department"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function CategoryFormModal({
+  isOpen,
+  mode,
+  values,
+  onChange,
+  onSubmit,
+  onClose,
+  isSubmitting,
+  error,
+}) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  if (!isOpen) return null;
+
+  const isEdit = mode === "edit";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-slate-950/60"
+        onClick={onClose}
+        aria-label="Close"
+      />
+      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+          <div>
+            <h2 className="text-[15px] font-semibold text-slate-950">
+              {isEdit ? "Edit category" : "Add new category"}
+            </h2>
+            <p className="mt-0.5 text-[13px] text-slate-500">
+              {isEdit ? "Update this category's details." : "Create a new category."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+          <div className="overflow-y-auto px-6 py-5">
+            {error && (
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+                {error}
+              </div>
+            )}
+            <div className="grid gap-4">
+              <FormField label="Category Name *" htmlFor="category-name">
+                <input
+                  id="category-name"
+                  type="text"
+                  required
+                  autoComplete="off"
+                  value={values.category_name}
+                  onChange={(e) => onChange("category_name", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+
+              <FormField label="Description" htmlFor="category-description">
+                <input
+                  id="category-description"
+                  type="text"
+                  autoComplete="off"
+                  value={values.description}
+                  onChange={(e) => onChange("description", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add category"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function EmployeeDirectoryTable({
   employees,
   totalCount,
@@ -2936,6 +3251,9 @@ function Dashboard({ user, onLogout }) {
   const [isSavingEquipment, setIsSavingEquipment] = useState(false);
   const [equipmentFormError, setEquipmentFormError] = useState(null);
   const [departments, setDepartments] = useState([]);
+  const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(false);
+  const [departmentsError, setDepartmentsError] = useState(null);
+  const [departmentsFetchToken, setDepartmentsFetchToken] = useState(0);
   const [replacements, setReplacements] = useState([]);
   const [isReplacementsLoading, setIsReplacementsLoading] = useState(false);
   const [replacementsError, setReplacementsError] = useState(null);
@@ -3021,6 +3339,25 @@ function Dashboard({ user, onLogout }) {
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
   const [deleteEmployeeError, setDeleteEmployeeError] = useState(null);
+
+  const [isDepartmentFormOpen, setIsDepartmentFormOpen] = useState(false);
+  const [departmentFormMode, setDepartmentFormMode] = useState("add");
+  const [departmentFormTarget, setDepartmentFormTarget] = useState(null);
+  const [departmentFormValues, setDepartmentFormValues] = useState({ department_code: "", department_name: "" });
+  const [isSavingDepartment, setIsSavingDepartment] = useState(false);
+  const [departmentFormError, setDepartmentFormError] = useState(null);
+  const [departmentToDelete, setDepartmentToDelete] = useState(null);
+  const [isDeletingDepartment, setIsDeletingDepartment] = useState(false);
+  const [deleteDepartmentError, setDeleteDepartmentError] = useState(null);
+  const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
+  const [categoryFormMode, setCategoryFormMode] = useState("add");
+  const [categoryFormTarget, setCategoryFormTarget] = useState(null);
+  const [categoryFormValues, setCategoryFormValues] = useState({ category_name: "", description: "" });
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
+  const [categoryFormError, setCategoryFormError] = useState(null);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
+  const [deleteCategoryError, setDeleteCategoryError] = useState(null);
   const notificationsRef = useRef(null);
   const profileMenuRef = useRef(null);
   const displayName = user?.name || "Admin User";
@@ -3069,6 +3406,12 @@ function Dashboard({ user, onLogout }) {
     setEmployeesFetchToken((value) => value + 1);
   }
 
+  function handleRetryDepartments() {
+    setIsDepartmentsLoading(true);
+    setDepartmentsError(null);
+    setDepartmentsFetchToken((value) => value + 1);
+  }
+
   function handleOpenAddEmployee() {
     setEmployeeFormMode("add");
     setEmployeeFormTarget(null);
@@ -3079,6 +3422,169 @@ function Dashboard({ user, onLogout }) {
     fetchDepartments()
       .then((data) => setDepartments(Array.isArray(data) ? data : []))
       .catch(() => setDepartments([]));
+  }
+
+  function handleOpenAddDepartment() {
+    setDepartmentFormMode("add");
+    setDepartmentFormTarget(null);
+    setDepartmentFormValues({ department_code: "", department_name: "" });
+    setDepartmentFormError(null);
+    setIsDepartmentFormOpen(true);
+  }
+
+  function handleOpenEditDepartment(department) {
+    setDepartmentFormMode("edit");
+    setDepartmentFormTarget(department);
+    setDepartmentFormValues({
+      department_code: department.department_code || "",
+      department_name: department.department_name || "",
+    });
+    setDepartmentFormError(null);
+    setIsDepartmentFormOpen(true);
+  }
+
+  function handleOpenAddCategory() {
+    setCategoryFormMode("add");
+    setCategoryFormTarget(null);
+    setCategoryFormValues({ category_name: "", description: "" });
+    setCategoryFormError(null);
+    setIsCategoryFormOpen(true);
+  }
+
+  function handleOpenEditCategory(category) {
+    setCategoryFormMode("edit");
+    setCategoryFormTarget(category);
+    setCategoryFormValues({
+      category_name: category.category_name || category.category || "",
+      description: category.description || "",
+    });
+    setCategoryFormError(null);
+    setIsCategoryFormOpen(true);
+  }
+
+  function handleCloseCategoryForm() {
+    setIsCategoryFormOpen(false);
+  }
+
+  function handleCategoryFormFieldChange(key, value) {
+    setCategoryFormValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleSubmitCategoryForm(event) {
+    event.preventDefault();
+
+    if (!categoryFormValues.category_name.trim()) {
+      setCategoryFormError("Please enter a category name.");
+      return;
+    }
+
+    setIsSavingCategory(true);
+    setCategoryFormError(null);
+
+    const payload = {
+      category_name: categoryFormValues.category_name.trim(),
+      description: categoryFormValues.description?.trim() || "",
+    };
+
+    const id = categoryFormTarget?.id ?? categoryFormTarget?.category_id ?? categoryFormTarget?.categoryId ?? null;
+
+    const req = categoryFormMode === "edit" && id ? updateCategory(id, payload) : createCategory(payload);
+
+    req
+      .then(() => {
+        setIsCategoryFormOpen(false);
+        handleRetryEquipment();
+      })
+      .catch((error) => setCategoryFormError(error.message || "Something went wrong."))
+      .finally(() => setIsSavingCategory(false));
+  }
+
+  function handleOpenDeleteCategory(category) {
+    setCategoryToDelete(category);
+    setDeleteCategoryError(null);
+  }
+
+  function handleCloseDeleteCategory() {
+    setCategoryToDelete(null);
+  }
+
+  function handleConfirmDeleteCategory() {
+    if (!categoryToDelete) return;
+
+    setIsDeletingCategory(true);
+    setDeleteCategoryError(null);
+
+    const id = categoryToDelete?.id ?? categoryToDelete?.category_id ?? categoryToDelete?.categoryId ?? null;
+
+    deleteCategory(id)
+      .then(() => {
+        setCategoryToDelete(null);
+        handleRetryEquipment();
+      })
+      .catch((error) => setDeleteCategoryError(error.message || "Something went wrong."))
+      .finally(() => setIsDeletingCategory(false));
+  }
+
+  function handleCloseDepartmentForm() {
+    setIsDepartmentFormOpen(false);
+  }
+
+  function handleDepartmentFormFieldChange(key, value) {
+    setDepartmentFormValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleSubmitDepartmentForm(event) {
+    event.preventDefault();
+
+    if (!departmentFormValues.department_code.trim() || !departmentFormValues.department_name.trim()) {
+      setDepartmentFormError("Please enter both department code and name.");
+      return;
+    }
+
+    setIsSavingDepartment(true);
+    setDepartmentFormError(null);
+
+    const payload = {
+      department_code: departmentFormValues.department_code.trim(),
+      department_name: departmentFormValues.department_name.trim(),
+    };
+
+    const request =
+      departmentFormMode === "edit"
+        ? updateDepartment(departmentFormTarget.department_id, payload)
+        : createDepartment(payload);
+
+    request
+      .then(() => {
+        setIsDepartmentFormOpen(false);
+        handleRetryDepartments();
+      })
+      .catch((error) => setDepartmentFormError(error.message || "Something went wrong."))
+      .finally(() => setIsSavingDepartment(false));
+  }
+
+  function handleOpenDeleteDepartment(department) {
+    setDepartmentToDelete(department);
+    setDeleteDepartmentError(null);
+  }
+
+  function handleCloseDeleteDepartment() {
+    setDepartmentToDelete(null);
+  }
+
+  function handleConfirmDeleteDepartment() {
+    if (!departmentToDelete) return;
+
+    setIsDeletingDepartment(true);
+    setDeleteDepartmentError(null);
+
+    deleteDepartment(departmentToDelete.department_id)
+      .then(() => {
+        setDepartmentToDelete(null);
+        handleRetryDepartments();
+      })
+      .catch((error) => setDeleteDepartmentError(error.message || "Something went wrong."))
+      .finally(() => setIsDeletingDepartment(false));
   }
 
   function handleOpenEditEmployee(employee) {
@@ -3238,6 +3744,10 @@ function Dashboard({ user, onLogout }) {
       setIsEmployeesLoading(true);
       setEmployeesError(null);
     }
+    if (label === "Departments" && label !== activeView) {
+      setIsDepartmentsLoading(true);
+      setDepartmentsError(null);
+    }
     if (activeView === "Equipment" && label !== "Equipment") {
       setEquipmentDetailCategory(null);
     }
@@ -3276,6 +3786,7 @@ function Dashboard({ user, onLogout }) {
 
   const activeNavItem = navItemsByLabel[activeView];
   const isEmployeeView = activeView === "Employee";
+  const isDepartmentsView = activeView === "Departments";
   const isEquipmentView = activeView === "Equipment";
   const isReplacementView = activeView === "Device Replacement";
   const isSsdUpgradeView = activeView === "SSD Upgrade";
@@ -3474,6 +3985,30 @@ function Dashboard({ user, onLogout }) {
       ignore = true;
     };
   }, [isLicenseView, licensesFetchToken]);
+
+  useEffect(() => {
+    if (!isDepartmentsView) return;
+
+    let ignore = false;
+
+    fetchDepartments()
+      .then((data) => {
+        if (!ignore) {
+          setDepartments(Array.isArray(data) ? data : []);
+          setDepartmentsError(null);
+        }
+      })
+      .catch((error) => {
+        if (!ignore) setDepartmentsError(error.message || "Something went wrong.");
+      })
+      .finally(() => {
+        if (!ignore) setIsDepartmentsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isDepartmentsView, departmentsFetchToken]);
 
   useEffect(() => {
     if (!isCloudRateView) return;
@@ -4264,6 +4799,9 @@ function Dashboard({ user, onLogout }) {
               onBackToCategories={handleBackToEquipmentCategories}
               onAddNew={handleOpenAddEquipmentItem}
               onEdit={handleOpenEditEquipmentItem}
+              onAddCategory={handleOpenAddCategory}
+              onEditCategory={handleOpenEditCategory}
+              onDeleteCategory={handleOpenDeleteCategory}
               statuses={equipmentStatuses}
               statusFilter={equipmentStatusFilter}
               onFilterStatus={handleFilterEquipmentStatus}
@@ -4312,6 +4850,18 @@ function Dashboard({ user, onLogout }) {
               isLoading={isLicensesLoading}
               error={licensesError}
               onRetry={handleRetryLicenses}
+            />
+          )}
+
+          {isDepartmentsView && (
+            <DepartmentsView
+              departments={departments}
+              isLoading={isDepartmentsLoading}
+              error={departmentsError}
+              onRetry={handleRetryDepartments}
+              onAddNew={handleOpenAddDepartment}
+              onEdit={handleOpenEditDepartment}
+              onDelete={handleOpenDeleteDepartment}
             />
           )}
 
@@ -4513,6 +5063,28 @@ function Dashboard({ user, onLogout }) {
         departments={departments}
       />
 
+      <DepartmentFormModal
+        isOpen={isDepartmentFormOpen}
+        mode={departmentFormMode}
+        values={departmentFormValues}
+        onChange={handleDepartmentFormFieldChange}
+        onSubmit={handleSubmitDepartmentForm}
+        onClose={handleCloseDepartmentForm}
+        isSubmitting={isSavingDepartment}
+        error={departmentFormError}
+      />
+
+      <CategoryFormModal
+        isOpen={isCategoryFormOpen}
+        mode={categoryFormMode}
+        values={categoryFormValues}
+        onChange={handleCategoryFormFieldChange}
+        onSubmit={handleSubmitCategoryForm}
+        onClose={handleCloseCategoryForm}
+        isSubmitting={isSavingCategory}
+        error={categoryFormError}
+      />
+
       <ConfirmDialog
         isOpen={Boolean(employeeToDelete)}
         title="Delete this employee?"
@@ -4526,6 +5098,36 @@ function Dashboard({ user, onLogout }) {
         onCancel={handleCloseDeleteEmployee}
         isConfirming={isDeletingEmployee}
         error={deleteEmployeeError}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(departmentToDelete)}
+        title="Delete this department?"
+        message={
+          departmentToDelete
+            ? `"${departmentToDelete.department_name}" will be permanently removed. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete department"
+        onConfirm={handleConfirmDeleteDepartment}
+        onCancel={handleCloseDeleteDepartment}
+        isConfirming={isDeletingDepartment}
+        error={deleteDepartmentError}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(categoryToDelete)}
+        title="Delete this category?"
+        message={
+          categoryToDelete
+            ? `"${categoryToDelete.category_name || categoryToDelete.category}" will be permanently removed. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete category"
+        onConfirm={handleConfirmDeleteCategory}
+        onCancel={handleCloseDeleteCategory}
+        isConfirming={isDeletingCategory}
+        error={deleteCategoryError}
       />
     </div>
   );
