@@ -37,6 +37,7 @@ import {
   searchEmployees,
   createEmployee,
   updateEmployee,
+  deleteEmployee,
 } from "../../services/employeeService";
 import { fetchReplacements } from "../../services/replacementService";
 import { fetchSsdUpgrades } from "../../services/ssdUpgradeService";
@@ -539,6 +540,70 @@ function FormField({ label, htmlFor, children }) {
 
 const formInputClass =
   "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100";
+
+function ConfirmDialog({
+  isOpen,
+  title,
+  message,
+  confirmLabel = "Delete",
+  onConfirm,
+  onCancel,
+  isConfirming,
+  error,
+}) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onCancel();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onCancel]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-slate-950/60"
+        onClick={onCancel}
+        aria-label="Close"
+      />
+      <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl">
+        <div className="px-6 py-5">
+          <div className="mb-3 grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-600">
+            <AlertTriangle size={18} />
+          </div>
+          <h2 className="text-[15px] font-semibold text-slate-950">{title}</h2>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">{message}</p>
+          {error && (
+            <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700">
+              {error}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isConfirming}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isConfirming}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-rose-600 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-rose-700 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isConfirming ? "Deleting..." : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function EquipmentFormModal({
   isOpen,
@@ -1316,9 +1381,9 @@ function EquipmentItemsTable({
             <button
               type="button"
               onClick={onBack}
-              className="mb-1 inline-flex items-center gap-1 rounded text-xs font-semibold text-slate-500 outline-none transition hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400"
+              className="mb-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             >
-              <ChevronDown size={12} className="rotate-90" />
+              <ChevronDown size={14} className="rotate-90 text-slate-500" />
               Back to categories
             </button>
             <h2 className="text-[15px] font-semibold text-slate-950">{category}</h2>
@@ -2425,6 +2490,7 @@ function EmployeeDirectoryTable({
   onViewDetail,
   onAddNew,
   onEdit,
+  onDelete,
 }) {
   const columns = [
     { key: "full_name", label: "Name" },
@@ -2523,6 +2589,13 @@ function EmployeeDirectoryTable({
                           className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                         >
                           Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete(employee)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                        >
+                          Delete
                         </button>
                       </div>
                     </td>
@@ -2945,6 +3018,9 @@ function Dashboard({ user, onLogout }) {
   const [employeeFormValues, setEmployeeFormValues] = useState(EMPLOYEE_FORM_INITIAL_VALUES);
   const [isSavingEmployee, setIsSavingEmployee] = useState(false);
   const [employeeFormError, setEmployeeFormError] = useState(null);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
+  const [deleteEmployeeError, setDeleteEmployeeError] = useState(null);
   const notificationsRef = useRef(null);
   const profileMenuRef = useRef(null);
   const displayName = user?.name || "Admin User";
@@ -3060,6 +3136,30 @@ function Dashboard({ user, onLogout }) {
       })
       .catch((error) => setEmployeeFormError(error.message || "Something went wrong."))
       .finally(() => setIsSavingEmployee(false));
+  }
+
+  function handleOpenDeleteEmployee(employee) {
+    setEmployeeToDelete(employee);
+    setDeleteEmployeeError(null);
+  }
+
+  function handleCloseDeleteEmployee() {
+    setEmployeeToDelete(null);
+  }
+
+  function handleConfirmDeleteEmployee() {
+    if (!employeeToDelete) return;
+
+    setIsDeletingEmployee(true);
+    setDeleteEmployeeError(null);
+
+    deleteEmployee(employeeToDelete.employee_id)
+      .then(() => {
+        setEmployeeToDelete(null);
+        handleRetryEmployees();
+      })
+      .catch((error) => setDeleteEmployeeError(error.message || "Something went wrong."))
+      .finally(() => setIsDeletingEmployee(false));
   }
 
   function handleViewEmployeeDetail(employee) {
@@ -4330,6 +4430,7 @@ function Dashboard({ user, onLogout }) {
                 onViewDetail={handleViewEmployeeDetail}
                 onAddNew={handleOpenAddEmployee}
                 onEdit={handleOpenEditEmployee}
+                onDelete={handleOpenDeleteEmployee}
               />
             </div>
           )}
@@ -4410,6 +4511,21 @@ function Dashboard({ user, onLogout }) {
         isSubmitting={isSavingEmployee}
         error={employeeFormError}
         departments={departments}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(employeeToDelete)}
+        title="Delete this employee?"
+        message={
+          employeeToDelete
+            ? `"${employeeToDelete.full_name}" will be permanently removed. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete employee"
+        onConfirm={handleConfirmDeleteEmployee}
+        onCancel={handleCloseDeleteEmployee}
+        isConfirming={isDeletingEmployee}
+        error={deleteEmployeeError}
       />
     </div>
   );

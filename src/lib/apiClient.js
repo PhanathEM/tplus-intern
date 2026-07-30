@@ -42,7 +42,9 @@ async function handleResponse(response) {
     }
     throw new Error(message);
   }
-  return response.json();
+  if (response.status === 204) return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
 
 export async function apiGet(path) {
@@ -68,6 +70,15 @@ export async function apiPut(path, body, { skipCredentials = false } = {}) {
     method: "PUT",
     headers: buildHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
+  });
+  return handleResponse(response);
+}
+
+export async function apiDelete(path, { skipCredentials = false } = {}) {
+  const url = skipCredentials ? path : appendTempCredentials(path);
+  const response = await fetch(`${API_BASE_URL}${url}`, {
+    method: "DELETE",
+    headers: buildHeaders(),
   });
   return handleResponse(response);
 }

@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut } from "../lib/apiClient";
+import { apiGet, apiPost, apiPut, apiDelete } from "../lib/apiClient";
 
 export function fetchEmployees() {
   return apiGet("/api/employees");
@@ -18,4 +18,8 @@ export function createEmployee(payload) {
 
 export function updateEmployee(employeeId, payload) {
   return apiPut(`/api/employees/${employeeId}`, payload);
+}
+
+export function deleteEmployee(employeeId) {
+  return apiDelete(`/api/employees/${employeeId}`);
 }
