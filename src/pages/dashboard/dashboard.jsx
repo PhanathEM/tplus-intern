@@ -1715,7 +1715,7 @@ function RecordCellValue({ value }) {
     return <span className="text-slate-400">N/A</span>;
   }
 
-  return <span>{String(value)}</span>;
+  return <span>{formatFieldValue(value)}</span>;
 }
 
 function RecordsTableView({
@@ -2982,7 +2982,24 @@ function humanizeFieldKey(key) {
 
 function formatFieldValue(value) {
   if (value === null || value === undefined || value === "") return "—";
+
+  if (typeof value === "string") {
+    const isoMatch = value.match(/^\d{4}-\d{2}-\d{2}(?:T|$)/);
+    if (isoMatch) {
+      return isoMatch[0].slice(0, 10);
+    }
+  }
+
+  if (value instanceof Date) {
+    return formatDate(value);
+  }
+
   return String(value);
+}
+
+function formatDate(date) {
+  const pad = (num) => String(num).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 function EmployeeDetailModal({ employee, devices, isLoading, error, onRetry, onClose }) {
