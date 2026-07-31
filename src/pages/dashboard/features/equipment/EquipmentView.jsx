@@ -22,6 +22,7 @@ export function EquipmentItemsTable({
   statusFilter,
   onFilterStatus,
   onEdit,
+  onUnassign,
   canManage = true,
 }) {
   const columns = useMemo(() => getRecordColumns(items, equipmentItemColumns), [items]);
@@ -86,30 +87,45 @@ return (
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {items.map((item, index) => (
-                  <tr key={item.equipment_id ?? index} className="transition hover:bg-slate-50/70">
-                    {columns.map((column) => (
-                      <td
-                        key={column.key}
-                        className={`px-4 py-3 text-slate-600 ${column.key === "remark" ? "min-w-72 whitespace-normal" : "whitespace-nowrap"
-                          }`}
-                      >
-                        <RecordCellValue value={item[column.key]} />
-                      </td>
-                    ))}
-                    {canManage && (
-                      <td className="whitespace-nowrap px-4 py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => onEdit(item)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                {items.map((item, index) => {
+                  const hasOwner = Boolean(item.owner_id || item.owner_name);
+
+                  return (
+                    <tr key={item.equipment_id ?? index} className="transition hover:bg-slate-50/70">
+                      {columns.map((column) => (
+                        <td
+                          key={column.key}
+                          className={`px-4 py-3 text-slate-600 ${column.key === "remark" ? "min-w-72 whitespace-normal" : "whitespace-nowrap"
+                            }`}
                         >
-                          Edit
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
+                          <RecordCellValue value={item[column.key]} />
+                        </td>
+                      ))}
+                      {canManage && (
+                        <td className="whitespace-nowrap px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {hasOwner && onUnassign && (
+                              <button
+                                type="button"
+                                onClick={() => onUnassign(item)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-700 outline-none transition hover:border-amber-300 hover:bg-amber-50 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                              >
+                                Unassign
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => onEdit(item)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                            >
+                              Edit
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -134,6 +150,7 @@ export function EquipmentView({
   onBackToCategories,
   onAddNew,
   onEdit,
+  onUnassign,
   statuses,
   statusFilter,
   onFilterStatus,
@@ -183,6 +200,7 @@ if (detailCategory) {
         statusFilter={statusFilter}
         onFilterStatus={onFilterStatus}
         onEdit={onEdit}
+        onUnassign={onUnassign}
         canManage={canManage}
       />
     );

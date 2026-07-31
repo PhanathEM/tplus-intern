@@ -19,6 +19,7 @@ import {
   updateEquipment,
   fetchAvailableStock,
   assignEquipment,
+  unassignEquipment,
 } from "../../services/equipmentService";
 import {
   fetchEmployees,
@@ -143,6 +144,9 @@ function Dashboard({ user, onLogout }) {
   const [equipmentFormValues, setEquipmentFormValues] = useState(ADD_EQUIPMENT_INITIAL_VALUES);
   const [isSavingEquipment, setIsSavingEquipment] = useState(false);
   const [equipmentFormError, setEquipmentFormError] = useState(null);
+  const [equipmentToUnassign, setEquipmentToUnassign] = useState(null);
+  const [isUnassigningEquipment, setIsUnassigningEquipment] = useState(false);
+  const [unassignEquipmentError, setUnassignEquipmentError] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(initialDashboardView === "Departments");
   const [departmentsError, setDepartmentsError] = useState(null);
@@ -247,8 +251,6 @@ function Dashboard({ user, onLogout }) {
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
   const [deleteEmployeeError, setDeleteEmployeeError] = useState(null);
-  const [isCheckingEmployeeDelete, setIsCheckingEmployeeDelete] = useState(false);
-  const [employeeDeleteBlockingDevices, setEmployeeDeleteBlockingDevices] = useState([]);
 
   const [isDepartmentFormOpen, setIsDepartmentFormOpen] = useState(false);
   const [departmentFormMode, setDepartmentFormMode] = useState("add");
@@ -653,25 +655,14 @@ function Dashboard({ user, onLogout }) {
   function handleOpenDeleteEmployee(employee) {
     setEmployeeToDelete(employee);
     setDeleteEmployeeError(null);
-    setEmployeeDeleteBlockingDevices([]);
-    setIsCheckingEmployeeDelete(true);
-
-    searchEmployees(employee.full_name)
-      .then((data) => {
-        const rows = Array.isArray(data) ? data : [];
-        setEmployeeDeleteBlockingDevices(rows.filter((row) => row.employee_id === employee.employee_id));
-      })
-      .catch(() => setEmployeeDeleteBlockingDevices([]))
-      .finally(() => setIsCheckingEmployeeDelete(false));
   }
 
   function handleCloseDeleteEmployee() {
     setEmployeeToDelete(null);
-    setEmployeeDeleteBlockingDevices([]);
   }
 
   function handleConfirmDeleteEmployee() {
-    if (!employeeToDelete || employeeDeleteBlockingDevices.length > 0) return;
+    if (!employeeToDelete) return;
 
     setIsDeletingEmployee(true);
     setDeleteEmployeeError(null);
@@ -680,8 +671,21 @@ function Dashboard({ user, onLogout }) {
       .then(() => {
         setEmployeeToDelete(null);
         handleRetryEmployees();
+        const term = employeeSearchTerm.trim();
+        if (hasSearchedEmployees && term) runEmployeeSearch(term);
       })
-      .catch((error) => setDeleteEmployeeError(error.message || "Something went wrong."))
+      .catch((error) => {
+        const data = error.response?.data;
+        const ownedEquipment = data?.references?.owned_equipment || 0;
+
+        setDeleteEmployeeError(
+          ownedEquipment > 0
+            ? `This employee has ${ownedEquipment} assigned device${ownedEquipment === 1 ? "" : "s"}. Unassign ${
+                ownedEquipment === 1 ? "it" : "them"
+              } first.`
+            : data?.error || error.message || "Could not delete employee."
+        );
+      })
       .finally(() => setIsDeletingEmployee(false));
   }
 
@@ -777,7 +781,9 @@ function Dashboard({ user, onLogout }) {
     setIsMobileSidebarOpen(false);
   }
 
-  selectViewRef.current = handleSelectView;
+  useEffect(() => {
+    selectViewRef.current = handleSelectView;
+  });
 
   function handleMarkAllNotificationsRead() {
     setReadNotificationIds((current) => {
@@ -1399,6 +1405,49 @@ function Dashboard({ user, onLogout }) {
       .finally(() => setIsSavingEquipment(false));
   }
 
+  function getEquipmentDisplayName(item) {
+    return (
+      [item?.category || item?.category_name, item?.device_type, item?.device_model].filter(Boolean).join(" - ") ||
+      item?.computer_name ||
+      item?.equipment_code ||
+      item?.service_tag ||
+      `Equipment ${item?.equipment_id || ""}`.trim()
+    );
+  }
+
+  function handleOpenUnassignEquipment(item) {
+    setEquipmentToUnassign(item);
+    setUnassignEquipmentError(null);
+  }
+
+  function handleCloseUnassignEquipment() {
+    setEquipmentToUnassign(null);
+    setUnassignEquipmentError(null);
+  }
+
+  function handleConfirmUnassignEquipment() {
+    if (!equipmentToUnassign?.equipment_id) return;
+
+    setIsUnassigningEquipment(true);
+    setUnassignEquipmentError(null);
+
+    unassignEquipment(equipmentToUnassign.equipment_id)
+      .then(() => {
+        setEquipmentToUnassign(null);
+        handleRetryEquipment();
+        handleRetryAvailableStock();
+        handleRetryNotifications();
+        if (equipmentDetailCategory) {
+          handleViewEquipmentCategory(equipmentDetailCategory, equipmentStatusFilter);
+        }
+        const term = employeeSearchTerm.trim();
+        if (hasSearchedEmployees && term) runEmployeeSearch(term);
+        if (employeeDetailTarget) handleRetryEmployeeDetail();
+      })
+      .catch((error) => setUnassignEquipmentError(error.message || "Something went wrong."))
+      .finally(() => setIsUnassigningEquipment(false));
+  }
+
   function handleRetryReplacements() {
     setIsReplacementsLoading(true);
     setReplacementsError(null);
@@ -1989,6 +2038,7 @@ function Dashboard({ user, onLogout }) {
               onBackToCategories={handleBackToEquipmentCategories}
               onAddNew={handleOpenAddEquipmentItem}
               onEdit={handleOpenEditEquipmentItem}
+              onUnassign={handleOpenUnassignEquipment}
               onAddCategory={handleOpenAddCategory}
               onEditCategory={handleOpenEditCategory}
               onDeleteCategory={handleOpenDeleteCategory}
@@ -2339,14 +2389,26 @@ function Dashboard({ user, onLogout }) {
         confirmLabel="Delete employee"
         onConfirm={handleConfirmDeleteEmployee}
         onCancel={handleCloseDeleteEmployee}
-        isConfirming={isDeletingEmployee || isCheckingEmployeeDelete}
-        blocked={employeeDeleteBlockingDevices.length > 0}
-        error={
-          employeeDeleteBlockingDevices.length > 0
-            ? `Still has ${employeeDeleteBlockingDevices.length} device${employeeDeleteBlockingDevices.length === 1 ? "" : "s"
-            } assigned. Return or reassign this equipment before deleting the employee.`
-            : deleteEmployeeError
+        isConfirming={isDeletingEmployee}
+        error={deleteEmployeeError}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(equipmentToUnassign)}
+        title="Unassign this equipment?"
+        message={
+          equipmentToUnassign
+            ? `"${getEquipmentDisplayName(equipmentToUnassign)}" will be removed from ${
+                equipmentToUnassign.owner_name || "its current owner"
+              } and returned to stock available as Working - IT Stock.`
+            : ""
         }
+        confirmLabel="Unassign"
+        confirmingLabel="Unassigning..."
+        onConfirm={handleConfirmUnassignEquipment}
+        onCancel={handleCloseUnassignEquipment}
+        isConfirming={isUnassigningEquipment}
+        error={unassignEquipmentError}
       />
 
       <ConfirmDialog

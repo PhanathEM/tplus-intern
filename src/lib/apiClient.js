@@ -34,13 +34,17 @@ function buildHeaders(extraHeaders) {
 async function handleResponse(response) {
   if (!response.ok) {
     let message = `Request failed: ${response.status} ${response.statusText}`;
+    let data = null;
     try {
-      const data = await response.json();
+      data = await response.json();
       message = data?.error || data?.message || message;
     } catch {
       // response wasn't JSON, fall back to the default message
     }
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    error.response = { status: response.status, data };
+    throw error;
   }
   if (response.status === 204) return null;
   const text = await response.text();

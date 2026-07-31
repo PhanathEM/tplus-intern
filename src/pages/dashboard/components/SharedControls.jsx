@@ -101,6 +101,7 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel = "Delete",
+  confirmingLabel = "Deleting...",
   onConfirm,
   onCancel,
   isConfirming,
@@ -163,7 +164,7 @@ return (
                 disabled={isConfirming}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-rose-600 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-rose-700 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isConfirming ? "Deleting..." : confirmLabel}
+                {isConfirming ? confirmingLabel : confirmLabel}
               </button>
             </>
           )}

@@ -29,3 +29,14 @@ export function fetchAvailableStock() {
 export function assignEquipment(payload) {
   return apiPost("/api/stock/assign", payload);
 }
+
+export function unassignEquipment(target, status = "Working - IT Stock") {
+  const payload =
+    target && typeof target === "object" && !Array.isArray(target)
+      ? { ...target }
+      : Array.isArray(target)
+        ? { equipment_ids: target }
+        : { equipment_id: target };
+
+  return apiPost("/api/equipment/unassign", { ...payload, status: payload.status || status });
+}
