@@ -4,12 +4,19 @@ import { TbLayoutSidebar } from "react-icons/tb";
 import tplusLogo from "../../../assets/tplus-logo.png";
 import { navSections } from "../dashboard.config";
 
-export function SidebarNavigation({ collapsed = false, activeView, onSelect }) {
+export function SidebarNavigation({ collapsed = false, activeView, onSelect, canManage = true }) {
   const [expandedLabels, setExpandedLabels] = useState(() => new Set());
+
+  const visibleSections = navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.adminOnly || canManage),
+    }))
+    .filter((section) => section.items.length > 0);
 
 return (
     <nav className={`scrollbar-thin-dark flex-1 overflow-y-auto py-4 ${collapsed ? "px-3" : "px-4"}`}>
-      {navSections.map((section, sectionIdx) => (
+      {visibleSections.map((section, sectionIdx) => (
         <div key={section.label} className={sectionIdx === 0 ? "" : "mt-5"}>
           {!collapsed ? (
             <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">

@@ -19,6 +19,7 @@ export const dashboardRouteByView = {
   "Cloud Rate": "cloud-rate",
   "Cloud Usage": "cloud-usage",
   "Service Usage": "service-usage",
+  Users: "users",
 };
 
 const dashboardViewByRoute = Object.fromEntries(

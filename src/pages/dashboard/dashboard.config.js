@@ -10,6 +10,7 @@ import {
   FiShield as Shield,
   FiShoppingCart as ShoppingCart,
   FiUsers as Users,
+  FiUserCheck as UserCheck,
   FiLayers as Layers,
 } from "react-icons/fi";
 
@@ -55,6 +56,10 @@ export const navSections = [
   {
     label: "Operations",
     items: [{ label: "Service Usage", icon: Activity }],
+  },
+  {
+    label: "Administration",
+    items: [{ label: "Users", icon: UserCheck, adminOnly: true }],
   },
 ];
 

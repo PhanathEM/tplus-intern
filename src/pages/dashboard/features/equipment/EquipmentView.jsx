@@ -22,6 +22,7 @@ export function EquipmentItemsTable({
   statusFilter,
   onFilterStatus,
   onEdit,
+  canManage = true,
 }) {
   const columns = useMemo(() => getRecordColumns(items, equipmentItemColumns), [items]);
 
@@ -79,7 +80,9 @@ return (
                       {column.label}
                     </th>
                   ))}
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold text-right">Actions</th>
+                  {canManage && (
+                    <th className="whitespace-nowrap px-4 py-3 font-semibold text-right">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -94,15 +97,17 @@ return (
                         <RecordCellValue value={item[column.key]} />
                       </td>
                     ))}
-                    <td className="whitespace-nowrap px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => onEdit(item)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                      >
-                        Edit
-                      </button>
-                    </td>
+                    {canManage && (
+                      <td className="whitespace-nowrap px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => onEdit(item)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -135,6 +140,7 @@ export function EquipmentView({
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
+  canManage = true,
 }) {
   const statusOptions = useMemo(() => ["All", ...statuses.map((item) => item.status_name)], [statuses]);
 
@@ -177,6 +183,7 @@ if (detailCategory) {
         statusFilter={statusFilter}
         onFilterStatus={onFilterStatus}
         onEdit={onEdit}
+        canManage={canManage}
       />
     );
   }
@@ -195,22 +202,26 @@ return (
             )}
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onAddNew}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-            >
-              <PlusCircle size={15} />
-              Add New Item
-            </button>
-            <button
-              type="button"
-              onClick={onAddCategory}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-            >
-              <PlusCircle size={15} />
-              Add New Category
-            </button>
+            {canManage && (
+              <>
+                <button
+                  type="button"
+                  onClick={onAddNew}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                >
+                  <PlusCircle size={15} />
+                  Add New Item
+                </button>
+                <button
+                  type="button"
+                  onClick={onAddCategory}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                >
+                  <PlusCircle size={15} />
+                  Add New Category
+                </button>
+              </>
+            )}
             <CategoryDropdown options={categoryOptions} selected={selectedCategory} onSelect={onSelectCategory} />
           </div>
         </div>
@@ -282,21 +293,25 @@ return (
                             <ChevronDown size={12} className="-rotate-90" />
                           </button>
 
-<button
-                            type="button"
-                            onClick={() => onEditCategory(item)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                          >
-                            Edit
-                          </button>
+{canManage && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => onEditCategory(item)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                              >
+                                Edit
+                              </button>
 
 <button
-                            type="button"
-                            onClick={() => onDeleteCategory(item)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                          >
-                            Delete
-                          </button>
+                                type="button"
+                                onClick={() => onDeleteCategory(item)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

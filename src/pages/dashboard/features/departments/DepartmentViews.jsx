@@ -8,7 +8,16 @@ import { departmentColumns } from "../../dashboard.config";
 import { FormField, formInputClass } from "../../components/SharedControls";
 import { RecordsTableView } from "../../components/RecordsTableView";
 
-export function DepartmentsView({ departments, isLoading, error, onRetry, onAddNew, onEdit, onDelete }) {
+export function DepartmentsView({
+  departments,
+  isLoading,
+  error,
+  onRetry,
+  onAddNew,
+  onEdit,
+  onDelete,
+  canManage = true,
+}) {
   return (
     <RecordsTableView
       records={departments}
@@ -25,33 +34,38 @@ export function DepartmentsView({ departments, isLoading, error, onRetry, onAddN
       error={error}
       onRetry={onRetry}
       headerActions={
-        <button
-          type="button"
-          onClick={onAddNew}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-        >
-          <PlusCircle size={14} />
-          Add Department
-        </button>
+        canManage && (
+          <button
+            type="button"
+            onClick={onAddNew}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+          >
+            <PlusCircle size={14} />
+            Add Department
+          </button>
+        )
       }
-      renderRowActions={(department) => (
-        <div className="flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => onEdit(department)}
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-          >
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete(department)}
-            className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-          >
-            Delete
-          </button>
-        </div>
-      )}
+      renderRowActions={
+        canManage &&
+        ((department) => (
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => onEdit(department)}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(department)}
+              className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            >
+              Delete
+            </button>
+          </div>
+        ))
+      }
     />
   );
 }

@@ -31,7 +31,7 @@ export function EmployeeSearchPanel({
 }) {
   const employeeGroups = useMemo(() => groupEmployeeSearchResults(results), [results]);
 
-return (
+  return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
         <div>
@@ -59,7 +59,7 @@ return (
         </form>
       </div>
 
-{!hasSearched ? (
+      {!hasSearched ? (
         <EmptyState
           icon={Search}
           title="Search for an employee"
@@ -109,7 +109,7 @@ return (
                 </div>
               </div>
 
-<div className="mt-3 space-y-2 pl-12">
+              <div className="mt-3 space-y-2 pl-12">
                 {group.devices.map((device, idx) => (
                   <div
                     key={device.equipment_id ?? idx}
@@ -165,11 +165,11 @@ export function EmployeeFormModal({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-if (!isOpen) return null;
+  if (!isOpen) return null;
 
- const isEdit = mode === "edit";
+  const isEdit = mode === "edit";
 
-return (
+  return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
@@ -197,7 +197,7 @@ return (
           </button>
         </div>
 
-<form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
           <div className="overflow-y-auto px-6 py-5">
             {error && (
               <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
@@ -205,7 +205,7 @@ return (
               </div>
             )}
 
-<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <FormField label="Full Name *" htmlFor="employee-full_name">
                   <input
@@ -221,7 +221,7 @@ return (
                 </FormField>
               </div>
 
-<FormField label="Position" htmlFor="employee-position">
+              <FormField label="Position" htmlFor="employee-position">
                 <input
                   id="employee-position"
                   type="text"
@@ -233,7 +233,7 @@ return (
                 />
               </FormField>
 
-<FormField label="Department" htmlFor="employee-department">
+              <FormField label="Department" htmlFor="employee-department">
                 <select
                   id="employee-department"
                   autoComplete="off"
@@ -251,7 +251,7 @@ return (
                 </select>
               </FormField>
 
-<FormField label="Location" htmlFor="employee-location">
+              <FormField label="Location" htmlFor="employee-location">
                 <input
                   id="employee-location"
                   type="text"
@@ -263,7 +263,7 @@ return (
                 />
               </FormField>
 
-<FormField label="Staff Code" htmlFor="employee-staff_code">
+              <FormField label="Staff Code" htmlFor="employee-staff_code">
                 <input
                   id="employee-staff_code"
                   type="text"
@@ -275,7 +275,7 @@ return (
                 />
               </FormField>
 
-<FormField label="Phone" htmlFor="employee-phone">
+              <FormField label="Phone" htmlFor="employee-phone">
                 <input
                   id="employee-phone"
                   type="text"
@@ -287,7 +287,7 @@ return (
                 />
               </FormField>
 
-<FormField label="Sex" htmlFor="employee-sex">
+              <FormField label="Sex" htmlFor="employee-sex">
                 <input
                   id="employee-sex"
                   type="text"
@@ -301,7 +301,7 @@ return (
             </div>
           </div>
 
-<div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
             <button
               type="button"
               onClick={onClose}
@@ -340,15 +340,17 @@ export function EmployeeDirectoryTable({
   onAddNew,
   onEdit,
   onDelete,
+  canManage = true,
 }) {
   const columns = [
     { key: "full_name", label: "Name" },
     { key: "position", label: "Position" },
+    { key: "phone", label: "Phone" },
     { key: "department_code", label: "Department" },
     { key: "location", label: "Location" },
   ];
 
-return (
+  return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
         <div>
@@ -357,17 +359,19 @@ return (
             <p className="mt-0.5 text-[13px] text-slate-500">{totalCount} employees</p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onAddNew}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-        >
-          <PlusCircle size={15} />
-          Add New Employee
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            onClick={onAddNew}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+          >
+            <PlusCircle size={15} />
+            Add New Employee
+          </button>
+        )}
       </div>
 
-{isLoading ? (
+      {isLoading ? (
         <div className="px-5 py-10 text-center text-[13px] text-slate-500">Loading employees...</div>
       ) : error ? (
         <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
@@ -419,6 +423,7 @@ return (
                       {employee.full_name || "—"}
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{employee.position || "—"}</td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{employee.phone || "—"}</td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">
                       {getEmployeeDepartmentCode(employee) || "—"}
                     </td>
@@ -432,20 +437,24 @@ return (
                         >
                           View Detail
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => onEdit(employee)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onDelete(employee)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                        >
-                          Delete
-                        </button>
+                        {canManage && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => onEdit(employee)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onDelete(employee)}
+                              className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -454,7 +463,7 @@ return (
             </table>
           </div>
 
-{totalCount > 0 && (
+          {totalCount > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500">
               <span>
                 Showing {(page - 1) * pageSize + 1}
@@ -499,9 +508,9 @@ export function EmployeeDetailModal({ employee, devices, isLoading, error, onRet
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-if (!employee) return null;
+  if (!employee) return null;
 
-return (
+  return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
@@ -528,7 +537,7 @@ return (
           </button>
         </div>
 
-<div className="overflow-y-auto px-6 py-5">
+        <div className="overflow-y-auto px-6 py-5">
           {isLoading ? (
             <div className="py-10 text-center text-[13px] text-slate-500">Loading details...</div>
           ) : error ? (

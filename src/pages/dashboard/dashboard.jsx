@@ -42,6 +42,7 @@ import {
   deleteDepartment,
 } from "../../services/departmentService";
 import { createCategory, updateCategory, deleteCategory } from "../../services/categoryService";
+import { fetchUsers, updateUser, resetUserPassword } from "../../services/userService";
 import {
   createBorrow,
   fetchCurrentBorrows,
@@ -103,8 +104,11 @@ import {
   EmployeeFormModal,
   EmployeeSearchPanel,
 } from "./features/employees/EmployeeViews";
+import { ResetPasswordModal, UserRoleModal, UsersView } from "./features/users/UserViews";
+import { isAdmin } from "../../lib/permissions";
 
 function Dashboard({ user, onLogout }) {
+  const canManage = isAdmin(user);
   const initialDashboardView = getInitialDashboardView();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -143,6 +147,11 @@ function Dashboard({ user, onLogout }) {
   const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(initialDashboardView === "Departments");
   const [departmentsError, setDepartmentsError] = useState(null);
   const [departmentsFetchToken, setDepartmentsFetchToken] = useState(0);
+  const [users, setUsers] = useState([]);
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
+  const [isUsersLoading, setIsUsersLoading] = useState(initialDashboardView === "Users");
+  const [usersError, setUsersError] = useState(null);
+  const [usersFetchToken, setUsersFetchToken] = useState(0);
   const [replacements, setReplacements] = useState([]);
   const [isReplacementsLoading, setIsReplacementsLoading] = useState(
     initialDashboardView === "Device Replacement"
@@ -238,6 +247,8 @@ function Dashboard({ user, onLogout }) {
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
   const [deleteEmployeeError, setDeleteEmployeeError] = useState(null);
+  const [isCheckingEmployeeDelete, setIsCheckingEmployeeDelete] = useState(false);
+  const [employeeDeleteBlockingDevices, setEmployeeDeleteBlockingDevices] = useState([]);
 
   const [isDepartmentFormOpen, setIsDepartmentFormOpen] = useState(false);
   const [departmentFormMode, setDepartmentFormMode] = useState("add");
@@ -248,6 +259,17 @@ function Dashboard({ user, onLogout }) {
   const [departmentToDelete, setDepartmentToDelete] = useState(null);
   const [isDeletingDepartment, setIsDeletingDepartment] = useState(false);
   const [deleteDepartmentError, setDeleteDepartmentError] = useState(null);
+
+  const [userRoleTarget, setUserRoleTarget] = useState(null);
+  const [userRoleValues, setUserRoleValues] = useState({ full_name: "", role: "viewer" });
+  const [isSavingUserRole, setIsSavingUserRole] = useState(false);
+  const [userRoleError, setUserRoleError] = useState(null);
+  const [resetPasswordTarget, setResetPasswordTarget] = useState(null);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState(null);
+
   const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
   const [categoryFormMode, setCategoryFormMode] = useState("add");
   const [categoryFormTarget, setCategoryFormTarget] = useState(null);
@@ -322,6 +344,12 @@ function Dashboard({ user, onLogout }) {
     setIsDepartmentsLoading(true);
     setDepartmentsError(null);
     setDepartmentsFetchToken((value) => value + 1);
+  }
+
+  function handleRetryUsers() {
+    setIsUsersLoading(true);
+    setUsersError(null);
+    setUsersFetchToken((value) => value + 1);
   }
 
   function handleOpenAddEmployee() {
@@ -499,6 +527,72 @@ function Dashboard({ user, onLogout }) {
       .finally(() => setIsDeletingDepartment(false));
   }
 
+  function handleApproveUser(user) {
+    updateUser(user.user_id, { is_active: true })
+      .then(() => handleRetryUsers())
+      .catch((error) => setUsersError(error.message || "Something went wrong."));
+  }
+
+  function handleOpenEditUserRole(user) {
+    setUserRoleTarget(user);
+    setUserRoleValues({ full_name: user.full_name || "", role: user.role || "viewer" });
+    setUserRoleError(null);
+  }
+
+  function handleCloseEditUserRole() {
+    setUserRoleTarget(null);
+  }
+
+  function handleUserRoleFieldChange(key, value) {
+    setUserRoleValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleSubmitEditUserRole(event) {
+    event.preventDefault();
+
+    setIsSavingUserRole(true);
+    setUserRoleError(null);
+
+    updateUser(userRoleTarget.user_id, {
+      full_name: userRoleValues.full_name.trim(),
+      role: userRoleValues.role,
+    })
+      .then(() => {
+        setUserRoleTarget(null);
+        handleRetryUsers();
+      })
+      .catch((error) => setUserRoleError(error.message || "Something went wrong."))
+      .finally(() => setIsSavingUserRole(false));
+  }
+
+  function handleOpenResetPassword(user) {
+    setResetPasswordTarget(user);
+    setResetPassword("");
+    setResetPasswordConfirm("");
+    setResetPasswordError(null);
+  }
+
+  function handleCloseResetPassword() {
+    setResetPasswordTarget(null);
+  }
+
+  function handleSubmitResetPassword(event) {
+    event.preventDefault();
+
+    if (resetPassword !== resetPasswordConfirm) {
+      setResetPasswordError("Passwords do not match.");
+      return;
+    }
+
+    setIsResettingPassword(true);
+    setResetPasswordError(null);
+
+    resetUserPassword(resetPasswordTarget.user_id, resetPassword)
+      .then(() => setResetPasswordTarget(null))
+      .catch((error) => setResetPasswordError(error.message || "Something went wrong."))
+      .finally(() => setIsResettingPassword(false));
+  }
+
   function handleOpenEditEmployee(employee) {
     setEmployeeFormMode("edit");
     setEmployeeFormTarget(employee);
@@ -559,14 +653,25 @@ function Dashboard({ user, onLogout }) {
   function handleOpenDeleteEmployee(employee) {
     setEmployeeToDelete(employee);
     setDeleteEmployeeError(null);
+    setEmployeeDeleteBlockingDevices([]);
+    setIsCheckingEmployeeDelete(true);
+
+    searchEmployees(employee.full_name)
+      .then((data) => {
+        const rows = Array.isArray(data) ? data : [];
+        setEmployeeDeleteBlockingDevices(rows.filter((row) => row.employee_id === employee.employee_id));
+      })
+      .catch(() => setEmployeeDeleteBlockingDevices([]))
+      .finally(() => setIsCheckingEmployeeDelete(false));
   }
 
   function handleCloseDeleteEmployee() {
     setEmployeeToDelete(null);
+    setEmployeeDeleteBlockingDevices([]);
   }
 
   function handleConfirmDeleteEmployee() {
-    if (!employeeToDelete) return;
+    if (!employeeToDelete || employeeDeleteBlockingDevices.length > 0) return;
 
     setIsDeletingEmployee(true);
     setDeleteEmployeeError(null);
@@ -791,6 +896,7 @@ function Dashboard({ user, onLogout }) {
   const isAvailableStockView = activeView === "Stock Available";
   const isCurrentBorrowsView = activeView === "Currently Borrowed";
   const isBorrowHistoryView = activeView === "Borrow History";
+  const isUsersView = activeView === "Users";
 
   useEffect(() => {
     if (!isEquipmentView) return;
@@ -1003,6 +1109,33 @@ function Dashboard({ user, onLogout }) {
       ignore = true;
     };
   }, [isDepartmentsView, departmentsFetchToken]);
+
+  useEffect(() => {
+    if (!isUsersView) return;
+
+    let ignore = false;
+
+    fetchUsers()
+      .then((data) => {
+        if (ignore) return;
+        const list = Array.isArray(data) ? data : data?.users;
+        setUsers(Array.isArray(list) ? list : []);
+        setPendingApprovalCount(
+          data?.pending_approval ?? (Array.isArray(list) ? list.filter((u) => !u.is_active).length : 0)
+        );
+        setUsersError(null);
+      })
+      .catch((error) => {
+        if (!ignore) setUsersError(error.message || "Something went wrong.");
+      })
+      .finally(() => {
+        if (!ignore) setIsUsersLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isUsersView, usersFetchToken]);
 
   useEffect(() => {
     if (!isCloudRateView) return;
@@ -1599,7 +1732,7 @@ function Dashboard({ user, onLogout }) {
                   <X />
                 </button>
               </div>
-              <SidebarNavigation activeView={activeView} onSelect={handleSelectView} />
+              <SidebarNavigation activeView={activeView} onSelect={handleSelectView} canManage={canManage} />
             </aside>
           </div>
         )}
@@ -1613,7 +1746,12 @@ function Dashboard({ user, onLogout }) {
             collapsed={isSidebarCollapsed}
             onToggleCollapse={() => setIsSidebarCollapsed((value) => !value)}
           />
-          <SidebarNavigation collapsed={isSidebarCollapsed} activeView={activeView} onSelect={handleSelectView} />
+          <SidebarNavigation
+            collapsed={isSidebarCollapsed}
+            activeView={activeView}
+            onSelect={handleSelectView}
+            canManage={canManage}
+          />
         </aside>
 
 
@@ -1802,7 +1940,7 @@ function Dashboard({ user, onLogout }) {
                       <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
                         <div className="border-b border-slate-100 px-3 py-2">
                           <p className="truncate text-sm font-semibold text-slate-950">{displayName}</p>
-                          <p className="truncate text-xs text-slate-500">System admin</p>
+                          <p className="truncate text-xs text-slate-500">{canManage ? "Admin" : "Viewer"}</p>
                         </div>
                         <button
                           type="button"
@@ -1836,6 +1974,7 @@ function Dashboard({ user, onLogout }) {
 
           {isEquipmentView && (
             <EquipmentView
+              canManage={canManage}
               categories={equipmentCategories}
               isLoading={isEquipmentLoading}
               error={equipmentError}
@@ -1906,6 +2045,7 @@ function Dashboard({ user, onLogout }) {
 
           {isDepartmentsView && (
             <DepartmentsView
+              canManage={canManage}
               departments={departments}
               isLoading={isDepartmentsLoading}
               error={departmentsError}
@@ -1945,6 +2085,7 @@ function Dashboard({ user, onLogout }) {
 
           {isAvailableStockView && (
             <AvailableStockView
+              canManage={canManage}
               stock={availableStock}
               isLoading={isAvailableStockLoading}
               error={availableStockError}
@@ -1956,6 +2097,7 @@ function Dashboard({ user, onLogout }) {
 
           {isCurrentBorrowsView && (
             <CurrentBorrowsView
+              canManage={canManage}
               loans={currentBorrows}
               isLoading={isCurrentBorrowsLoading}
               error={currentBorrowsError}
@@ -1989,7 +2131,8 @@ function Dashboard({ user, onLogout }) {
             !isCloudUsageView &&
             !isAvailableStockView &&
             !isCurrentBorrowsView &&
-            !isBorrowHistoryView && (
+            !isBorrowHistoryView &&
+            !isUsersView && (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
                 <div className="rounded-xl border border-slate-200 bg-white">
                   <EmptyState
@@ -2017,6 +2160,7 @@ function Dashboard({ user, onLogout }) {
 
               {/* Employee directory */}
               <EmployeeDirectoryTable
+                canManage={canManage}
                 employees={paginatedEmployees}
                 totalCount={sortedEmployees.length}
                 sort={employeeSort}
@@ -2035,6 +2179,30 @@ function Dashboard({ user, onLogout }) {
               />
             </div>
           )}
+
+          {isUsersView &&
+            (canManage ? (
+              <UsersView
+                users={users}
+                pendingCount={pendingApprovalCount}
+                isLoading={isUsersLoading}
+                error={usersError}
+                onRetry={handleRetryUsers}
+                onApprove={handleApproveUser}
+                onEditRole={handleOpenEditUserRole}
+                onResetPassword={handleOpenResetPassword}
+              />
+            ) : (
+              <div className="px-4 py-6 sm:px-6 lg:px-8">
+                <div className="rounded-xl border border-slate-200 bg-white">
+                  <EmptyState
+                    icon={Box}
+                    title="Not available"
+                    description="This page is admin-only."
+                  />
+                </div>
+              </div>
+            ))}
         </main>
       </div>
 
@@ -2125,6 +2293,30 @@ function Dashboard({ user, onLogout }) {
         error={departmentFormError}
       />
 
+      <UserRoleModal
+        isOpen={Boolean(userRoleTarget)}
+        user={userRoleTarget}
+        values={userRoleValues}
+        onChange={handleUserRoleFieldChange}
+        onSubmit={handleSubmitEditUserRole}
+        onClose={handleCloseEditUserRole}
+        isSubmitting={isSavingUserRole}
+        error={userRoleError}
+      />
+
+      <ResetPasswordModal
+        isOpen={Boolean(resetPasswordTarget)}
+        user={resetPasswordTarget}
+        password={resetPassword}
+        confirmPassword={resetPasswordConfirm}
+        onChangePassword={setResetPassword}
+        onChangeConfirmPassword={setResetPasswordConfirm}
+        onSubmit={handleSubmitResetPassword}
+        onClose={handleCloseResetPassword}
+        isSubmitting={isResettingPassword}
+        error={resetPasswordError}
+      />
+
       <CategoryFormModal
         isOpen={isCategoryFormOpen}
         mode={categoryFormMode}
@@ -2147,8 +2339,14 @@ function Dashboard({ user, onLogout }) {
         confirmLabel="Delete employee"
         onConfirm={handleConfirmDeleteEmployee}
         onCancel={handleCloseDeleteEmployee}
-        isConfirming={isDeletingEmployee}
-        error={deleteEmployeeError}
+        isConfirming={isDeletingEmployee || isCheckingEmployeeDelete}
+        blocked={employeeDeleteBlockingDevices.length > 0}
+        error={
+          employeeDeleteBlockingDevices.length > 0
+            ? `Still has ${employeeDeleteBlockingDevices.length} device${employeeDeleteBlockingDevices.length === 1 ? "" : "s"
+            } assigned. Return or reassign this equipment before deleting the employee.`
+            : deleteEmployeeError
+        }
       />
 
       <ConfirmDialog
