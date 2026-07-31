@@ -63,30 +63,6 @@ export const navItemsByLabel = navSections
   .flatMap((item) => (item.children ? [item, ...item.children] : [item]))
   .reduce((acc, item) => ({ ...acc, [item.label]: item }), {});
 
-export const initialNotifications = [
-  {
-    id: "ntf-1",
-    title: "Unusual sign-in detected",
-    detail: "New device login from Phnom Penh, KH",
-    time: "5 min ago",
-    unread: true,
-  },
-  {
-    id: "ntf-2",
-    title: "SSD upgrade approved",
-    detail: "Procurement approved 12 units",
-    time: "1 hr ago",
-    unread: true,
-  },
-  {
-    id: "ntf-3",
-    title: "Weekly report ready",
-    detail: "Asset compliance report generated",
-    time: "Yesterday",
-    unread: false,
-  },
-];
-
 export const equipmentItemColumns = [
   { key: "equipment_id", label: "Equipment ID" },
   { key: "category", label: "Category" },

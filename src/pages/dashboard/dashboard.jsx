@@ -5,6 +5,7 @@ import {
   FiChevronDown as ChevronDown,
   FiLogOut as LogOut,
   FiMenu as Menu,
+  FiRefreshCw as RefreshCw,
   FiSearch as Search,
   FiSettings as Settings,
   FiUser as UserIcon,
@@ -56,10 +57,10 @@ import {
   EMPLOYEES_PAGE_SIZE,
   EQUIPMENT_CATEGORY_OPTIONS,
   RETURN_EQUIPMENT_INITIAL_VALUES,
-  initialNotifications,
   navItemsByLabel,
 } from "./dashboard.config";
 import { getEmployeeDepartmentCode, normalizeRecordList } from "./dashboard.utils";
+import { buildDashboardNotifications } from "./dashboard.notifications";
 import {
   DASHBOARD_DEFAULT_VIEW,
   getDashboardTitle,
@@ -108,7 +109,15 @@ function Dashboard({ user, onLogout }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState(initialDashboardView);
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const [readNotificationIds, setReadNotificationIds] = useState(() => new Set());
+  const [notificationData, setNotificationData] = useState({
+    currentBorrows: [],
+    availableStock: [],
+    licenses: [],
+  });
+  const [isNotificationsLoading, setIsNotificationsLoading] = useState(true);
+  const [notificationsError, setNotificationsError] = useState(null);
+  const [notificationsFetchToken, setNotificationsFetchToken] = useState(0);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuCloseTimeout = useRef(null);
@@ -258,7 +267,19 @@ function Dashboard({ user, onLogout }) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-  const hasUnreadNotifications = notifications.some((item) => item.unread);
+  const notifications = useMemo(
+    () =>
+      buildDashboardNotifications({
+        ...notificationData,
+        error: notificationsError,
+      }).map((item) => ({
+        ...item,
+        unread: !readNotificationIds.has(item.id),
+      })),
+    [notificationData, notificationsError, readNotificationIds]
+  );
+  const unreadNotificationCount = notifications.filter((item) => item.unread).length;
+  const hasUnreadNotifications = unreadNotificationCount > 0;
 
   const equipmentFormCategoryOptions = useMemo(() => {
     const names = new Set(EQUIPMENT_CATEGORY_OPTIONS);
@@ -654,7 +675,25 @@ function Dashboard({ user, onLogout }) {
   selectViewRef.current = handleSelectView;
 
   function handleMarkAllNotificationsRead() {
-    setNotifications((current) => current.map((item) => ({ ...item, unread: false })));
+    setReadNotificationIds((current) => {
+      const next = new Set(current);
+      notifications.forEach((item) => next.add(item.id));
+      return next;
+    });
+  }
+
+  function handleRetryNotifications() {
+    setIsNotificationsLoading(true);
+    setNotificationsError(null);
+    setNotificationsFetchToken((value) => value + 1);
+  }
+
+  function handleOpenNotification(notification) {
+    setReadNotificationIds((current) => new Set(current).add(notification.id));
+    if (notification.targetView) {
+      handleSelectView(notification.targetView);
+    }
+    setIsNotificationsOpen(false);
   }
 
   useEffect(() => {
@@ -699,6 +738,43 @@ function Dashboard({ user, onLogout }) {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    Promise.allSettled([fetchCurrentBorrows(), fetchAvailableStock(), fetchLicenses()])
+      .then(([borrowsResult, stockResult, licensesResult]) => {
+        if (ignore) return;
+
+        const failures = [];
+        if (borrowsResult.status === "rejected") failures.push("current borrows");
+        if (stockResult.status === "rejected") failures.push("available stock");
+        if (licensesResult.status === "rejected") failures.push("licenses");
+
+        setNotificationData({
+          currentBorrows:
+            borrowsResult.status === "fulfilled" && Array.isArray(borrowsResult.value?.borrowed)
+              ? borrowsResult.value.borrowed
+              : [],
+          availableStock:
+            stockResult.status === "fulfilled" && Array.isArray(stockResult.value?.equipment)
+              ? stockResult.value.equipment
+              : [],
+          licenses:
+            licensesResult.status === "fulfilled" ? normalizeRecordList(licensesResult.value) : [],
+        });
+        setNotificationsError(
+          failures.length ? `Could not refresh ${failures.join(", ")} notifications.` : null
+        );
+      })
+      .finally(() => {
+        if (!ignore) setIsNotificationsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [notificationsFetchToken]);
 
   const activeNavItem = navItemsByLabel[activeView];
   const isEmployeeView = activeView === "Employee";
@@ -885,8 +961,10 @@ function Dashboard({ user, onLogout }) {
 
     fetchLicenses()
       .then((data) => {
+        const records = normalizeRecordList(data);
         if (!ignore) {
-          setLicenses(normalizeRecordList(data));
+          setLicenses(records);
+          setNotificationData((current) => ({ ...current, licenses: records }));
           setLicensesError(null);
         }
       })
@@ -1005,8 +1083,10 @@ function Dashboard({ user, onLogout }) {
 
     fetchAvailableStock()
       .then((data) => {
+        const records = Array.isArray(data?.equipment) ? data.equipment : [];
         if (!ignore) {
-          setAvailableStock(Array.isArray(data?.equipment) ? data.equipment : []);
+          setAvailableStock(records);
+          setNotificationData((current) => ({ ...current, availableStock: records }));
           setAvailableStockError(null);
         }
       })
@@ -1029,8 +1109,10 @@ function Dashboard({ user, onLogout }) {
 
     fetchCurrentBorrows()
       .then((data) => {
+        const records = Array.isArray(data?.borrowed) ? data.borrowed : [];
         if (!ignore) {
-          setCurrentBorrows(Array.isArray(data?.borrowed) ? data.borrowed : []);
+          setCurrentBorrows(records);
+          setNotificationData((current) => ({ ...current, currentBorrows: records }));
           setCurrentBorrowsError(null);
         }
       })
@@ -1175,6 +1257,7 @@ function Dashboard({ user, onLogout }) {
       .then(() => {
         setIsEquipmentFormOpen(false);
         handleRetryEquipment();
+        handleRetryNotifications();
         if (equipmentDetailCategory) {
           handleViewEquipmentCategory(equipmentDetailCategory, equipmentStatusFilter);
         }
@@ -1297,6 +1380,7 @@ function Dashboard({ user, onLogout }) {
       .then(() => {
         setIsReturnModalOpen(false);
         handleRetryCurrentBorrows();
+        handleRetryNotifications();
       })
       .catch((error) => setReturnError(error.message || "Something went wrong."))
       .finally(() => setIsReturning(false));
@@ -1359,6 +1443,7 @@ function Dashboard({ user, onLogout }) {
       .then(() => {
         setIsAssignModalOpen(false);
         handleRetryAvailableStock();
+        handleRetryNotifications();
       })
       .catch((error) => setAssignError(error.message || "Something went wrong."))
       .finally(() => setIsAssigning(false));
@@ -1416,6 +1501,7 @@ function Dashboard({ user, onLogout }) {
       .then(() => {
         setIsBorrowModalOpen(false);
         handleRetryAvailableStock();
+        handleRetryNotifications();
       })
       .catch((error) => setBorrowError(error.message || "Something went wrong."))
       .finally(() => setIsBorrowing(false));
@@ -1603,38 +1689,72 @@ function Dashboard({ user, onLogout }) {
                     >
                       <Bell size={18} />
                       {hasUnreadNotifications && (
-                        <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
+                        <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+                          {unreadNotificationCount > 9 ? "9+" : unreadNotificationCount}
+                        </span>
                       )}
                     </button>
 
                     {isNotificationsOpen && (
                       <div className="absolute right-0 top-full z-30 mt-2 w-80 rounded-xl border border-slate-200 bg-white shadow-lg">
                         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                          <p className="text-sm font-semibold text-slate-950">Notifications</p>
-                          <button
-                            type="button"
-                            onClick={handleMarkAllNotificationsRead}
-                            className="rounded text-xs font-semibold text-orange-600 outline-none transition hover:text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-400"
-                          >
-                            Mark all as read
-                          </button>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-950">Notifications</p>
+                            <p className="mt-0.5 text-[11px] text-slate-400">
+                              {unreadNotificationCount} unread
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={handleRetryNotifications}
+                              disabled={isNotificationsLoading}
+                              className="grid h-7 w-7 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
+                              aria-label="Refresh notifications"
+                              title="Refresh notifications"
+                            >
+                              <RefreshCw size={13} className={isNotificationsLoading ? "animate-spin" : ""} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleMarkAllNotificationsRead}
+                              disabled={notifications.length === 0}
+                              className="rounded text-xs font-semibold text-orange-600 outline-none transition hover:text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:text-slate-300"
+                            >
+                              Mark all as read
+                            </button>
+                          </div>
                         </div>
                         <div className="max-h-80 overflow-y-auto">
-                          {notifications.length === 0 ? (
+                          {isNotificationsLoading && notifications.length === 0 ? (
+                            <div className="px-4 py-8 text-center text-[13px] text-slate-500">
+                              Loading notifications...
+                            </div>
+                          ) : notifications.length === 0 ? (
                             <EmptyState icon={Bell} title="No notifications" description="You're all caught up." />
                           ) : (
                             notifications.map((item) => (
-                              <div key={item.id} className="flex gap-3 border-b border-slate-50 px-4 py-3 last:border-b-0">
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => handleOpenNotification(item)}
+                                className="flex w-full gap-3 border-b border-slate-50 px-4 py-3 text-left outline-none transition last:border-b-0 hover:bg-slate-50 focus-visible:bg-slate-50"
+                              >
                                 <span
-                                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.unread ? "bg-orange-500" : "bg-transparent"
-                                    }`}
+                                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                                    item.unread
+                                      ? item.tone === "danger"
+                                        ? "bg-rose-500"
+                                        : "bg-orange-500"
+                                      : "bg-transparent"
+                                  }`}
                                 />
                                 <div className="min-w-0">
                                   <p className="text-[13px] font-semibold text-slate-950">{item.title}</p>
                                   <p className="mt-0.5 text-[13px] text-slate-500">{item.detail}</p>
                                   <p className="mt-1 text-[11px] text-slate-400">{item.time}</p>
                                 </div>
-                              </div>
+                              </button>
                             ))
                           )}
                         </div>
