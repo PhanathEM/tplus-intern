@@ -29,6 +29,7 @@ export const navSections = [
         label: "Equipment",
         icon: Box,
         children: [
+          { label: "All Equipment", icon: Box },
           { label: "Stock Available", icon: Box },
           { label: "Currently Borrowed", icon: RefreshCw },
           { label: "Borrow History", icon: Search },

@@ -18,7 +18,7 @@ export function EmptyState({ icon: Icon, title, description }) {
   );
 }
 
-export function CategoryDropdown({ options, selected, onSelect }) {
+export function CategoryDropdown({ options, selected, onSelect, label = "Select" }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -48,7 +48,7 @@ return (
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <span className="truncate">{selected}</span>
+        <span className="truncate">{selected === "All" ? `All ${label}` : selected}</span>
         <ChevronDown
           size={14}
           className={`shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
@@ -58,7 +58,7 @@ return (
 {isOpen && (
         <div
           role="listbox"
-          className="absolute right-0 top-full z-30 mt-2 max-h-72 w-52 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+          className="absolute right-0 top-full z-30 mt-2 min-w-52 max-w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
         >
           {options.map((option) => (
             <button

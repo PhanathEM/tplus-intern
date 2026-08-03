@@ -8,6 +8,7 @@ export const dashboardRouteByView = {
   Employee: "employee",
   Departments: "departments",
   Equipment: "equipment",
+  "All Equipment": "equipment",
   "Stock Available": "stock-available",
   "Currently Borrowed": "currently-borrowed",
   "Borrow History": "borrow-history",

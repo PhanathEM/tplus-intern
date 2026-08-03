@@ -715,7 +715,7 @@ function Dashboard({ user, onLogout }) {
   function handleSelectView(label, { updateUrl = true } = {}) {
     if (!navItemsByLabel[label]) return;
 
-    if (label === "Equipment" && label !== activeView) {
+    if (label === "All Equipment" && label !== activeView) {
       setIsEquipmentLoading(true);
       setEquipmentError(null);
     }
@@ -890,7 +890,7 @@ function Dashboard({ user, onLogout }) {
   const activeNavItem = navItemsByLabel[activeView];
   const isEmployeeView = activeView === "Employee";
   const isDepartmentsView = activeView === "Departments";
-  const isEquipmentView = activeView === "Equipment";
+  const isEquipmentView = activeView === "All Equipment";
   const isReplacementView = activeView === "Device Replacement";
   const isSsdUpgradeView = activeView === "SSD Upgrade";
   const isSsdProcurementView = activeView === "SSD Procurement";
@@ -927,6 +927,11 @@ function Dashboard({ user, onLogout }) {
       ignore = true;
     };
   }, [isEquipmentView, equipmentFetchToken]);
+
+  useEffect(() => {
+    if (!isEquipmentView) return;
+    handleViewEquipmentCategory(equipmentCategory, equipmentStatusFilter);
+  }, [isEquipmentView, equipmentFetchToken, equipmentCategory, equipmentStatusFilter]);
 
   useEffect(() => {
     if (!isEquipmentView) return;
@@ -1690,19 +1695,25 @@ function Dashboard({ user, onLogout }) {
   }
 
   function handleViewEquipmentCategory(category, status = "All") {
+    setEquipmentCategory(category);
     setEquipmentDetailCategory(category);
     setEquipmentStatusFilter(status);
     setIsEquipmentItemsLoading(true);
     setEquipmentItemsError(null);
 
-    fetchEquipmentByCategory(category, status)
+    const queryCategory = category === "All" ? "" : category;
+    fetchEquipmentByCategory(queryCategory, status)
       .then((data) => setEquipmentItems(Array.isArray(data) ? data : []))
       .catch((error) => setEquipmentItemsError(error.message || "Something went wrong."))
       .finally(() => setIsEquipmentItemsLoading(false));
   }
 
+  function handleSelectEquipmentCategory(category) {
+    handleViewEquipmentCategory(category, equipmentStatusFilter);
+  }
+
   function handleFilterEquipmentStatus(status) {
-    handleViewEquipmentCategory(equipmentDetailCategory, status);
+    handleViewEquipmentCategory(equipmentCategory, status);
   }
 
   function handleBackToEquipmentCategories() {
@@ -2021,7 +2032,7 @@ function Dashboard({ user, onLogout }) {
             </div>
           </header>
 
-          {isEquipmentView && (
+          {(isEquipmentView) && (
             <EquipmentView
               canManage={canManage}
               categories={equipmentCategories}
@@ -2029,7 +2040,7 @@ function Dashboard({ user, onLogout }) {
               error={equipmentError}
               onRetry={handleRetryEquipment}
               selectedCategory={equipmentCategory}
-              onSelectCategory={setEquipmentCategory}
+              onSelectCategory={handleSelectEquipmentCategory}
               detailCategory={equipmentDetailCategory}
               items={equipmentItems}
               isItemsLoading={isEquipmentItemsLoading}

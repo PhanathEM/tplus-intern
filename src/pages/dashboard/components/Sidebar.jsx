@@ -29,9 +29,9 @@ return (
 <div className="space-y-0.5">
             {section.items.map((item) => {
               const Icon = item.icon;
-              const isActive = item.label === activeView;
               const hasChildren = Boolean(item.children?.length);
               const isChildActive = hasChildren && item.children.some((child) => child.label === activeView);
+              const isActive = item.label === activeView || isChildActive;
               const isExpanded = expandedLabels.has(item.label) || isChildActive;
 
 return (
@@ -54,7 +54,21 @@ return (
                 >
                   <button
                     type="button"
-                    onClick={() => onSelect(item.label)}
+                    onClick={() => {
+                      if (hasChildren) {
+                        setExpandedLabels((current) => {
+                          const next = new Set(current);
+                          if (next.has(item.label)) {
+                            next.delete(item.label);
+                          } else {
+                            next.add(item.label);
+                          }
+                          return next;
+                        });
+                        return;
+                      }
+                      onSelect(item.label);
+                    }}
                     title={collapsed ? item.label : undefined}
                     className={`group relative flex w-full items-center rounded-lg py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${collapsed ? "justify-center px-0" : "gap-3 px-3 text-left"
                       } ${isActive
