@@ -59,6 +59,7 @@ import {
   EMPLOYEES_PAGE_SIZE,
   EQUIPMENT_CATEGORY_OPTIONS,
   RETURN_EQUIPMENT_INITIAL_VALUES,
+  navSections,
   navItemsByLabel,
 } from "./dashboard.config";
 import { getEmployeeDepartmentCode, normalizeRecordList } from "./dashboard.utils";
@@ -105,15 +106,141 @@ import {
   EmployeeFormModal,
   EmployeeSearchPanel,
 } from "./features/employees/EmployeeViews";
-import { ResetPasswordModal, UserRoleModal, UsersView } from "./features/users/UserViews";
-import { isAdmin } from "../../lib/permissions";
+import { ResetPasswordModal, UserPermissionsModal, UsersView } from "./features/users/UserViews";
+import { ActivityLogView, MyActivityView } from "./features/activity/ActivityViews";
+import {
+  canAccessDashboardView,
+  getAccessProfileLabel,
+  getAccessibleDashboardViews,
+  hasPermission,
+  isAdmin,
+  mergeStoredPermissionsForUser,
+  normalizeUserPermissions,
+  PERMISSIONS,
+  permissionsToRole,
+  rememberUserPermissions,
+} from "../../lib/permissions";
+import {
+  ACTIVITY_ACTION_VALUES,
+  ACTIVITY_MODULE_VALUES,
+  ACTIVITY_MODULES,
+  getActivityLog,
+  logActivity,
+  markActivityRestored,
+  subscribeActivityLog,
+} from "../../lib/activityLog";
+
+function buildEmployeeRestorePayload(snapshot) {
+  const payload = {
+    full_name: snapshot?.full_name || "",
+    position: snapshot?.position || "",
+    department: getEmployeeDepartmentCode(snapshot) || "",
+    location: snapshot?.location || "",
+    staff_code: snapshot?.staff_code || "",
+    phone: snapshot?.phone || "",
+    sex: snapshot?.sex || "",
+  };
+  return Object.fromEntries(Object.entries(payload).filter(([, value]) => String(value).trim() !== ""));
+}
+
+function buildDepartmentRestorePayload(snapshot) {
+  return {
+    department_code: snapshot?.department_code || "",
+    department_name: snapshot?.department_name || "",
+  };
+}
+
+function buildCategoryRestorePayload(snapshot) {
+  return {
+    category_name: snapshot?.category_name || snapshot?.category || "",
+    description: snapshot?.description || "",
+  };
+}
 
 function Dashboard({ user, onLogout }) {
-  const canManage = isAdmin(user);
+  const canCreateRecords = isAdmin(user);
+  const canManageEquipment = hasPermission(user, PERMISSIONS.EQUIPMENT);
+  const canManageDepartments = hasPermission(user, PERMISSIONS.DEPARTMENTS);
+  const canManageEmployees = hasPermission(user, PERMISSIONS.EMPLOYEE);
+  const canManageStock = hasPermission(user, PERMISSIONS.STOCK_AVAILABLE);
+  const canManageBorrows = hasPermission(user, PERMISSIONS.CURRENTLY_BORROWED);
+  const canManageActivityLog = hasPermission(user, PERMISSIONS.ACTIVITY_LOG);
+  const [activityEntries, setActivityEntries] = useState(() => getActivityLog());
+  const [activityLogFilters, setActivityLogFilters] = useState({
+    module: "All",
+    action: "All",
+    search: "",
+  });
+  const [restoringActivityId, setRestoringActivityId] = useState(null);
+  const [activityRestoreError, setActivityRestoreError] = useState(null);
+
+  useEffect(() => subscribeActivityLog(() => setActivityEntries(getActivityLog())), []);
+
+  const currentActorId = user?.user_id ?? user?.id ?? null;
+  const myActivityEntries = useMemo(
+    () => activityEntries.filter((entry) => String(entry.actorId) === String(currentActorId)),
+    [activityEntries, currentActorId]
+  );
+  const filteredActivityLogEntries = useMemo(() => {
+    const { module, action, search } = activityLogFilters;
+    const term = search.trim().toLowerCase();
+
+    return activityEntries.filter((entry) => {
+      if (module !== "All" && entry.module !== module) return false;
+      if (action !== "All" && entry.action !== action) return false;
+      if (term) {
+        const haystack = `${entry.actorName} ${entry.entityLabel}`.toLowerCase();
+        if (!haystack.includes(term)) return false;
+      }
+      return true;
+    });
+  }, [activityEntries, activityLogFilters]);
+
+  function handleActivityLogFilterChange(key, value) {
+    setActivityLogFilters((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleRestoreActivity(entry) {
+    if (!entry || entry.restoredAt || !entry.before) return;
+
+    setRestoringActivityId(entry.id);
+    setActivityRestoreError(null);
+
+    let request;
+    if (entry.module === ACTIVITY_MODULES.EMPLOYEE) {
+      request = createEmployee(buildEmployeeRestorePayload(entry.before));
+    } else if (entry.module === ACTIVITY_MODULES.DEPARTMENT) {
+      request = createDepartment(buildDepartmentRestorePayload(entry.before));
+    } else if (entry.module === ACTIVITY_MODULES.CATEGORY) {
+      request = createCategory(buildCategoryRestorePayload(entry.before));
+    } else {
+      setRestoringActivityId(null);
+      return;
+    }
+
+    request
+      .then(() => {
+        markActivityRestored(entry.id, user);
+        setActivityEntries(getActivityLog());
+        if (entry.module === ACTIVITY_MODULES.EMPLOYEE) handleRetryEmployees();
+        if (entry.module === ACTIVITY_MODULES.DEPARTMENT) handleRetryDepartments();
+        if (entry.module === ACTIVITY_MODULES.CATEGORY) handleRetryEquipment();
+      })
+      .catch((error) => setActivityRestoreError(error.message || "Could not restore this record."))
+      .finally(() => setRestoringActivityId(null));
+  }
+
+  const accessibleDashboardViews = useMemo(
+    () => getAccessibleDashboardViews(user, navSections),
+    [user]
+  );
+  const firstAccessibleDashboardView = accessibleDashboardViews[0] || null;
+  const canManageUsers = canAccessDashboardView(user, "Users", navItemsByLabel);
   const initialDashboardView = getInitialDashboardView();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState(initialDashboardView);
+  const hasActiveViewAccess = accessibleDashboardViews.includes(activeView);
   const [readNotificationIds, setReadNotificationIds] = useState(() => new Set());
   const [notificationData, setNotificationData] = useState({
     currentBorrows: [],
@@ -251,6 +378,7 @@ function Dashboard({ user, onLogout }) {
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
   const [deleteEmployeeError, setDeleteEmployeeError] = useState(null);
+  const [deleteEmployeeBlocked, setDeleteEmployeeBlocked] = useState(false);
 
   const [isDepartmentFormOpen, setIsDepartmentFormOpen] = useState(false);
   const [departmentFormMode, setDepartmentFormMode] = useState("add");
@@ -262,10 +390,10 @@ function Dashboard({ user, onLogout }) {
   const [isDeletingDepartment, setIsDeletingDepartment] = useState(false);
   const [deleteDepartmentError, setDeleteDepartmentError] = useState(null);
 
-  const [userRoleTarget, setUserRoleTarget] = useState(null);
-  const [userRoleValues, setUserRoleValues] = useState({ full_name: "", role: "viewer" });
-  const [isSavingUserRole, setIsSavingUserRole] = useState(false);
-  const [userRoleError, setUserRoleError] = useState(null);
+  const [userPermissionsTarget, setUserPermissionsTarget] = useState(null);
+  const [userPermissionValues, setUserPermissionValues] = useState({ full_name: "", permissions: [] });
+  const [isSavingUserPermissions, setIsSavingUserPermissions] = useState(false);
+  const [userPermissionsError, setUserPermissionsError] = useState(null);
   const [resetPasswordTarget, setResetPasswordTarget] = useState(null);
   const [resetPassword, setResetPassword] = useState("");
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
@@ -302,7 +430,14 @@ function Dashboard({ user, onLogout }) {
       })),
     [notificationData, notificationsError, readNotificationIds]
   );
-  const unreadNotificationCount = notifications.filter((item) => item.unread).length;
+  const visibleNotifications = useMemo(
+    () =>
+      notifications.filter(
+        (item) => !item.targetView || canAccessDashboardView(user, item.targetView, navItemsByLabel)
+      ),
+    [notifications, user]
+  );
+  const unreadNotificationCount = visibleNotifications.filter((item) => item.unread).length;
   const hasUnreadNotifications = unreadNotificationCount > 0;
 
   const equipmentFormCategoryOptions = useMemo(() => {
@@ -429,11 +564,21 @@ function Dashboard({ user, onLogout }) {
     };
 
     const id = categoryFormTarget?.id ?? categoryFormTarget?.category_id ?? categoryFormTarget?.categoryId ?? null;
+    const isEdit = categoryFormMode === "edit" && id;
 
-    const req = categoryFormMode === "edit" && id ? updateCategory(id, payload) : createCategory(payload);
+    const req = isEdit ? updateCategory(id, payload) : createCategory(payload);
 
     req
-      .then(() => {
+      .then((data) => {
+        logActivity({
+          actor: user,
+          action: isEdit ? "update" : "create",
+          module: ACTIVITY_MODULES.CATEGORY,
+          entityId: id ?? data?.category_id ?? data?.id,
+          entityLabel: payload.category_name,
+          before: isEdit ? categoryFormTarget : null,
+          after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
+        });
         setIsCategoryFormOpen(false);
         handleRetryEquipment();
       })
@@ -460,6 +605,15 @@ function Dashboard({ user, onLogout }) {
 
     deleteCategory(id)
       .then(() => {
+        logActivity({
+          actor: user,
+          action: "delete",
+          module: ACTIVITY_MODULES.CATEGORY,
+          entityId: id,
+          entityLabel: categoryToDelete?.category_name || categoryToDelete?.category || `Category ${id}`,
+          before: categoryToDelete,
+          restorable: true,
+        });
         setCategoryToDelete(null);
         handleRetryEquipment();
       })
@@ -491,13 +645,22 @@ function Dashboard({ user, onLogout }) {
       department_name: departmentFormValues.department_name.trim(),
     };
 
-    const request =
-      departmentFormMode === "edit"
-        ? updateDepartment(departmentFormTarget.department_id, payload)
-        : createDepartment(payload);
+    const isEdit = departmentFormMode === "edit";
+    const request = isEdit
+      ? updateDepartment(departmentFormTarget.department_id, payload)
+      : createDepartment(payload);
 
     request
-      .then(() => {
+      .then((data) => {
+        logActivity({
+          actor: user,
+          action: isEdit ? "update" : "create",
+          module: ACTIVITY_MODULES.DEPARTMENT,
+          entityId: isEdit ? departmentFormTarget.department_id : data?.department_id,
+          entityLabel: payload.department_name,
+          before: isEdit ? departmentFormTarget : null,
+          after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
+        });
         setIsDepartmentFormOpen(false);
         handleRetryDepartments();
       })
@@ -522,6 +685,15 @@ function Dashboard({ user, onLogout }) {
 
     deleteDepartment(departmentToDelete.department_id)
       .then(() => {
+        logActivity({
+          actor: user,
+          action: "delete",
+          module: ACTIVITY_MODULES.DEPARTMENT,
+          entityId: departmentToDelete.department_id,
+          entityLabel: departmentToDelete.department_name,
+          before: departmentToDelete,
+          restorable: true,
+        });
         setDepartmentToDelete(null);
         handleRetryDepartments();
       })
@@ -529,42 +701,78 @@ function Dashboard({ user, onLogout }) {
       .finally(() => setIsDeletingDepartment(false));
   }
 
-  function handleApproveUser(user) {
-    updateUser(user.user_id, { is_active: true })
-      .then(() => handleRetryUsers())
+  function handleApproveUser(targetUser) {
+    updateUser(targetUser.user_id, { is_active: true })
+      .then(() => {
+        logActivity({
+          actor: user,
+          action: "approve",
+          module: ACTIVITY_MODULES.USER,
+          entityId: targetUser.user_id,
+          entityLabel: targetUser.full_name || targetUser.username,
+          before: targetUser,
+          after: { ...targetUser, is_active: true },
+        });
+        handleRetryUsers();
+      })
       .catch((error) => setUsersError(error.message || "Something went wrong."));
   }
 
-  function handleOpenEditUserRole(user) {
-    setUserRoleTarget(user);
-    setUserRoleValues({ full_name: user.full_name || "", role: user.role || "viewer" });
-    setUserRoleError(null);
+  function handleOpenEditUserPermissions(user) {
+    setUserPermissionsTarget(user);
+    setUserPermissionValues({
+      full_name: user.full_name || "",
+      permissions: normalizeUserPermissions(user),
+    });
+    setUserPermissionsError(null);
   }
 
-  function handleCloseEditUserRole() {
-    setUserRoleTarget(null);
+  function handleCloseEditUserPermissions() {
+    setUserPermissionsTarget(null);
   }
 
-  function handleUserRoleFieldChange(key, value) {
-    setUserRoleValues((current) => ({ ...current, [key]: value }));
+  function handleUserPermissionFieldChange(key, value) {
+    setUserPermissionValues((current) => ({ ...current, [key]: value }));
   }
 
-  function handleSubmitEditUserRole(event) {
+  function handleSubmitEditUserPermissions(event) {
     event.preventDefault();
 
-    setIsSavingUserRole(true);
-    setUserRoleError(null);
+    const permissions = normalizeUserPermissions({ permissions: userPermissionValues.permissions });
+    const payload = {
+      full_name: userPermissionValues.full_name.trim(),
+      permissions,
+      role: permissionsToRole(permissions),
+    };
+    const legacyPayload = {
+      full_name: payload.full_name,
+      role: payload.role,
+    };
 
-    updateUser(userRoleTarget.user_id, {
-      full_name: userRoleValues.full_name.trim(),
-      role: userRoleValues.role,
-    })
+    setIsSavingUserPermissions(true);
+    setUserPermissionsError(null);
+
+    updateUser(userPermissionsTarget.user_id, payload)
+      .catch((error) => {
+        if (![400, 422].includes(error.status)) throw error;
+        return updateUser(userPermissionsTarget.user_id, legacyPayload);
+      })
       .then(() => {
-        setUserRoleTarget(null);
+        logActivity({
+          actor: user,
+          action: "update",
+          module: ACTIVITY_MODULES.USER,
+          entityId: userPermissionsTarget.user_id,
+          entityLabel: userPermissionsTarget.username || payload.full_name,
+          before: userPermissionsTarget,
+          after: { ...userPermissionsTarget, ...payload },
+        });
+        rememberUserPermissions(userPermissionsTarget, permissions);
+        setUserPermissionsTarget(null);
         handleRetryUsers();
       })
-      .catch((error) => setUserRoleError(error.message || "Something went wrong."))
-      .finally(() => setIsSavingUserRole(false));
+      .catch((error) => setUserPermissionsError(error.message || "Something went wrong."))
+      .finally(() => setIsSavingUserPermissions(false));
   }
 
   function handleOpenResetPassword(user) {
@@ -590,7 +798,16 @@ function Dashboard({ user, onLogout }) {
     setResetPasswordError(null);
 
     resetUserPassword(resetPasswordTarget.user_id, resetPassword)
-      .then(() => setResetPasswordTarget(null))
+      .then(() => {
+        logActivity({
+          actor: user,
+          action: "reset_password",
+          module: ACTIVITY_MODULES.USER,
+          entityId: resetPasswordTarget.user_id,
+          entityLabel: resetPasswordTarget.username || resetPasswordTarget.full_name,
+        });
+        setResetPasswordTarget(null);
+      })
       .catch((error) => setResetPasswordError(error.message || "Something went wrong."))
       .finally(() => setIsResettingPassword(false));
   }
@@ -638,13 +855,20 @@ function Dashboard({ user, onLogout }) {
       Object.entries(employeeFormValues).filter(([, value]) => value.trim() !== "")
     );
 
-    const request =
-      employeeFormMode === "edit"
-        ? updateEmployee(employeeFormTarget.employee_id, payload)
-        : createEmployee(payload);
+    const isEdit = employeeFormMode === "edit";
+    const request = isEdit ? updateEmployee(employeeFormTarget.employee_id, payload) : createEmployee(payload);
 
     request
-      .then(() => {
+      .then((data) => {
+        logActivity({
+          actor: user,
+          action: isEdit ? "update" : "create",
+          module: ACTIVITY_MODULES.EMPLOYEE,
+          entityId: isEdit ? employeeFormTarget.employee_id : data?.employee_id,
+          entityLabel: payload.full_name || employeeFormTarget?.full_name,
+          before: isEdit ? employeeFormTarget : null,
+          after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
+        });
         setIsEmployeeFormOpen(false);
         handleRetryEmployees();
       })
@@ -655,10 +879,20 @@ function Dashboard({ user, onLogout }) {
   function handleOpenDeleteEmployee(employee) {
     setEmployeeToDelete(employee);
     setDeleteEmployeeError(null);
+    setDeleteEmployeeBlocked(false);
   }
 
   function handleCloseDeleteEmployee() {
     setEmployeeToDelete(null);
+    setDeleteEmployeeError(null);
+    setDeleteEmployeeBlocked(false);
+  }
+
+  function handleViewAssignedDevicesFromDelete() {
+    if (!employeeToDelete) return;
+    const employee = employeeToDelete;
+    handleCloseDeleteEmployee();
+    handleViewEmployeeDetail(employee);
   }
 
   function handleConfirmDeleteEmployee() {
@@ -666,9 +900,19 @@ function Dashboard({ user, onLogout }) {
 
     setIsDeletingEmployee(true);
     setDeleteEmployeeError(null);
+    setDeleteEmployeeBlocked(false);
 
     deleteEmployee(employeeToDelete.employee_id)
       .then(() => {
+        logActivity({
+          actor: user,
+          action: "delete",
+          module: ACTIVITY_MODULES.EMPLOYEE,
+          entityId: employeeToDelete.employee_id,
+          entityLabel: employeeToDelete.full_name,
+          before: employeeToDelete,
+          restorable: true,
+        });
         setEmployeeToDelete(null);
         handleRetryEmployees();
         const term = employeeSearchTerm.trim();
@@ -678,6 +922,7 @@ function Dashboard({ user, onLogout }) {
         const data = error.response?.data;
         const ownedEquipment = data?.references?.owned_equipment || 0;
 
+        setDeleteEmployeeBlocked(ownedEquipment > 0);
         setDeleteEmployeeError(
           ownedEquipment > 0
             ? `This employee has ${ownedEquipment} assigned device${ownedEquipment === 1 ? "" : "s"}. Unassign ${
@@ -714,6 +959,7 @@ function Dashboard({ user, onLogout }) {
 
   function handleSelectView(label, { updateUrl = true } = {}) {
     if (!navItemsByLabel[label]) return;
+    if (!canAccessDashboardView(user, label, navItemsByLabel)) return;
 
     if (label === "All Equipment" && label !== activeView) {
       setIsEquipmentLoading(true);
@@ -785,10 +1031,15 @@ function Dashboard({ user, onLogout }) {
     selectViewRef.current = handleSelectView;
   });
 
+  useEffect(() => {
+    if (hasActiveViewAccess || !firstAccessibleDashboardView) return;
+    selectViewRef.current?.(firstAccessibleDashboardView);
+  }, [firstAccessibleDashboardView, hasActiveViewAccess]);
+
   function handleMarkAllNotificationsRead() {
     setReadNotificationIds((current) => {
       const next = new Set(current);
-      notifications.forEach((item) => next.add(item.id));
+      visibleNotifications.forEach((item) => next.add(item.id));
       return next;
     });
   }
@@ -888,21 +1139,23 @@ function Dashboard({ user, onLogout }) {
   }, [notificationsFetchToken]);
 
   const activeNavItem = navItemsByLabel[activeView];
-  const isEmployeeView = activeView === "Employee";
-  const isDepartmentsView = activeView === "Departments";
-  const isEquipmentView = activeView === "All Equipment";
-  const isReplacementView = activeView === "Device Replacement";
-  const isSsdUpgradeView = activeView === "SSD Upgrade";
-  const isSsdProcurementView = activeView === "SSD Procurement";
-  const isAntivirusView = activeView === "Antivirus Install";
-  const isLicenseView = activeView === "License";
-  const isCloudRateView = activeView === "Cloud Rate";
-  const isServerUsageView = activeView === "Service Usage";
-  const isCloudUsageView = activeView === "Cloud Usage";
-  const isAvailableStockView = activeView === "Stock Available";
-  const isCurrentBorrowsView = activeView === "Currently Borrowed";
-  const isBorrowHistoryView = activeView === "Borrow History";
-  const isUsersView = activeView === "Users";
+  const isEmployeeView = activeView === "Employee" && hasActiveViewAccess;
+  const isDepartmentsView = activeView === "Departments" && hasActiveViewAccess;
+  const isEquipmentView = activeView === "All Equipment" && hasActiveViewAccess;
+  const isReplacementView = activeView === "Device Replacement" && hasActiveViewAccess;
+  const isSsdUpgradeView = activeView === "SSD Upgrade" && hasActiveViewAccess;
+  const isSsdProcurementView = activeView === "SSD Procurement" && hasActiveViewAccess;
+  const isAntivirusView = activeView === "Antivirus Install" && hasActiveViewAccess;
+  const isLicenseView = activeView === "License" && hasActiveViewAccess;
+  const isCloudRateView = activeView === "Cloud Rate" && hasActiveViewAccess;
+  const isServerUsageView = activeView === "Service Usage" && hasActiveViewAccess;
+  const isCloudUsageView = activeView === "Cloud Usage" && hasActiveViewAccess;
+  const isAvailableStockView = activeView === "Stock Available" && hasActiveViewAccess;
+  const isCurrentBorrowsView = activeView === "Currently Borrowed" && hasActiveViewAccess;
+  const isBorrowHistoryView = activeView === "Borrow History" && hasActiveViewAccess;
+  const isUsersView = activeView === "Users" && hasActiveViewAccess;
+  const isMyActivityView = activeView === "My Activity" && hasActiveViewAccess;
+  const isActivityLogView = activeView === "Activity Log" && hasActiveViewAccess;
 
   useEffect(() => {
     if (!isEquipmentView) return;
@@ -1130,7 +1383,7 @@ function Dashboard({ user, onLogout }) {
       .then((data) => {
         if (ignore) return;
         const list = Array.isArray(data) ? data : data?.users;
-        setUsers(Array.isArray(list) ? list : []);
+        setUsers(Array.isArray(list) ? list.map(mergeStoredPermissionsForUser) : []);
         setPendingApprovalCount(
           data?.pending_approval ?? (Array.isArray(list) ? list.filter((u) => !u.is_active).length : 0)
         );
@@ -1392,13 +1645,20 @@ function Dashboard({ user, onLogout }) {
       Object.entries(equipmentFormValues).filter(([, value]) => value.trim() !== "")
     );
 
-    const request =
-      equipmentFormMode === "edit"
-        ? updateEquipment(equipmentFormTarget.equipment_id, payload)
-        : createEquipment(payload);
+    const isEdit = equipmentFormMode === "edit";
+    const request = isEdit ? updateEquipment(equipmentFormTarget.equipment_id, payload) : createEquipment(payload);
 
     request
-      .then(() => {
+      .then((data) => {
+        logActivity({
+          actor: user,
+          action: isEdit ? "update" : "create",
+          module: ACTIVITY_MODULES.EQUIPMENT,
+          entityId: isEdit ? equipmentFormTarget.equipment_id : data?.equipment_id,
+          entityLabel: getEquipmentDisplayName(isEdit ? equipmentFormTarget : payload),
+          before: isEdit ? equipmentFormTarget : null,
+          after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
+        });
         setIsEquipmentFormOpen(false);
         handleRetryEquipment();
         handleRetryNotifications();
@@ -1438,6 +1698,14 @@ function Dashboard({ user, onLogout }) {
 
     unassignEquipment(equipmentToUnassign.equipment_id)
       .then(() => {
+        logActivity({
+          actor: user,
+          action: "unassign",
+          module: ACTIVITY_MODULES.EQUIPMENT,
+          entityId: equipmentToUnassign.equipment_id,
+          entityLabel: getEquipmentDisplayName(equipmentToUnassign),
+          before: equipmentToUnassign,
+        });
         setEquipmentToUnassign(null);
         handleRetryEquipment();
         handleRetryAvailableStock();
@@ -1565,6 +1833,15 @@ function Dashboard({ user, onLogout }) {
 
     returnBorrow(returnTarget.borrow_id, payload)
       .then(() => {
+        logActivity({
+          actor: user,
+          action: "return",
+          module: ACTIVITY_MODULES.BORROW,
+          entityId: returnTarget.borrow_id,
+          entityLabel: returnTarget.computer_name || returnTarget.equipment_code || `Borrow ${returnTarget.borrow_id}`,
+          before: returnTarget,
+          after: payload,
+        });
         setIsReturnModalOpen(false);
         handleRetryCurrentBorrows();
         handleRetryNotifications();
@@ -1628,6 +1905,14 @@ function Dashboard({ user, onLogout }) {
 
     assignEquipment(payload)
       .then(() => {
+        logActivity({
+          actor: user,
+          action: "assign",
+          module: ACTIVITY_MODULES.EQUIPMENT,
+          entityId: assignTarget.equipment_id,
+          entityLabel: getEquipmentDisplayName(assignTarget),
+          after: payload,
+        });
         setIsAssignModalOpen(false);
         handleRetryAvailableStock();
         handleRetryNotifications();
@@ -1686,6 +1971,14 @@ function Dashboard({ user, onLogout }) {
 
     createBorrow(payload)
       .then(() => {
+        logActivity({
+          actor: user,
+          action: "borrow",
+          module: ACTIVITY_MODULES.BORROW,
+          entityId: borrowTarget.equipment_id,
+          entityLabel: getEquipmentDisplayName(borrowTarget),
+          after: payload,
+        });
         setIsBorrowModalOpen(false);
         handleRetryAvailableStock();
         handleRetryNotifications();
@@ -1792,7 +2085,7 @@ function Dashboard({ user, onLogout }) {
                   <X />
                 </button>
               </div>
-              <SidebarNavigation activeView={activeView} onSelect={handleSelectView} canManage={canManage} />
+              <SidebarNavigation activeView={activeView} onSelect={handleSelectView} user={user} />
             </aside>
           </div>
         )}
@@ -1810,7 +2103,7 @@ function Dashboard({ user, onLogout }) {
             collapsed={isSidebarCollapsed}
             activeView={activeView}
             onSelect={handleSelectView}
-            canManage={canManage}
+            user={user}
           />
         </aside>
 
@@ -1916,7 +2209,7 @@ function Dashboard({ user, onLogout }) {
                             <button
                               type="button"
                               onClick={handleMarkAllNotificationsRead}
-                              disabled={notifications.length === 0}
+                              disabled={visibleNotifications.length === 0}
                               className="rounded text-xs font-semibold text-orange-600 outline-none transition hover:text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:text-slate-300"
                             >
                               Mark all as read
@@ -1924,14 +2217,14 @@ function Dashboard({ user, onLogout }) {
                           </div>
                         </div>
                         <div className="max-h-80 overflow-y-auto">
-                          {isNotificationsLoading && notifications.length === 0 ? (
+                          {isNotificationsLoading && visibleNotifications.length === 0 ? (
                             <div className="px-4 py-8 text-center text-[13px] text-slate-500">
                               Loading notifications...
                             </div>
-                          ) : notifications.length === 0 ? (
+                          ) : visibleNotifications.length === 0 ? (
                             <EmptyState icon={Bell} title="No notifications" description="You're all caught up." />
                           ) : (
-                            notifications.map((item) => (
+                            visibleNotifications.map((item) => (
                               <button
                                 key={item.id}
                                 type="button"
@@ -2000,7 +2293,7 @@ function Dashboard({ user, onLogout }) {
                       <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
                         <div className="border-b border-slate-100 px-3 py-2">
                           <p className="truncate text-sm font-semibold text-slate-950">{displayName}</p>
-                          <p className="truncate text-xs text-slate-500">{canManage ? "Admin" : "Viewer"}</p>
+                          <p className="truncate text-xs text-slate-500">{getAccessProfileLabel(user)}</p>
                         </div>
                         <button
                           type="button"
@@ -2034,7 +2327,8 @@ function Dashboard({ user, onLogout }) {
 
           {(isEquipmentView) && (
             <EquipmentView
-              canManage={canManage}
+              canManage={canManageEquipment}
+              canCreate={canCreateRecords}
               categories={equipmentCategories}
               isLoading={isEquipmentLoading}
               error={equipmentError}
@@ -2106,7 +2400,8 @@ function Dashboard({ user, onLogout }) {
 
           {isDepartmentsView && (
             <DepartmentsView
-              canManage={canManage}
+              canManage={canManageDepartments}
+              canCreate={canCreateRecords}
               departments={departments}
               isLoading={isDepartmentsLoading}
               error={departmentsError}
@@ -2146,7 +2441,7 @@ function Dashboard({ user, onLogout }) {
 
           {isAvailableStockView && (
             <AvailableStockView
-              canManage={canManage}
+              canManage={canManageStock}
               stock={availableStock}
               isLoading={isAvailableStockLoading}
               error={availableStockError}
@@ -2158,7 +2453,7 @@ function Dashboard({ user, onLogout }) {
 
           {isCurrentBorrowsView && (
             <CurrentBorrowsView
-              canManage={canManage}
+              canManage={canManageBorrows}
               loans={currentBorrows}
               isLoading={isCurrentBorrowsLoading}
               error={currentBorrowsError}
@@ -2180,7 +2475,21 @@ function Dashboard({ user, onLogout }) {
             />
           )}
 
-          {!isEmployeeView &&
+          {!hasActiveViewAccess && !firstAccessibleDashboardView && (
+            <div className="px-4 py-6 sm:px-6 lg:px-8">
+              <div className="rounded-xl border border-slate-200 bg-white">
+                <EmptyState
+                  icon={Box}
+                  title="No pages assigned"
+                  description="Ask an admin to add permissions to this account."
+                />
+              </div>
+            </div>
+          )}
+
+          {hasActiveViewAccess &&
+            !isEmployeeView &&
+            !isDepartmentsView &&
             !isEquipmentView &&
             !isReplacementView &&
             !isSsdUpgradeView &&
@@ -2193,7 +2502,9 @@ function Dashboard({ user, onLogout }) {
             !isAvailableStockView &&
             !isCurrentBorrowsView &&
             !isBorrowHistoryView &&
-            !isUsersView && (
+            !isUsersView &&
+            !isMyActivityView &&
+            !isActivityLogView && (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
                 <div className="rounded-xl border border-slate-200 bg-white">
                   <EmptyState
@@ -2221,7 +2532,8 @@ function Dashboard({ user, onLogout }) {
 
               {/* Employee directory */}
               <EmployeeDirectoryTable
-                canManage={canManage}
+                canManage={canManageEmployees}
+                canCreate={canCreateRecords}
                 employees={paginatedEmployees}
                 totalCount={sortedEmployees.length}
                 sort={employeeSort}
@@ -2242,7 +2554,7 @@ function Dashboard({ user, onLogout }) {
           )}
 
           {isUsersView &&
-            (canManage ? (
+            (canManageUsers ? (
               <UsersView
                 users={users}
                 pendingCount={pendingApprovalCount}
@@ -2250,7 +2562,7 @@ function Dashboard({ user, onLogout }) {
                 error={usersError}
                 onRetry={handleRetryUsers}
                 onApprove={handleApproveUser}
-                onEditRole={handleOpenEditUserRole}
+                onEditPermissions={handleOpenEditUserPermissions}
                 onResetPassword={handleOpenResetPassword}
               />
             ) : (
@@ -2261,6 +2573,30 @@ function Dashboard({ user, onLogout }) {
                     title="Not available"
                     description="This page is admin-only."
                   />
+                </div>
+              </div>
+            ))}
+
+          {isMyActivityView && <MyActivityView entries={myActivityEntries} />}
+
+          {isActivityLogView &&
+            (canManageActivityLog ? (
+              <ActivityLogView
+                entries={filteredActivityLogEntries}
+                totalCount={activityEntries.length}
+                filters={activityLogFilters}
+                onFilterChange={handleActivityLogFilterChange}
+                moduleOptions={ACTIVITY_MODULE_VALUES}
+                actionOptions={ACTIVITY_ACTION_VALUES}
+                onRestore={handleRestoreActivity}
+                restoringId={restoringActivityId}
+                restoreError={activityRestoreError}
+                canManage={canManageActivityLog}
+              />
+            ) : (
+              <div className="px-4 py-6 sm:px-6 lg:px-8">
+                <div className="rounded-xl border border-slate-200 bg-white">
+                  <EmptyState icon={Box} title="Not available" description="This page is admin-only." />
                 </div>
               </div>
             ))}
@@ -2275,6 +2611,8 @@ function Dashboard({ user, onLogout }) {
           error={employeeDetailError}
           onRetry={handleRetryEmployeeDetail}
           onClose={handleCloseEmployeeDetail}
+          onUnassign={handleOpenUnassignEquipment}
+          canManage={canManageEmployees}
         />
       )}
 
@@ -2354,15 +2692,15 @@ function Dashboard({ user, onLogout }) {
         error={departmentFormError}
       />
 
-      <UserRoleModal
-        isOpen={Boolean(userRoleTarget)}
-        user={userRoleTarget}
-        values={userRoleValues}
-        onChange={handleUserRoleFieldChange}
-        onSubmit={handleSubmitEditUserRole}
-        onClose={handleCloseEditUserRole}
-        isSubmitting={isSavingUserRole}
-        error={userRoleError}
+      <UserPermissionsModal
+        isOpen={Boolean(userPermissionsTarget)}
+        user={userPermissionsTarget}
+        values={userPermissionValues}
+        onChange={handleUserPermissionFieldChange}
+        onSubmit={handleSubmitEditUserPermissions}
+        onClose={handleCloseEditUserPermissions}
+        isSubmitting={isSavingUserPermissions}
+        error={userPermissionsError}
       />
 
       <ResetPasswordModal
@@ -2402,6 +2740,9 @@ function Dashboard({ user, onLogout }) {
         onCancel={handleCloseDeleteEmployee}
         isConfirming={isDeletingEmployee}
         error={deleteEmployeeError}
+        blocked={deleteEmployeeBlocked}
+        blockedActionLabel="Unassign devices"
+        onBlockedAction={handleViewAssignedDevicesFromDelete}
       />
 
       <ConfirmDialog

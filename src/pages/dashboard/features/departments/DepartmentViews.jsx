@@ -17,6 +17,7 @@ export function DepartmentsView({
   onEdit,
   onDelete,
   canManage = true,
+  canCreate = true,
 }) {
   return (
     <RecordsTableView
@@ -34,7 +35,7 @@ export function DepartmentsView({
       error={error}
       onRetry={onRetry}
       headerActions={
-        canManage && (
+        canCreate && (
           <button
             type="button"
             onClick={onAddNew}

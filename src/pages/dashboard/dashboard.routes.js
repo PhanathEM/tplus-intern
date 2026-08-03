@@ -21,6 +21,8 @@ export const dashboardRouteByView = {
   "Cloud Usage": "cloud-usage",
   "Service Usage": "service-usage",
   Users: "users",
+  "My Activity": "my-activity",
+  "Activity Log": "activity-log",
 };
 
 const dashboardViewByRoute = Object.fromEntries(

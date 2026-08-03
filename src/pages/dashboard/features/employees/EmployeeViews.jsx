@@ -341,6 +341,7 @@ export function EmployeeDirectoryTable({
   onEdit,
   onDelete,
   canManage = true,
+  canCreate = true,
 }) {
   const columns = [
     { key: "full_name", label: "Name" },
@@ -359,7 +360,7 @@ export function EmployeeDirectoryTable({
             <p className="mt-0.5 text-[13px] text-slate-500">{totalCount} employees</p>
           )}
         </div>
-        {canManage && (
+        {canCreate && (
           <button
             type="button"
             onClick={onAddNew}
@@ -499,7 +500,16 @@ export function EmployeeDirectoryTable({
   );
 }
 
-export function EmployeeDetailModal({ employee, devices, isLoading, error, onRetry, onClose }) {
+export function EmployeeDetailModal({
+  employee,
+  devices,
+  isLoading,
+  error,
+  onRetry,
+  onClose,
+  onUnassign,
+  canManage = true,
+}) {
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -566,10 +576,19 @@ export function EmployeeDetailModal({ employee, devices, isLoading, error, onRet
             <div className="space-y-5">
               {devices.map((device, idx) => (
                 <div key={device.equipment_id ?? idx} className="rounded-xl border border-slate-100">
-                  <div className="border-b border-slate-100 bg-slate-50/60 px-4 py-2.5">
+                  <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/60 px-4 py-2.5">
                     <p className="text-[13px] font-semibold text-slate-800">
                       {[device.category, device.device_type].filter(Boolean).join(" · ") || `Equipment ${idx + 1}`}
                     </p>
+                    {canManage && onUnassign && device.equipment_id && (
+                      <button
+                        type="button"
+                        onClick={() => onUnassign(device)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-700 outline-none transition hover:border-amber-300 hover:bg-amber-50 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                      >
+                        Unassign
+                      </button>
+                    )}
                   </div>
                   <dl className="grid grid-cols-1 gap-x-4 gap-y-2.5 p-4 sm:grid-cols-2">
                     {Object.entries(device).map(([key, value]) => (

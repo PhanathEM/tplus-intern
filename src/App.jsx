@@ -3,13 +3,15 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Dashboard from "./pages/dashboard/dashboard";
 import Login from "./pages/auth/login";
 import { setAuthToken } from "./lib/apiClient";
+import { mergeStoredPermissionsForUser } from "./lib/permissions";
 
 const SESSION_STORAGE_KEY = "tplus_session";
 
 function loadStoredSession() {
   try {
     const raw = localStorage.getItem(SESSION_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const session = raw ? JSON.parse(raw) : null;
+    return session?.user ? { ...session, user: mergeStoredPermissionsForUser(session.user) } : session;
   } catch {
     return null;
   }
@@ -25,8 +27,11 @@ function App() {
   }, [session]);
 
   function handleLogin(newSession) {
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newSession));
-    setSession(newSession);
+    const nextSession = newSession?.user
+      ? { ...newSession, user: mergeStoredPermissionsForUser(newSession.user) }
+      : newSession;
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextSession));
+    setSession(nextSession);
   }
 
   function handleLogout() {

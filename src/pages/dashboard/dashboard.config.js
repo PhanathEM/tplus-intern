@@ -1,6 +1,7 @@
 import {
   FiActivity as Activity,
   FiBox as Box,
+  FiClock as Clock,
   FiCloud as Cloud,
   FiDollarSign as DollarSign,
   FiHardDrive as HardDrive,
@@ -13,13 +14,14 @@ import {
   FiUserCheck as UserCheck,
   FiLayers as Layers,
 } from "react-icons/fi";
+import { PERMISSIONS } from "../../lib/permissions";
 
 export const navSections = [
   {
     label: "Workforce",
     items: [
-      { label: "Employee", icon: Users },
-      { label: "Departments", icon: Layers },
+      { label: "Employee", icon: Users, permission: PERMISSIONS.EMPLOYEE },
+      { label: "Departments", icon: Layers, permission: PERMISSIONS.DEPARTMENTS },
     ],
   },
   {
@@ -29,38 +31,50 @@ export const navSections = [
         label: "Equipment",
         icon: Box,
         children: [
-          { label: "All Equipment", icon: Box },
-          { label: "Stock Available", icon: Box },
-          { label: "Currently Borrowed", icon: RefreshCw },
-          { label: "Borrow History", icon: Search },
+          { label: "All Equipment", icon: Box, permission: PERMISSIONS.EQUIPMENT },
+          { label: "Stock Available", icon: Box, permission: PERMISSIONS.STOCK_AVAILABLE },
+          { label: "Currently Borrowed", icon: RefreshCw, permission: PERMISSIONS.CURRENTLY_BORROWED },
+          { label: "Borrow History", icon: Search, permission: PERMISSIONS.BORROW_HISTORY },
         ],
       },
-      { label: "Device Replacement", icon: RefreshCw },
-      { label: "SSD Upgrade", icon: HardDrive },
-      { label: "SSD Procurement", icon: ShoppingCart },
+      { label: "Device Replacement", icon: RefreshCw, permission: PERMISSIONS.DEVICE_REPLACEMENT },
+      { label: "SSD Upgrade", icon: HardDrive, permission: PERMISSIONS.SSD_UPGRADE },
+      { label: "SSD Procurement", icon: ShoppingCart, permission: PERMISSIONS.SSD_PROCUREMENT },
     ],
   },
   {
     label: "Software & Security",
     items: [
-      { label: "Antivirus Install", icon: Shield },
-      { label: "License", icon: Key },
+      { label: "Antivirus Install", icon: Shield, permission: PERMISSIONS.ANTIVIRUS_INSTALL },
+      { label: "License", icon: Key, permission: PERMISSIONS.LICENSE },
     ],
   },
   {
     label: "Cloud",
     items: [
-      { label: "Cloud Rate", icon: DollarSign },
-      { label: "Cloud Usage", icon: Cloud },
+      { label: "Cloud Rate", icon: DollarSign, permission: PERMISSIONS.CLOUD_RATE },
+      { label: "Cloud Usage", icon: Cloud, permission: PERMISSIONS.CLOUD_USAGE },
     ],
   },
   {
     label: "Operations",
-    items: [{ label: "Service Usage", icon: Activity }],
+    items: [{ label: "Service Usage", icon: Activity, permission: PERMISSIONS.SERVICE_USAGE }],
+  },
+  {
+    label: "Account",
+    items: [{ label: "My Activity", icon: Clock }],
   },
   {
     label: "Administration",
-    items: [{ label: "Users", icon: UserCheck, adminOnly: true }],
+    items: [
+      { label: "Users", icon: UserCheck, permission: PERMISSIONS.USERS, adminOnly: true },
+      {
+        label: "Activity Log",
+        icon: Activity,
+        permission: PERMISSIONS.ACTIVITY_LOG,
+        adminOnly: true,
+      },
+    ],
   },
 ];
 
@@ -68,6 +82,16 @@ export const navItemsByLabel = navSections
   .flatMap((section) => section.items)
   .flatMap((item) => (item.children ? [item, ...item.children] : [item]))
   .reduce((acc, item) => ({ ...acc, [item.label]: item }), {});
+
+export const userPermissionSections = navSections
+  .map((section) => ({
+    label: section.label,
+    permissions: section.items
+      .flatMap((item) => (item.children ? item.children : [item]))
+      .filter((item) => item.permission)
+      .map((item) => ({ value: item.permission, label: item.label })),
+  }))
+  .filter((section) => section.permissions.length > 0);
 
 export const equipmentItemColumns = [
   { key: "equipment_id", label: "Equipment ID" },

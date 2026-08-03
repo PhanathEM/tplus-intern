@@ -6,6 +6,12 @@ import {
   FiX as X,
 } from "react-icons/fi";
 import { EmptyState, FormField, formInputClass } from "../../components/SharedControls";
+import { userPermissionSections } from "../../dashboard.config";
+import {
+  ALL_PERMISSION_VALUES,
+  getPermissionSummary,
+  normalizeUserPermissions,
+} from "../../../../lib/permissions";
 
 export function UsersView({
   users,
@@ -14,7 +20,7 @@ export function UsersView({
   error,
   onRetry,
   onApprove,
-  onEditRole,
+  onEditPermissions,
   onResetPassword,
 }) {
   return (
@@ -74,7 +80,7 @@ export function UsersView({
                 <tr>
                   <th className="px-5 py-3 font-semibold">Username</th>
                   <th className="px-5 py-3 font-semibold">Full Name</th>
-                  <th className="px-5 py-3 font-semibold">Role</th>
+                  <th className="px-5 py-3 font-semibold">Permissions</th>
                   <th className="px-5 py-3 font-semibold">Status</th>
                   <th className="px-5 py-3 font-semibold text-right">Actions</th>
                 </tr>
@@ -86,7 +92,11 @@ export function UsersView({
                       {user.username}
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{user.full_name || "—"}</td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 capitalize">{user.role}</td>
+                    <td className="min-w-64 px-5 py-3.5 text-slate-600">
+                      <span className="inline-flex max-w-72 items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                        <span className="truncate">{getPermissionSummary(user)}</span>
+                      </span>
+                    </td>
                     <td className="whitespace-nowrap px-5 py-3.5">
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-semibold ${user.is_active
@@ -110,10 +120,10 @@ export function UsersView({
                         )}
                         <button
                           type="button"
-                          onClick={() => onEditRole(user)}
+                          onClick={() => onEditPermissions(user)}
                           className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                         >
-                          Edit
+                          Permissions
                         </button>
                         <button
                           type="button"
@@ -135,7 +145,7 @@ export function UsersView({
   );
 }
 
-export function UserRoleModal({ isOpen, user, values, onChange, onSubmit, onClose, isSubmitting, error }) {
+export function UserPermissionsModal({ isOpen, user, values, onChange, onSubmit, onClose, isSubmitting, error }) {
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -146,6 +156,29 @@ export function UserRoleModal({ isOpen, user, values, onChange, onSubmit, onClos
 
   if (!isOpen || !user) return null;
 
+  const selectedPermissions = new Set(normalizeUserPermissions({ permissions: values.permissions }));
+  const allPermissionsSelected = ALL_PERMISSION_VALUES.every((permission) =>
+    selectedPermissions.has(permission)
+  );
+
+  function updatePermissions(nextPermissions) {
+    onChange("permissions", nextPermissions);
+  }
+
+  function handleToggleAll(checked) {
+    updatePermissions(checked ? ALL_PERMISSION_VALUES : []);
+  }
+
+  function handleTogglePermission(permission, checked) {
+    const nextPermissions = new Set(selectedPermissions);
+    if (checked) {
+      nextPermissions.add(permission);
+    } else {
+      nextPermissions.delete(permission);
+    }
+    updatePermissions([...nextPermissions]);
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
@@ -154,7 +187,7 @@ export function UserRoleModal({ isOpen, user, values, onChange, onSubmit, onClos
         onClick={onClose}
         aria-label="Close"
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950">Edit account</h2>
@@ -189,18 +222,50 @@ export function UserRoleModal({ isOpen, user, values, onChange, onSubmit, onClos
                   disabled={isSubmitting}
                 />
               </FormField>
-              <FormField label="Role *" htmlFor="user-role">
-                <select
-                  id="user-role"
-                  value={values.role}
-                  onChange={(e) => onChange("role", e.target.value)}
-                  className={formInputClass}
-                  disabled={isSubmitting}
-                >
-                  <option value="viewer">Viewer</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </FormField>
+              <div>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-semibold text-slate-600">Permissions</p>
+                  <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100">
+                    <input
+                      type="checkbox"
+                      checked={allPermissionsSelected}
+                      onChange={(event) => handleToggleAll(event.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-orange-500 accent-orange-500 focus:ring-orange-400"
+                      disabled={isSubmitting}
+                    />
+                    All permissions
+                  </label>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {userPermissionSections.map((section) => (
+                    <div key={section.label} className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        {section.label}
+                      </p>
+                      <div className="grid gap-2">
+                        {section.permissions.map((permission) => (
+                          <label
+                            key={permission.value}
+                            className="flex cursor-pointer items-center gap-2 rounded-lg bg-white px-3 py-2 text-[13px] font-medium text-slate-700 ring-1 ring-slate-100 transition hover:bg-orange-50 hover:text-slate-950"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedPermissions.has(permission.value)}
+                              onChange={(event) =>
+                                handleTogglePermission(permission.value, event.target.checked)
+                              }
+                              className="h-4 w-4 rounded border-slate-300 text-orange-500 accent-orange-500 focus:ring-orange-400"
+                              disabled={isSubmitting}
+                            />
+                            <span>{permission.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 

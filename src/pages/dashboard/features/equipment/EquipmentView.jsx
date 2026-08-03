@@ -156,6 +156,7 @@ export function EquipmentView({
   onFilterStatus,
   onAddCategory,
   canManage = true,
+  canCreate = true,
 }) {
   const statusOptions = useMemo(() => ["All", ...statuses.map((item) => item.status_name)], [statuses]);
 
@@ -179,7 +180,7 @@ export function EquipmentView({
             )}
           </div>
           <div className="flex items-center gap-2">
-            {canManage && (
+            {canCreate && (
               <>
                 <button
                   type="button"
