@@ -2335,6 +2335,37 @@ function Dashboard({ user, onLogout }) {
     setEmployeeDetailError(null);
   }
 
+  function getEmployeeRecordFromSearchGroup(group) {
+    const firstDevice = group.devices?.[0] || {};
+    const employeeId = group.employee_id ?? firstDevice.employee_id;
+    const fullName = group.owner_name ?? firstDevice.owner_name ?? firstDevice.full_name ?? "";
+    const directoryRecord = employees.find(
+      (employee) =>
+        (employeeId !== undefined && String(employee.employee_id) === String(employeeId)) ||
+        (fullName && employee.full_name === fullName)
+    );
+
+    if (directoryRecord) return directoryRecord;
+
+    return {
+      employee_id: employeeId,
+      full_name: fullName,
+      position: group.employee_position ?? firstDevice.employee_position ?? firstDevice.position ?? "",
+      department:
+        group.employee_department ??
+        firstDevice.employee_department ??
+        firstDevice.department ??
+        firstDevice.department_code ??
+        "",
+      department_code:
+        group.employee_department ?? firstDevice.department_code ?? firstDevice.department ?? "",
+      location: group.employee_location ?? firstDevice.employee_location ?? firstDevice.location ?? "",
+      staff_code: firstDevice.staff_code ?? "",
+      phone: firstDevice.phone ?? "",
+      sex: firstDevice.sex ?? "",
+    };
+  }
+
   useEffect(() => {
     if (!isEmployeeView) return;
     const term = employeeSearchTerm.trim();
@@ -2831,6 +2862,9 @@ function Dashboard({ user, onLogout }) {
                 error={employeeSearchError}
                 hasSearched={hasSearchedEmployees}
                 onViewDetail={handleViewEmployeeSearchDetail}
+                onEdit={(group) => handleOpenEditEmployee(getEmployeeRecordFromSearchGroup(group))}
+                onDelete={(group) => handleOpenDeleteEmployee(getEmployeeRecordFromSearchGroup(group))}
+                canManage={canManageEmployees}
               />
 
               {/* Employee directory */}
