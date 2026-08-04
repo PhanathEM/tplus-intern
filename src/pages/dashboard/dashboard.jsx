@@ -62,7 +62,7 @@ import {
   navSections,
   navItemsByLabel,
 } from "./dashboard.config";
-import { getEmployeeDepartmentCode, normalizeRecordList } from "./dashboard.utils";
+import { getEmployeeDepartmentCode, groupEmployeeSearchResults, normalizeRecordList } from "./dashboard.utils";
 import { buildDashboardNotifications } from "./dashboard.notifications";
 import {
   DASHBOARD_DEFAULT_VIEW,
@@ -73,6 +73,7 @@ import {
 } from "./dashboard.routes";
 import { ConfirmDialog, EmptyState } from "./components/SharedControls";
 import { SidebarBrand, SidebarNavigation } from "./components/Sidebar";
+import { GlobalSearch } from "./components/GlobalSearch";
 import {
   AssignEquipmentModal,
   BorrowEquipmentModal,
@@ -169,6 +170,15 @@ const HOME_STAT_FETCHERS = {
       typeof data?.count === "number" ? data.count : Array.isArray(data?.items) ? data.items.length : 0
     ),
 };
+
+function createEmptyGlobalSearchResults() {
+  return {
+    employees: [],
+    departments: [],
+    equipment: [],
+    users: [],
+  };
+}
 
 function Dashboard({ user, onLogout }) {
   const canCreateRecords = isAdmin(user);
@@ -369,6 +379,142 @@ function Dashboard({ user, onLogout }) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuCloseTimeout = useRef(null);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState("");
+  const [globalSearchResults, setGlobalSearchResults] = useState(createEmptyGlobalSearchResults);
+  const [isGlobalSearchLoading, setIsGlobalSearchLoading] = useState(false);
+  const globalSearchEquipmentCacheRef = useRef(null);
+
+  function handleGlobalSearchQueryChange(nextQuery) {
+    setGlobalSearchQuery(nextQuery);
+    if (nextQuery.trim().length < 2) {
+      setGlobalSearchResults(createEmptyGlobalSearchResults());
+      setIsGlobalSearchLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const term = globalSearchQuery.trim();
+    if (term.length < 2) return;
+
+    let ignore = false;
+    const lowerTerm = term.toLowerCase();
+
+    const timeoutId = window.setTimeout(() => {
+      setIsGlobalSearchLoading(true);
+
+      const jobs = [];
+
+      if (hasPermission(user, PERMISSIONS.EMPLOYEE)) {
+        jobs.push(
+          searchEmployees(term)
+            .then((data) => ({
+              key: "employees",
+              items: groupEmployeeSearchResults(Array.isArray(data) ? data : []).slice(0, 5),
+            }))
+            .catch(() => ({ key: "employees", items: [] }))
+        );
+      }
+
+      if (hasPermission(user, PERMISSIONS.DEPARTMENTS)) {
+        jobs.push(
+          fetchDepartments()
+            .then((data) => ({
+              key: "departments",
+              items: (Array.isArray(data) ? data : [])
+                .filter((department) =>
+                  `${department.department_name || ""} ${department.department_code || ""}`
+                    .toLowerCase()
+                    .includes(lowerTerm)
+                )
+                .slice(0, 5),
+            }))
+            .catch(() => ({ key: "departments", items: [] }))
+        );
+      }
+
+      if (hasPermission(user, PERMISSIONS.USERS)) {
+        jobs.push(
+          fetchUsers()
+            .then((data) => {
+              const list = Array.isArray(data) ? data : data?.users;
+              return {
+                key: "users",
+                items: (Array.isArray(list) ? list : [])
+                  .filter((candidate) =>
+                    `${candidate.full_name || ""} ${candidate.username || ""}`.toLowerCase().includes(lowerTerm)
+                  )
+                  .slice(0, 5),
+              };
+            })
+            .catch(() => ({ key: "users", items: [] }))
+        );
+      }
+
+      if (hasPermission(user, PERMISSIONS.EQUIPMENT)) {
+        const equipmentPromise = globalSearchEquipmentCacheRef.current
+          ? Promise.resolve(globalSearchEquipmentCacheRef.current)
+          : fetchEquipmentByCategory("", "All")
+              .then((data) => {
+                const list = Array.isArray(data) ? data : [];
+                globalSearchEquipmentCacheRef.current = list;
+                return list;
+              })
+              .catch(() => []);
+
+        jobs.push(
+          equipmentPromise.then((list) => ({
+            key: "equipment",
+            items: list
+              .filter((item) =>
+                `${item.computer_name || ""} ${item.equipment_code || ""} ${item.service_tag || ""} ${
+                  item.device_model || ""
+                } ${item.owner_name || ""}`
+                  .toLowerCase()
+                  .includes(lowerTerm)
+              )
+              .slice(0, 5),
+          }))
+        );
+      }
+
+      Promise.all(jobs)
+        .then((jobResults) => {
+          if (ignore) return;
+          const next = createEmptyGlobalSearchResults();
+          jobResults.forEach(({ key, items }) => {
+            next[key] = items;
+          });
+          setGlobalSearchResults(next);
+        })
+        .finally(() => {
+          if (!ignore) setIsGlobalSearchLoading(false);
+        });
+    }, 350);
+
+    return () => {
+      ignore = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [globalSearchQuery, user]);
+
+  function handleSelectGlobalSearchResult(type, item) {
+    setGlobalSearchQuery("");
+    setGlobalSearchResults(createEmptyGlobalSearchResults());
+    setIsGlobalSearchLoading(false);
+    setIsMobileSearchOpen(false);
+
+    if (type === "employees") {
+      handleSelectView("Employee");
+      handleViewEmployeeSearchDetail(item);
+    } else if (type === "departments") {
+      handleSelectView("Departments");
+    } else if (type === "equipment") {
+      handleSelectView("All Equipment");
+      handleViewEquipmentCategory(item.category || item.category_name || "All", "All");
+    } else if (type === "users") {
+      handleSelectView("Users");
+    }
+  }
   const [equipmentCategories, setEquipmentCategories] = useState([]);
   const [equipmentCategory, setEquipmentCategory] = useState("All");
   const [isEquipmentLoading, setIsEquipmentLoading] = useState(initialDashboardView === "Equipment");
@@ -2251,15 +2397,15 @@ function Dashboard({ user, onLogout }) {
             <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
               {isMobileSearchOpen ? (
                 <div className="flex flex-1 items-center gap-2">
-                  <div className="relative flex-1">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input
-                      autoFocus
-                      type="search"
-                      placeholder="Search users, assets, requests"
-                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-100"
-                    />
-                  </div>
+                  <GlobalSearch
+                    autoFocus
+                    className="flex-1"
+                    value={globalSearchQuery}
+                    onChange={handleGlobalSearchQueryChange}
+                    results={globalSearchResults}
+                    isLoading={isGlobalSearchLoading}
+                    onSelect={handleSelectGlobalSearchResult}
+                  />
                   <button
                     type="button"
                     onClick={() => setIsMobileSearchOpen(false)}
@@ -2284,15 +2430,14 @@ function Dashboard({ user, onLogout }) {
                     <h1 className="truncate text-[17px] font-semibold text-slate-950">{activeView}</h1>
                   </div>
 
-                  <label className="relative hidden w-72 shrink-0 lg:block">
-                    <span className="sr-only">Search</span>
-                    <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <input
-                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-100"
-                      placeholder="Search users, assets, requests"
-                      type="search"
-                    />
-                  </label>
+                  <GlobalSearch
+                    className="hidden w-72 shrink-0 lg:block"
+                    value={globalSearchQuery}
+                    onChange={handleGlobalSearchQueryChange}
+                    results={globalSearchResults}
+                    isLoading={isGlobalSearchLoading}
+                    onSelect={handleSelectGlobalSearchResult}
+                  />
 
                   <button
                     type="button"
