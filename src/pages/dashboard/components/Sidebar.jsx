@@ -5,7 +5,19 @@ import tplusLogo from "../../../assets/tplus-logo.png";
 import { navSections } from "../dashboard.config";
 import { getVisibleNavSections } from "../../../lib/permissions";
 
-export function SidebarNavigation({ collapsed = false, activeView, onSelect, user }) {
+function getBadgeConfig(badges, label, fallbackBadge) {
+  const badge = badges?.[label] ?? fallbackBadge;
+  if (!badge) return null;
+  return typeof badge === "object" ? badge : { value: badge, tone: "default" };
+}
+
+function getBadgeClass(tone) {
+  if (tone === "danger") return "bg-rose-500 text-white";
+  if (tone === "warning") return "bg-amber-400 text-slate-950";
+  return "bg-white/10 text-slate-200";
+}
+
+export function SidebarNavigation({ collapsed = false, activeView, onSelect, user, badges }) {
   const [expandedLabels, setExpandedLabels] = useState(() => new Set());
 
   const visibleSections = getVisibleNavSections(user, navSections);
@@ -29,6 +41,7 @@ return (
               const isChildActive = hasChildren && item.children.some((child) => child.label === activeView);
               const isActive = item.label === activeView || isChildActive;
               const isExpanded = expandedLabels.has(item.label) || isChildActive;
+              const badge = getBadgeConfig(badges, item.label, item.badge);
 
 return (
                 <div
@@ -85,9 +98,14 @@ return (
                         className={`shrink-0 text-slate-500 transition-transform ${isExpanded ? "" : "-rotate-90"}`}
                       />
                     )}
-                    {!collapsed && !hasChildren && item.badge && (
-                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-slate-200">
-                        {item.badge}
+                    {!collapsed && !hasChildren && badge && (
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${getBadgeClass(badge.tone)}`}>
+                        {badge.value}
+                      </span>
+                    )}
+                    {collapsed && !hasChildren && badge && (
+                      <span className={`absolute right-1 top-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${getBadgeClass(badge.tone)}`}>
+                        {badge.value}
                       </span>
                     )}
                   </button>

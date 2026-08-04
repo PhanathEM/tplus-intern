@@ -40,6 +40,9 @@ export function RecordsTableView({
   error,
   onRetry,
   headerActions,
+  topContent,
+  renderCell,
+  getRowClassName,
   renderRowActions,
 }) {
   const columns = useMemo(() => getRecordColumns(records, columnsConfig), [records, columnsConfig]);
@@ -91,38 +94,44 @@ return (
         ) : records.length === 0 ? (
           <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px]">
-              <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
-                <tr>
-                  {columns.map((column) => (
-                    <th key={column.key} className="whitespace-nowrap px-4 py-3 font-semibold">
-                      {column.label}
-                    </th>
-                  ))}
-                  {renderRowActions && <th className="whitespace-nowrap px-4 py-3 font-semibold text-right">Actions</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {records.map((record, index) => (
-                  <tr key={rowKey(record, index)} className="transition hover:bg-slate-50/70">
+          <>
+            {topContent}
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-100 text-left text-[13px]">
+                <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+                  <tr>
                     {columns.map((column) => (
-                      <td
-                        key={column.key}
-                        className={`px-4 py-3 text-slate-600 ${column.key === "remark" ? "min-w-72 whitespace-normal" : "whitespace-nowrap"
-                          }`}
-                      >
-                        <RecordCellValue value={record[column.key]} />
-                      </td>
+                      <th key={column.key} className="whitespace-nowrap px-4 py-3 font-semibold">
+                        {column.label}
+                      </th>
                     ))}
-                    {renderRowActions && (
-                      <td className="whitespace-nowrap px-4 py-3 text-right">{renderRowActions(record)}</td>
-                    )}
+                    {renderRowActions && <th className="whitespace-nowrap px-4 py-3 font-semibold text-right">Actions</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {records.map((record, index) => (
+                    <tr
+                      key={rowKey(record, index)}
+                      className={`transition hover:bg-slate-50/70 ${getRowClassName?.(record) || ""}`}
+                    >
+                      {columns.map((column) => (
+                        <td
+                          key={column.key}
+                          className={`px-4 py-3 text-slate-600 ${column.key === "remark" ? "min-w-72 whitespace-normal" : "whitespace-nowrap"
+                            }`}
+                        >
+                          {renderCell ? renderCell(record, column) : <RecordCellValue value={record[column.key]} />}
+                        </td>
+                      ))}
+                      {renderRowActions && (
+                        <td className="whitespace-nowrap px-4 py-3 text-right">{renderRowActions(record)}</td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

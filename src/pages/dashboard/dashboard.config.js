@@ -212,8 +212,8 @@ export const licenseColumns = [
   { key: "license_id", label: "License ID" },
   { key: "product_name", label: "Product Name" },
   { key: "product_type", label: "Product Type" },
+  { key: "date_start", label: "Date Start" },
   { key: "date_expire", label: "Date Expire" },
-  { key: "date_renewed", label: "Date Renewed" },
   { key: "status", label: "Status" },
   { key: "remark", label: "Remark" },
 ];

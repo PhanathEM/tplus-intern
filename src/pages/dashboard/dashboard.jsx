@@ -32,7 +32,7 @@ import { fetchReplacements } from "../../services/replacementService";
 import { fetchSsdUpgrades } from "../../services/ssdUpgradeService";
 import { fetchSsdProcurement } from "../../services/ssdProcurementService";
 import { fetchAntivirusInstalls } from "../../services/antivirusService";
-import { fetchLicenses } from "../../services/licenseService";
+import { createLicense, deleteLicense, fetchLicenses, updateLicense } from "../../services/licenseService";
 import { fetchCloudRates } from "../../services/cloudRateService";
 import { fetchServerUsage } from "../../services/serverUsageService";
 import { fetchCloudUsage } from "../../services/cloudUsageService";
@@ -63,7 +63,7 @@ import {
   navItemsByLabel,
 } from "./dashboard.config";
 import { getEmployeeDepartmentCode, groupEmployeeSearchResults, normalizeRecordList } from "./dashboard.utils";
-import { buildDashboardNotifications } from "./dashboard.notifications";
+import { buildDashboardNotifications, getLicenseExpiryAlerts } from "./dashboard.notifications";
 import {
   DASHBOARD_DEFAULT_VIEW,
   getDashboardTitle,
@@ -85,6 +85,7 @@ import {
   AntivirusView,
   CloudRatesView,
   CloudUsageView,
+  LicenseFormModal,
   LicensesView,
   ReplacementsView,
   ServerUsageView,
@@ -179,6 +180,20 @@ function createEmptyGlobalSearchResults() {
     users: [],
   };
 }
+
+function toDateInputValue(value) {
+  if (typeof value !== "string") return "";
+  const isoMatch = value.match(/^\d{4}-\d{2}-\d{2}/);
+  return isoMatch ? isoMatch[0] : "";
+}
+
+const LICENSE_FORM_INITIAL_VALUES = {
+  product_name: "",
+  product_type: "",
+  date_start: "",
+  date_expire: "",
+  remark: "",
+};
 
 function Dashboard({ user, onLogout }) {
   const canCreateRecords = isAdmin(user);
@@ -568,6 +583,15 @@ function Dashboard({ user, onLogout }) {
   const [isLicensesLoading, setIsLicensesLoading] = useState(initialDashboardView === "License");
   const [licensesError, setLicensesError] = useState(null);
   const [licensesFetchToken, setLicensesFetchToken] = useState(0);
+  const [isLicenseFormOpen, setIsLicenseFormOpen] = useState(false);
+  const [licenseFormMode, setLicenseFormMode] = useState("add");
+  const [licenseFormTarget, setLicenseFormTarget] = useState(null);
+  const [licenseFormValues, setLicenseFormValues] = useState(LICENSE_FORM_INITIAL_VALUES);
+  const [isSavingLicense, setIsSavingLicense] = useState(false);
+  const [licenseFormError, setLicenseFormError] = useState(null);
+  const [licenseToDelete, setLicenseToDelete] = useState(null);
+  const [isDeletingLicense, setIsDeletingLicense] = useState(false);
+  const [deleteLicenseError, setDeleteLicenseError] = useState(null);
   const [cloudRates, setCloudRates] = useState([]);
   const [isCloudRatesLoading, setIsCloudRatesLoading] = useState(initialDashboardView === "Cloud Rate");
   const [cloudRatesError, setCloudRatesError] = useState(null);
@@ -697,6 +721,17 @@ function Dashboard({ user, onLogout }) {
         (item) => !item.targetView || canAccessDashboardView(user, item.targetView, navItemsByLabel)
       ),
     [notifications, user]
+  );
+  const licenseExpiryAlerts = useMemo(
+    () => getLicenseExpiryAlerts(notificationData.licenses),
+    [notificationData.licenses]
+  );
+  const sidebarBadges = useMemo(
+    () =>
+      licenseExpiryAlerts.length > 0
+        ? { License: { value: licenseExpiryAlerts.length, tone: "danger" } }
+        : {},
+    [licenseExpiryAlerts.length]
   );
   const unreadNotificationCount = visibleNotifications.filter((item) => item.unread).length;
   const hasUnreadNotifications = unreadNotificationCount > 0;
@@ -2034,6 +2069,113 @@ function Dashboard({ user, onLogout }) {
     setLicensesFetchToken((value) => value + 1);
   }
 
+  function handleOpenAddLicense() {
+    setLicenseFormMode("add");
+    setLicenseFormTarget(null);
+    setLicenseFormValues(LICENSE_FORM_INITIAL_VALUES);
+    setLicenseFormError(null);
+    setIsLicenseFormOpen(true);
+  }
+
+  function handleOpenEditLicense(license) {
+    setLicenseFormMode("edit");
+    setLicenseFormTarget(license);
+    setLicenseFormValues({
+      product_name: license.product_name || "",
+      product_type: license.product_type || "",
+      date_start: toDateInputValue(license.date_start),
+      date_expire: toDateInputValue(license.date_expire),
+      remark: license.remark || "",
+    });
+    setLicenseFormError(null);
+    setIsLicenseFormOpen(true);
+  }
+
+  function handleCloseLicenseForm() {
+    setIsLicenseFormOpen(false);
+    setLicenseFormError(null);
+  }
+
+  function handleLicenseFormFieldChange(key, value) {
+    setLicenseFormValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleSubmitLicenseForm(event) {
+    event.preventDefault();
+
+    if (!licenseFormValues.product_name.trim()) {
+      setLicenseFormError("Please enter a product name.");
+      return;
+    }
+
+    if (!licenseFormValues.date_expire.trim()) {
+      setLicenseFormError("Please choose the expiry date.");
+      return;
+    }
+
+    setIsSavingLicense(true);
+    setLicenseFormError(null);
+
+    const payload = Object.fromEntries(
+      Object.entries(licenseFormValues).filter(([, value]) => value.trim() !== "")
+    );
+
+    const isEdit = licenseFormMode === "edit";
+    const request = isEdit
+      ? updateLicense(licenseFormTarget.license_id, payload)
+      : createLicense(payload);
+
+    request
+      .then((data) => {
+        logActivity({
+          actor: user,
+          action: isEdit ? "update" : "create",
+          module: ACTIVITY_MODULES.LICENSE,
+          entityId: isEdit ? licenseFormTarget.license_id : data?.license_id,
+          entityLabel: payload.product_name,
+          before: isEdit ? licenseFormTarget : null,
+          after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
+        });
+        setIsLicenseFormOpen(false);
+        setLicenseFormValues(LICENSE_FORM_INITIAL_VALUES);
+        handleRetryLicenses();
+      })
+      .catch((error) => setLicenseFormError(error.message || "Could not save license."))
+      .finally(() => setIsSavingLicense(false));
+  }
+
+  function handleOpenDeleteLicense(license) {
+    setLicenseToDelete(license);
+    setDeleteLicenseError(null);
+  }
+
+  function handleCloseDeleteLicense() {
+    setLicenseToDelete(null);
+  }
+
+  function handleConfirmDeleteLicense() {
+    if (!licenseToDelete) return;
+
+    setIsDeletingLicense(true);
+    setDeleteLicenseError(null);
+
+    deleteLicense(licenseToDelete.license_id)
+      .then(() => {
+        logActivity({
+          actor: user,
+          action: "delete",
+          module: ACTIVITY_MODULES.LICENSE,
+          entityId: licenseToDelete.license_id,
+          entityLabel: licenseToDelete.product_name,
+          before: licenseToDelete,
+        });
+        setLicenseToDelete(null);
+        handleRetryLicenses();
+      })
+      .catch((error) => setDeleteLicenseError(error.message || "Something went wrong."))
+      .finally(() => setIsDeletingLicense(false));
+  }
+
   function handleRetryCloudRates() {
     setIsCloudRatesLoading(true);
     setCloudRatesError(null);
@@ -2399,7 +2541,7 @@ function Dashboard({ user, onLogout }) {
                   <X />
                 </button>
               </div>
-              <SidebarNavigation activeView={activeView} onSelect={handleSelectView} user={user} />
+              <SidebarNavigation activeView={activeView} onSelect={handleSelectView} user={user} badges={sidebarBadges} />
             </aside>
           </div>
         )}
@@ -2418,6 +2560,7 @@ function Dashboard({ user, onLogout }) {
             activeView={activeView}
             onSelect={handleSelectView}
             user={user}
+            badges={sidebarBadges}
           />
         </aside>
 
@@ -2727,6 +2870,11 @@ function Dashboard({ user, onLogout }) {
               isLoading={isLicensesLoading}
               error={licensesError}
               onRetry={handleRetryLicenses}
+              onAddNew={handleOpenAddLicense}
+              onEdit={handleOpenEditLicense}
+              onDelete={handleOpenDeleteLicense}
+              canCreate={canCreateRecords}
+              canManage={canCreateRecords}
             />
           )}
 
@@ -3084,6 +3232,32 @@ function Dashboard({ user, onLogout }) {
         onClose={handleCloseCategoryForm}
         isSubmitting={isSavingCategory}
         error={categoryFormError}
+      />
+
+      <LicenseFormModal
+        isOpen={isLicenseFormOpen}
+        mode={licenseFormMode}
+        values={licenseFormValues}
+        onChange={handleLicenseFormFieldChange}
+        onSubmit={handleSubmitLicenseForm}
+        onClose={handleCloseLicenseForm}
+        isSubmitting={isSavingLicense}
+        error={licenseFormError}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(licenseToDelete)}
+        title="Delete this license?"
+        message={
+          licenseToDelete
+            ? `"${licenseToDelete.product_name}" will be permanently removed. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete license"
+        onConfirm={handleConfirmDeleteLicense}
+        onCancel={handleCloseDeleteLicense}
+        isConfirming={isDeletingLicense}
+        error={deleteLicenseError}
       />
 
       <ConfirmDialog

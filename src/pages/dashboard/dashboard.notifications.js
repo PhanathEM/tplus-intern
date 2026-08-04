@@ -1,6 +1,6 @@
 const LOW_STOCK_THRESHOLD = 2;
 const BORROW_DUE_SOON_DAYS = 3;
-const LICENSE_EXPIRY_WARNING_DAYS = 30;
+export const LICENSE_EXPIRY_WARNING_DAYS = 7;
 
 function parseDate(value) {
   if (!value) return null;
@@ -39,6 +39,41 @@ function equipmentName(record) {
 
 function licenseName(record) {
   return record.product_name || record.product_type || `License #${record.license_id || "N/A"}`;
+}
+
+export function getLicenseExpiryInfo(record) {
+  const days = daysUntil(record.date_expire);
+  const status = String(record.status || "").toLowerCase();
+  const statusLooksExpired = /\bexpired\b/.test(status);
+
+  if (statusLooksExpired || (days !== null && days < 0)) {
+    return {
+      days,
+      isExpired: true,
+      tone: "danger",
+      label: "Expired",
+      dateLabel: formatDate(record.date_expire),
+    };
+  }
+
+  if (days !== null && days <= LICENSE_EXPIRY_WARNING_DAYS) {
+    return {
+      days,
+      isExpired: false,
+      tone: "warning",
+      label: days === 0 ? "Expires today" : `${days} day${days === 1 ? "" : "s"} left`,
+      dateLabel: formatDate(record.date_expire),
+    };
+  }
+
+  return null;
+}
+
+export function getLicenseExpiryAlerts(licenses = []) {
+  return licenses
+    .map((license) => ({ license, info: getLicenseExpiryInfo(license) }))
+    .filter((item) => item.info)
+    .sort((a, b) => (a.info.days ?? -9999) - (b.info.days ?? -9999));
 }
 
 function groupStockByCategory(stock) {
@@ -125,23 +160,16 @@ export function buildDashboardNotifications({ currentBorrows = [], availableStoc
       });
   }
 
-  licenses
-    .filter((license) => {
-      const days = daysUntil(license.date_expire);
-      const status = String(license.status || "").toLowerCase();
-      return status.includes("expire") || (days !== null && days <= LICENSE_EXPIRY_WARNING_DAYS);
-    })
+  getLicenseExpiryAlerts(licenses)
     .slice(0, 5)
-    .forEach((license) => {
-      const days = daysUntil(license.date_expire);
-      const isExpired = days !== null && days < 0;
+    .forEach(({ license, info }) => {
       notifications.push({
         id: `license-expiry-${license.license_id || licenseName(license)}`,
-        title: isExpired ? "License expired" : "License expiring soon",
-        detail: `${licenseName(license)} ${isExpired ? "expired" : "expires"} on ${formatDate(license.date_expire)}`,
-        time: isExpired ? "Needs renewal" : `${Math.max(days ?? 0, 0)} day${days === 1 ? "" : "s"} left`,
+        title: info.isExpired ? "License expired" : "License expiring soon",
+        detail: `${licenseName(license)} ${info.isExpired ? "expired" : "expires"} on ${info.dateLabel}`,
+        time: info.isExpired ? "Needs renewal" : info.label,
         targetView: "License",
-        tone: isExpired ? "danger" : "warning",
+        tone: info.tone,
       });
     });
 
