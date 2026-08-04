@@ -5,11 +5,13 @@ import {
   FiCloud as Cloud,
   FiDollarSign as DollarSign,
   FiHardDrive as HardDrive,
+  FiHome as Home,
   FiKey as Key,
   FiRefreshCw as RefreshCw,
   FiSearch as Search,
   FiShield as Shield,
   FiShoppingCart as ShoppingCart,
+  FiTrash2 as Trash2,
   FiUsers as Users,
   FiUserCheck as UserCheck,
   FiLayers as Layers,
@@ -17,6 +19,10 @@ import {
 import { PERMISSIONS } from "../../lib/permissions";
 
 export const navSections = [
+  {
+    label: "Overview",
+    items: [{ label: "Dashboard", icon: Home }],
+  },
   {
     label: "Workforce",
     items: [
@@ -72,6 +78,12 @@ export const navSections = [
         label: "Activity Log",
         icon: Activity,
         permission: PERMISSIONS.ACTIVITY_LOG,
+        adminOnly: true,
+      },
+      {
+        label: "Recycle Bin",
+        icon: Trash2,
+        permission: PERMISSIONS.RECYCLE_BIN,
         adminOnly: true,
       },
     ],

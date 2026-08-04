@@ -17,6 +17,7 @@ export const PERMISSIONS = {
   SERVICE_USAGE: "service_usage",
   USERS: "users",
   ACTIVITY_LOG: "activity_log",
+  RECYCLE_BIN: "recycle_bin",
 };
 
 export const PERMISSION_DEFINITIONS = [
@@ -36,11 +37,18 @@ export const PERMISSION_DEFINITIONS = [
   { value: PERMISSIONS.SERVICE_USAGE, label: "Service Usage" },
   { value: PERMISSIONS.USERS, label: "Users" },
   { value: PERMISSIONS.ACTIVITY_LOG, label: "Activity Log" },
+  { value: PERMISSIONS.RECYCLE_BIN, label: "Recycle Bin" },
 ];
+
+const ADMIN_ONLY_DEFAULT_PERMISSIONS = new Set([
+  PERMISSIONS.USERS,
+  PERMISSIONS.ACTIVITY_LOG,
+  PERMISSIONS.RECYCLE_BIN,
+]);
 
 export const ALL_PERMISSION_VALUES = PERMISSION_DEFINITIONS.map((permission) => permission.value);
 export const DEFAULT_USER_PERMISSION_VALUES = ALL_PERMISSION_VALUES.filter(
-  (permission) => permission !== PERMISSIONS.USERS && permission !== PERMISSIONS.ACTIVITY_LOG
+  (permission) => !ADMIN_ONLY_DEFAULT_PERMISSIONS.has(permission)
 );
 
 const PERMISSION_LABEL_BY_VALUE = PERMISSION_DEFINITIONS.reduce(
@@ -187,6 +195,21 @@ export function canAccessDashboardView(user, view, navItemsByLabel) {
   const item = navItemsByLabel[view];
   if (!item) return false;
   return hasPermission(user, getPermissionForNavItem(item));
+}
+
+export function getVisibleNavSections(user, navSections) {
+  return navSections
+    .map((section) => ({
+      ...section,
+      items: section.items
+        .map((item) => {
+          if (!item.children?.length) return item;
+          const children = item.children.filter((child) => canAccessNavItem(user, child));
+          return children.length > 0 ? { ...item, children } : null;
+        })
+        .filter((item) => item && canAccessNavItem(user, item)),
+    }))
+    .filter((section) => section.items.length > 0);
 }
 
 export function getAccessibleDashboardViews(user, navSections) {

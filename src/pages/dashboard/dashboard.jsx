@@ -112,6 +112,7 @@ import {
   canAccessDashboardView,
   getAccessProfileLabel,
   getAccessibleDashboardViews,
+  getVisibleNavSections,
   hasPermission,
   isAdmin,
   mergeStoredPermissionsForUser,
@@ -126,36 +127,48 @@ import {
   ACTIVITY_MODULES,
   getActivityLog,
   logActivity,
-  markActivityRestored,
   subscribeActivityLog,
 } from "../../lib/activityLog";
+import { RecycleBinView } from "./features/recycle-bin/RecycleBinViews";
+import {
+  deleteRecycleBinItem,
+  fetchRecycleBin,
+  purgeRecycleBin,
+  restoreRecycleBinItem,
+} from "../../services/recycleBinService";
+import { DashboardHomeView } from "./features/home/DashboardHomeView";
 
-function buildEmployeeRestorePayload(snapshot) {
-  const payload = {
-    full_name: snapshot?.full_name || "",
-    position: snapshot?.position || "",
-    department: getEmployeeDepartmentCode(snapshot) || "",
-    location: snapshot?.location || "",
-    staff_code: snapshot?.staff_code || "",
-    phone: snapshot?.phone || "",
-    sex: snapshot?.sex || "",
-  };
-  return Object.fromEntries(Object.entries(payload).filter(([, value]) => String(value).trim() !== ""));
+function excludeBrokenStatuses(data) {
+  const list = Array.isArray(data) ? data : [];
+  return list.filter((status) => !/broken/i.test(status?.status_name || ""));
 }
 
-function buildDepartmentRestorePayload(snapshot) {
-  return {
-    department_code: snapshot?.department_code || "",
-    department_name: snapshot?.department_name || "",
-  };
-}
-
-function buildCategoryRestorePayload(snapshot) {
-  return {
-    category_name: snapshot?.category_name || snapshot?.category || "",
-    description: snapshot?.description || "",
-  };
-}
+const HOME_STAT_FETCHERS = {
+  Employee: () => fetchEmployees().then((data) => (Array.isArray(data) ? data.length : 0)),
+  Departments: () => fetchDepartments().then((data) => (Array.isArray(data) ? data.length : 0)),
+  "All Equipment": () =>
+    fetchEquipmentCategorySummary().then((data) =>
+      Array.isArray(data) ? data.reduce((sum, category) => sum + (category.total_items || 0), 0) : 0
+    ),
+  "Borrow History": () =>
+    fetchBorrowHistory({}).then((data) => (Array.isArray(data?.history) ? data.history.length : 0)),
+  "Device Replacement": () => fetchReplacements().then((data) => normalizeRecordList(data).length),
+  "SSD Upgrade": () => fetchSsdUpgrades().then((data) => normalizeRecordList(data).length),
+  "SSD Procurement": () => fetchSsdProcurement().then((data) => normalizeRecordList(data).length),
+  "Antivirus Install": () => fetchAntivirusInstalls().then((data) => normalizeRecordList(data).length),
+  "Cloud Rate": () => fetchCloudRates().then((data) => normalizeRecordList(data).length),
+  "Cloud Usage": () => fetchCloudUsage().then((data) => normalizeRecordList(data).length),
+  "Service Usage": () => fetchServerUsage().then((data) => normalizeRecordList(data).length),
+  Users: () =>
+    fetchUsers().then((data) => {
+      const list = Array.isArray(data) ? data : data?.users;
+      return Array.isArray(list) ? list.length : 0;
+    }),
+  "Recycle Bin": () =>
+    fetchRecycleBin().then((data) =>
+      typeof data?.count === "number" ? data.count : Array.isArray(data?.items) ? data.items.length : 0
+    ),
+};
 
 function Dashboard({ user, onLogout }) {
   const canCreateRecords = isAdmin(user);
@@ -171,9 +184,6 @@ function Dashboard({ user, onLogout }) {
     action: "All",
     search: "",
   });
-  const [restoringActivityId, setRestoringActivityId] = useState(null);
-  const [activityRestoreError, setActivityRestoreError] = useState(null);
-
   useEffect(() => subscribeActivityLog(() => setActivityEntries(getActivityLog())), []);
 
   const currentActorId = user?.user_id ?? user?.id ?? null;
@@ -200,34 +210,105 @@ function Dashboard({ user, onLogout }) {
     setActivityLogFilters((current) => ({ ...current, [key]: value }));
   }
 
-  function handleRestoreActivity(entry) {
-    if (!entry || entry.restoredAt || !entry.before) return;
+  const canManageRecycleBin = hasPermission(user, PERMISSIONS.RECYCLE_BIN);
+  const [recycleBinEntries, setRecycleBinEntries] = useState([]);
+  const [isRecycleBinLoading, setIsRecycleBinLoading] = useState(false);
+  const [recycleBinError, setRecycleBinError] = useState(null);
+  const [recycleBinFetchToken, setRecycleBinFetchToken] = useState(0);
+  const [recycleBinTypeFilter, setRecycleBinTypeFilter] = useState("All");
+  const [restoringRecycleBinId, setRestoringRecycleBinId] = useState(null);
+  const [deletingRecycleBinId, setDeletingRecycleBinId] = useState(null);
+  const [isPurgingRecycleBin, setIsPurgingRecycleBin] = useState(false);
+  const [recycleBinActionError, setRecycleBinActionError] = useState(null);
+  const [recycleBinItemToDelete, setRecycleBinItemToDelete] = useState(null);
+  const [isPurgeRecycleBinOpen, setIsPurgeRecycleBinOpen] = useState(false);
 
-    setRestoringActivityId(entry.id);
-    setActivityRestoreError(null);
+  const recycleBinTypeOptions = useMemo(() => {
+    const types = new Set(
+      recycleBinEntries.map((entry) => entry?.entity_type ?? entry?.entityType ?? entry?.type).filter(Boolean)
+    );
+    return [...types].sort();
+  }, [recycleBinEntries]);
 
-    let request;
-    if (entry.module === ACTIVITY_MODULES.EMPLOYEE) {
-      request = createEmployee(buildEmployeeRestorePayload(entry.before));
-    } else if (entry.module === ACTIVITY_MODULES.DEPARTMENT) {
-      request = createDepartment(buildDepartmentRestorePayload(entry.before));
-    } else if (entry.module === ACTIVITY_MODULES.CATEGORY) {
-      request = createCategory(buildCategoryRestorePayload(entry.before));
-    } else {
-      setRestoringActivityId(null);
-      return;
-    }
+  function handleRetryRecycleBin() {
+    setIsRecycleBinLoading(true);
+    setRecycleBinError(null);
+    setRecycleBinFetchToken((value) => value + 1);
+  }
 
-    request
+  function handleRecycleBinFilterChange(value) {
+    setRecycleBinTypeFilter(value);
+    setIsRecycleBinLoading(true);
+    setRecycleBinError(null);
+  }
+
+  function refreshAfterRecycleBinChange() {
+    handleRetryRecycleBin();
+    handleRetryEmployees();
+    handleRetryDepartments();
+    handleRetryEquipment();
+  }
+
+  function handleRestoreRecycleBinItem(entry) {
+    const id = entry?.id ?? entry?.recycle_bin_id ?? entry?.bin_id;
+    if (id === undefined || id === null) return;
+
+    setRestoringRecycleBinId(id);
+    setRecycleBinActionError(null);
+
+    restoreRecycleBinItem(id)
       .then(() => {
-        markActivityRestored(entry.id, user);
-        setActivityEntries(getActivityLog());
-        if (entry.module === ACTIVITY_MODULES.EMPLOYEE) handleRetryEmployees();
-        if (entry.module === ACTIVITY_MODULES.DEPARTMENT) handleRetryDepartments();
-        if (entry.module === ACTIVITY_MODULES.CATEGORY) handleRetryEquipment();
+        refreshAfterRecycleBinChange();
       })
-      .catch((error) => setActivityRestoreError(error.message || "Could not restore this record."))
-      .finally(() => setRestoringActivityId(null));
+      .catch((error) => setRecycleBinActionError(error.message || "Could not restore this item."))
+      .finally(() => setRestoringRecycleBinId(null));
+  }
+
+  function handleOpenDeleteRecycleBinItem(entry) {
+    setRecycleBinItemToDelete(entry);
+    setRecycleBinActionError(null);
+  }
+
+  function handleCloseDeleteRecycleBinItem() {
+    setRecycleBinItemToDelete(null);
+  }
+
+  function handleConfirmDeleteRecycleBinItem() {
+    const id = recycleBinItemToDelete?.id ?? recycleBinItemToDelete?.recycle_bin_id ?? recycleBinItemToDelete?.bin_id;
+    if (id === undefined || id === null) return;
+
+    setDeletingRecycleBinId(id);
+    setRecycleBinActionError(null);
+
+    deleteRecycleBinItem(id)
+      .then(() => {
+        setRecycleBinItemToDelete(null);
+        handleRetryRecycleBin();
+      })
+      .catch((error) => setRecycleBinActionError(error.message || "Could not permanently delete this item."))
+      .finally(() => setDeletingRecycleBinId(null));
+  }
+
+  function handleOpenPurgeRecycleBin() {
+    setIsPurgeRecycleBinOpen(true);
+    setRecycleBinActionError(null);
+  }
+
+  function handleClosePurgeRecycleBin() {
+    setIsPurgeRecycleBinOpen(false);
+  }
+
+  function handleConfirmPurgeRecycleBin() {
+    setIsPurgingRecycleBin(true);
+    setRecycleBinActionError(null);
+
+    purgeRecycleBin()
+      .then(() => {
+        setIsPurgeRecycleBinOpen(false);
+        handleRetryRecycleBin();
+      })
+      .catch((error) => setRecycleBinActionError(error.message || "Could not purge the recycle bin."))
+      .finally(() => setIsPurgingRecycleBin(false));
   }
 
   const accessibleDashboardViews = useMemo(
@@ -241,6 +322,40 @@ function Dashboard({ user, onLogout }) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState(initialDashboardView);
   const hasActiveViewAccess = accessibleDashboardViews.includes(activeView);
+  const isDashboardHomeView = activeView === "Dashboard" && hasActiveViewAccess;
+  const [homeStats, setHomeStats] = useState({});
+  const [isHomeStatsLoading, setIsHomeStatsLoading] = useState(initialDashboardView === "Dashboard");
+  const visibleHomeNavSections = useMemo(
+    () =>
+      getVisibleNavSections(user, navSections).filter((section) => section.label !== "Overview"),
+    [user]
+  );
+
+  useEffect(() => {
+    if (!isDashboardHomeView) return;
+
+    let ignore = false;
+
+    const labels = Object.keys(HOME_STAT_FETCHERS).filter((label) => accessibleDashboardViews.includes(label));
+
+    Promise.allSettled(labels.map((label) => HOME_STAT_FETCHERS[label]()))
+      .then((results) => {
+        if (ignore) return;
+        const next = {};
+        results.forEach((result, index) => {
+          next[labels[index]] = result.status === "fulfilled" ? result.value : null;
+        });
+        setHomeStats((current) => ({ ...current, ...next }));
+      })
+      .finally(() => {
+        if (!ignore) setIsHomeStatsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isDashboardHomeView, accessibleDashboardViews]);
+
   const [readNotificationIds, setReadNotificationIds] = useState(() => new Set());
   const [notificationData, setNotificationData] = useState({
     currentBorrows: [],
@@ -612,7 +727,6 @@ function Dashboard({ user, onLogout }) {
           entityId: id,
           entityLabel: categoryToDelete?.category_name || categoryToDelete?.category || `Category ${id}`,
           before: categoryToDelete,
-          restorable: true,
         });
         setCategoryToDelete(null);
         handleRetryEquipment();
@@ -692,7 +806,6 @@ function Dashboard({ user, onLogout }) {
           entityId: departmentToDelete.department_id,
           entityLabel: departmentToDelete.department_name,
           before: departmentToDelete,
-          restorable: true,
         });
         setDepartmentToDelete(null);
         handleRetryDepartments();
@@ -911,7 +1024,6 @@ function Dashboard({ user, onLogout }) {
           entityId: employeeToDelete.employee_id,
           entityLabel: employeeToDelete.full_name,
           before: employeeToDelete,
-          restorable: true,
         });
         setEmployeeToDelete(null);
         handleRetryEmployees();
@@ -1156,6 +1268,7 @@ function Dashboard({ user, onLogout }) {
   const isUsersView = activeView === "Users" && hasActiveViewAccess;
   const isMyActivityView = activeView === "My Activity" && hasActiveViewAccess;
   const isActivityLogView = activeView === "Activity Log" && hasActiveViewAccess;
+  const isRecycleBinView = activeView === "Recycle Bin" && hasActiveViewAccess;
 
   useEffect(() => {
     if (!isEquipmentView) return;
@@ -1193,7 +1306,7 @@ function Dashboard({ user, onLogout }) {
 
     fetchEquipmentStatuses()
       .then((data) => {
-        if (!ignore) setEquipmentStatuses(Array.isArray(data) ? data : []);
+        if (!ignore) setEquipmentStatuses(excludeBrokenStatuses(data));
       })
       .catch(() => {
         if (!ignore) setEquipmentStatuses([]);
@@ -1402,6 +1515,30 @@ function Dashboard({ user, onLogout }) {
   }, [isUsersView, usersFetchToken]);
 
   useEffect(() => {
+    if (!isRecycleBinView) return;
+
+    let ignore = false;
+
+    fetchRecycleBin(recycleBinTypeFilter === "All" ? undefined : recycleBinTypeFilter)
+      .then((data) => {
+        if (ignore) return;
+        const list = Array.isArray(data) ? data : data?.items ?? data?.data;
+        setRecycleBinEntries(Array.isArray(list) ? list : []);
+        setRecycleBinError(null);
+      })
+      .catch((error) => {
+        if (!ignore) setRecycleBinError(error.message || "Something went wrong.");
+      })
+      .finally(() => {
+        if (!ignore) setIsRecycleBinLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isRecycleBinView, recycleBinFetchToken, recycleBinTypeFilter]);
+
+  useEffect(() => {
     if (!isCloudRateView) return;
 
     let ignore = false;
@@ -1585,7 +1722,7 @@ function Dashboard({ user, onLogout }) {
       .catch(() => setDepartments([]));
 
     fetchEquipmentStatuses()
-      .then((data) => setEquipmentStatuses(Array.isArray(data) ? data : []))
+      .then((data) => setEquipmentStatuses(excludeBrokenStatuses(data)))
       .catch(() => setEquipmentStatuses([]));
   }
 
@@ -1624,7 +1761,7 @@ function Dashboard({ user, onLogout }) {
       .catch(() => setDepartments([]));
 
     fetchEquipmentStatuses()
-      .then((data) => setEquipmentStatuses(Array.isArray(data) ? data : []))
+      .then((data) => setEquipmentStatuses(excludeBrokenStatuses(data)))
       .catch(() => setEquipmentStatuses([]));
   }
 
@@ -1865,7 +2002,7 @@ function Dashboard({ user, onLogout }) {
       .catch(() => setDepartments([]));
 
     fetchEquipmentStatuses()
-      .then((data) => setEquipmentStatuses(Array.isArray(data) ? data : []))
+      .then((data) => setEquipmentStatuses(excludeBrokenStatuses(data)))
       .catch(() => setEquipmentStatuses([]));
   }
 
@@ -2325,6 +2462,25 @@ function Dashboard({ user, onLogout }) {
             </div>
           </header>
 
+          {isDashboardHomeView && (
+            <DashboardHomeView
+              navSections={visibleHomeNavSections}
+              stats={{
+                ...homeStats,
+                "Stock Available": notificationData.availableStock.length,
+                "Currently Borrowed": notificationData.currentBorrows.length,
+                License: notificationData.licenses.length,
+                "My Activity": myActivityEntries.length,
+                "Activity Log": activityEntries.length,
+              }}
+              isStatsLoading={isHomeStatsLoading}
+              onSelectView={handleSelectView}
+              notifications={visibleNotifications}
+              onOpenNotification={handleOpenNotification}
+              recentActivity={myActivityEntries}
+            />
+          )}
+
           {(isEquipmentView) && (
             <EquipmentView
               canManage={canManageEquipment}
@@ -2488,6 +2644,7 @@ function Dashboard({ user, onLogout }) {
           )}
 
           {hasActiveViewAccess &&
+            !isDashboardHomeView &&
             !isEmployeeView &&
             !isDepartmentsView &&
             !isEquipmentView &&
@@ -2504,7 +2661,8 @@ function Dashboard({ user, onLogout }) {
             !isBorrowHistoryView &&
             !isUsersView &&
             !isMyActivityView &&
-            !isActivityLogView && (
+            !isActivityLogView &&
+            !isRecycleBinView && (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
                 <div className="rounded-xl border border-slate-200 bg-white">
                   <EmptyState
@@ -2588,10 +2746,32 @@ function Dashboard({ user, onLogout }) {
                 onFilterChange={handleActivityLogFilterChange}
                 moduleOptions={ACTIVITY_MODULE_VALUES}
                 actionOptions={ACTIVITY_ACTION_VALUES}
-                onRestore={handleRestoreActivity}
-                restoringId={restoringActivityId}
-                restoreError={activityRestoreError}
-                canManage={canManageActivityLog}
+              />
+            ) : (
+              <div className="px-4 py-6 sm:px-6 lg:px-8">
+                <div className="rounded-xl border border-slate-200 bg-white">
+                  <EmptyState icon={Box} title="Not available" description="This page is admin-only." />
+                </div>
+              </div>
+            ))}
+
+          {isRecycleBinView &&
+            (canManageRecycleBin ? (
+              <RecycleBinView
+                entries={recycleBinEntries}
+                isLoading={isRecycleBinLoading}
+                error={recycleBinError}
+                onRetry={handleRetryRecycleBin}
+                typeFilter={recycleBinTypeFilter}
+                onFilterChange={handleRecycleBinFilterChange}
+                typeOptions={recycleBinTypeOptions}
+                onRestore={handleRestoreRecycleBinItem}
+                onDeleteForever={handleOpenDeleteRecycleBinItem}
+                onPurgeAll={handleOpenPurgeRecycleBin}
+                restoringId={restoringRecycleBinId}
+                deletingId={deletingRecycleBinId}
+                isPurging={isPurgingRecycleBin}
+                actionError={recycleBinActionError}
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -2791,6 +2971,28 @@ function Dashboard({ user, onLogout }) {
         onCancel={handleCloseDeleteCategory}
         isConfirming={isDeletingCategory}
         error={deleteCategoryError}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(recycleBinItemToDelete)}
+        title="Delete this item forever?"
+        message="This will permanently remove it from the recycle bin. This cannot be undone."
+        confirmLabel="Delete forever"
+        onConfirm={handleConfirmDeleteRecycleBinItem}
+        onCancel={handleCloseDeleteRecycleBinItem}
+        isConfirming={Boolean(deletingRecycleBinId)}
+        error={recycleBinActionError}
+      />
+
+      <ConfirmDialog
+        isOpen={isPurgeRecycleBinOpen}
+        title="Purge the entire recycle bin?"
+        message={`${recycleBinEntries.length} item${recycleBinEntries.length === 1 ? "" : "s"} will be permanently deleted. This cannot be undone.`}
+        confirmLabel="Purge all"
+        onConfirm={handleConfirmPurgeRecycleBin}
+        onCancel={handleClosePurgeRecycleBin}
+        isConfirming={isPurgingRecycleBin}
+        error={recycleBinActionError}
       />
     </div>
   );

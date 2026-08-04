@@ -2,9 +2,10 @@ import { navItemsByLabel } from "./dashboard.config";
 
 export const DASHBOARD_APP_TITLE = "TPLUS Management System";
 export const DASHBOARD_BASE_PATH = "/dashboard";
-export const DASHBOARD_DEFAULT_VIEW = "Employee";
+export const DASHBOARD_DEFAULT_VIEW = "Dashboard";
 
 export const dashboardRouteByView = {
+  Dashboard: "dashboard",
   Employee: "employee",
   Departments: "departments",
   Equipment: "equipment",
@@ -23,6 +24,7 @@ export const dashboardRouteByView = {
   Users: "users",
   "My Activity": "my-activity",
   "Activity Log": "activity-log",
+  "Recycle Bin": "recycle-bin",
 };
 
 const dashboardViewByRoute = Object.fromEntries(

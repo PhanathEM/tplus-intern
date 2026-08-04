@@ -1,10 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  FiActivity as ActivityIcon,
-  FiAlertTriangle as AlertTriangle,
-  FiChevronDown as ChevronDown,
-  FiRotateCcw as RotateCcw,
-} from "react-icons/fi";
+import { FiActivity as ActivityIcon, FiChevronDown as ChevronDown } from "react-icons/fi";
 import { EmptyState } from "../../components/SharedControls";
 import { formatFieldValue, humanizeFieldKey } from "../../dashboard.utils";
 
@@ -115,18 +110,12 @@ function ActivityDetails({ entry, changes, columnCount }) {
         ) : (
           <p className="text-xs text-slate-500">No additional details recorded.</p>
         )}
-
-        {entry.restoredAt && (
-          <p className="mt-2 text-xs font-medium text-emerald-700">
-            Restored by {entry.restoredBy || "someone"} on {formatTimestamp(entry.restoredAt)}
-          </p>
-        )}
       </td>
     </tr>
   );
 }
 
-function ActivityRow({ entry, showActor, onRestore, isRestoring }) {
+function ActivityRow({ entry, showActor }) {
   const [expanded, setExpanded] = useState(false);
   const changes = useMemo(() => diffFields(entry.before, entry.after), [entry.before, entry.after]);
   const hasDetails = Boolean(entry.before || entry.after);
@@ -144,39 +133,19 @@ function ActivityRow({ entry, showActor, onRestore, isRestoring }) {
         </td>
         <td className="whitespace-nowrap px-4 py-3 text-slate-600">{entry.module}</td>
         <td className="px-4 py-3 text-slate-800">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">{entry.entityLabel || `#${entry.entityId ?? "—"}`}</span>
-            {entry.restoredAt && (
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                Restored
-              </span>
-            )}
-          </div>
+          <span className="font-medium">{entry.entityLabel || `#${entry.entityId ?? "—"}`}</span>
         </td>
         <td className="whitespace-nowrap px-4 py-3 text-right">
-          <div className="flex items-center justify-end gap-2">
-            {hasDetails && (
-              <button
-                type="button"
-                onClick={() => setExpanded((value) => !value)}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-              >
-                Details
-                <ChevronDown size={12} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
-              </button>
-            )}
-            {entry.restorable && !entry.restoredAt && onRestore && (
-              <button
-                type="button"
-                onClick={() => onRestore(entry)}
-                disabled={isRestoring}
-                className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-emerald-700 outline-none transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <RotateCcw size={12} className={isRestoring ? "animate-spin" : ""} />
-                {isRestoring ? "Restoring..." : "Restore"}
-              </button>
-            )}
-          </div>
+          {hasDetails && (
+            <button
+              type="button"
+              onClick={() => setExpanded((value) => !value)}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            >
+              Details
+              <ChevronDown size={12} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+            </button>
+          )}
         </td>
       </tr>
       {expanded && <ActivityDetails entry={entry} changes={changes} columnCount={columnCount} />}
@@ -184,7 +153,7 @@ function ActivityRow({ entry, showActor, onRestore, isRestoring }) {
   );
 }
 
-function ActivityTable({ entries, showActor, onRestore, restoringId, emptyDescription }) {
+function ActivityTable({ entries, showActor, emptyDescription }) {
   if (entries.length === 0) {
     return <EmptyState icon={ActivityIcon} title="No activity yet" description={emptyDescription} />;
   }
@@ -204,13 +173,7 @@ function ActivityTable({ entries, showActor, onRestore, restoringId, emptyDescri
         </thead>
         <tbody className="divide-y divide-slate-50">
           {entries.map((entry) => (
-            <ActivityRow
-              key={entry.id}
-              entry={entry}
-              showActor={showActor}
-              onRestore={onRestore}
-              isRestoring={restoringId === entry.id}
-            />
+            <ActivityRow key={entry.id} entry={entry} showActor={showActor} />
           ))}
         </tbody>
       </table>
@@ -248,10 +211,6 @@ export function ActivityLogView({
   onFilterChange,
   moduleOptions,
   actionOptions,
-  onRestore,
-  restoringId,
-  restoreError,
-  canManage,
 }) {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -298,20 +257,7 @@ export function ActivityLogView({
           </div>
         </div>
 
-        {restoreError && (
-          <div className="mx-5 mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700">
-            <AlertTriangle size={14} />
-            {restoreError}
-          </div>
-        )}
-
-        <ActivityTable
-          entries={entries}
-          showActor
-          onRestore={canManage ? onRestore : null}
-          restoringId={restoringId}
-          emptyDescription="No activity matches these filters."
-        />
+        <ActivityTable entries={entries} showActor emptyDescription="No activity matches these filters." />
       </div>
     </div>
   );

@@ -3,24 +3,12 @@ import { FiChevronDown as ChevronDown } from "react-icons/fi";
 import { TbLayoutSidebar } from "react-icons/tb";
 import tplusLogo from "../../../assets/tplus-logo.png";
 import { navSections } from "../dashboard.config";
-import { canAccessNavItem } from "../../../lib/permissions";
+import { getVisibleNavSections } from "../../../lib/permissions";
 
 export function SidebarNavigation({ collapsed = false, activeView, onSelect, user }) {
   const [expandedLabels, setExpandedLabels] = useState(() => new Set());
 
-  const visibleSections = navSections
-    .map((section) => ({
-      ...section,
-      items: section.items
-        .map((item) => {
-          if (!item.children?.length) return item;
-
-          const children = item.children.filter((child) => canAccessNavItem(user, child));
-          return children.length > 0 ? { ...item, children } : null;
-        })
-        .filter((item) => item && canAccessNavItem(user, item)),
-    }))
-    .filter((section) => section.items.length > 0);
+  const visibleSections = getVisibleNavSections(user, navSections);
 
 return (
     <nav className={`scrollbar-thin-dark flex-1 overflow-y-auto py-4 ${collapsed ? "px-3" : "px-4"}`}>

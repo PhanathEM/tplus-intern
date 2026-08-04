@@ -70,7 +70,6 @@ export function logActivity({
   entityLabel = "",
   before = null,
   after = null,
-  restorable = false,
 }) {
   const entries = readLog();
 
@@ -84,9 +83,6 @@ export function logActivity({
     entityLabel,
     before,
     after,
-    restorable: Boolean(restorable && before),
-    restoredAt: null,
-    restoredBy: null,
   };
 
   entries.unshift(entry);
@@ -98,20 +94,6 @@ export function logActivity({
 
 export function getActivityLog() {
   return readLog();
-}
-
-export function markActivityRestored(entryId, restoredBy) {
-  const entries = readLog();
-  const next = entries.map((entry) =>
-    entry.id === entryId
-      ? {
-          ...entry,
-          restoredAt: new Date().toISOString(),
-          restoredBy: restoredBy?.full_name || restoredBy?.username || "Unknown user",
-        }
-      : entry
-  );
-  writeLog(next);
 }
 
 export function subscribeActivityLog(callback) {
