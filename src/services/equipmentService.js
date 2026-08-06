@@ -30,8 +30,8 @@ export function updateEquipmentByView(view, equipmentId, payload) {
   return apiPut(`/api/equipment/${view}/${equipmentId}`, payload);
 }
 
-export function deleteEquipmentByView(view, equipmentId) {
-  return apiDelete(`/api/equipment/${view}/${equipmentId}`);
+export function deleteEquipmentItem(equipmentId) {
+  return apiDelete(`/api/equipment/${equipmentId}`);
 }
 
 export function fetchViewColumnsSummary() {

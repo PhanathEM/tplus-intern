@@ -19,7 +19,7 @@ import {
   fetchEquipmentByView,
   createEquipmentByView,
   updateEquipmentByView,
-  deleteEquipmentByView,
+  deleteEquipmentItem,
   fetchViewColumnsSummary,
   fetchAvailableViewFields,
   fetchViewColumns,
@@ -2239,11 +2239,14 @@ function Dashboard({ user, onLogout }) {
 
   function getEquipmentDisplayName(item) {
     return (
-      [item?.category || item?.category_name, item?.device_type, item?.device_model].filter(Boolean).join(" - ") ||
+      item?.device_name ||
+      item?.name ||
       item?.computer_name ||
+      [item?.device_type, item?.device_model].filter(Boolean).join(" - ") ||
       item?.equipment_code ||
       item?.service_tag ||
-      `Equipment ${item?.equipment_id || ""}`.trim()
+      item?.serial_no ||
+      `${item?.category || item?.category_name || "Equipment"} #${item?.equipment_id || ""}`.trim()
     );
   }
 
@@ -2302,11 +2305,7 @@ function Dashboard({ user, onLogout }) {
     setIsDeletingEquipment(true);
     setDeleteEquipmentError(null);
 
-    const view =
-      equipmentToDelete.__equipment_view ||
-      resolveEquipmentView(equipmentToDelete.category || equipmentToDelete.category_name);
-
-    deleteEquipmentByView(view, equipmentToDelete.equipment_id)
+    deleteEquipmentItem(equipmentToDelete.equipment_id)
       .then(() => {
         logActivity({
           actor: user,

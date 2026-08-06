@@ -128,14 +128,16 @@ export function normalizeViewColumns(data) {
     .filter(Boolean);
 }
 
-// GET /api/equipment/{view} -> { ..., columns: [{ field, header }], items: [...] }
+// GET /api/equipment/{view} -> { ..., columns: [{ field, header, custom }], items: [...] }
+// Custom fields are always included here too (tagged custom: true) alongside
+// the category's configured standard columns.
 export function normalizeEquipmentTableColumns(data) {
   const list = Array.isArray(data?.columns) ? data.columns : [];
   return list
     .map((entry) => {
       const key = entry?.field || entry?.key || "";
       if (!key) return null;
-      return { key, label: entry?.header || humanizeFieldKey(key) };
+      return { key, label: entry?.header || humanizeFieldKey(key), custom: Boolean(entry?.custom) };
     })
     .filter(Boolean);
 }
@@ -194,13 +196,18 @@ export function getEquipmentFormFields(sampleRecord) {
 // always matches what was ticked there.
 export function getEquipmentFormFieldsFromColumns(columns) {
   if (!Array.isArray(columns) || columns.length === 0) return null;
-  return columns
-    .filter((column) => !EQUIPMENT_FORM_EXCLUDED_KEYS.has(column.key))
+  // Custom fields are excluded here even though the backend lists them
+  // alongside standard columns — they must come from fetchCustomFields()
+  // instead, which is the only source that carries their real field_id
+  // (needed to delete/rename them later).
+  const fields = columns
+    .filter((column) => !column.custom && !EQUIPMENT_FORM_EXCLUDED_KEYS.has(column.key))
     .map((column) => ({
       key: column.key,
       label: column.label || humanizeFieldKey(column.key),
       type: inferEquipmentFieldType(column.key),
     }));
+  return fields.length > 0 ? fields : null;
 }
 
 export function buildEquipmentFormValues(fields, source = {}) {
