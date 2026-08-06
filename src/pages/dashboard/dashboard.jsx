@@ -19,6 +19,14 @@ import {
   fetchEquipmentByView,
   createEquipmentByView,
   updateEquipmentByView,
+  deleteEquipmentByView,
+  fetchViewColumnsSummary,
+  fetchAvailableViewFields,
+  fetchViewColumns,
+  saveViewColumns,
+  fetchCustomFields,
+  createCustomField,
+  deleteCustomField,
   fetchAvailableStock,
   assignEquipment,
   unassignEquipment,
@@ -70,7 +78,13 @@ import {
   normalizeRecordList,
   extractEquipmentItems,
   normalizeEquipmentViews,
+  normalizeViewColumnsSummary,
+  normalizeAvailableFields,
+  normalizeViewColumns,
+  normalizeEquipmentTableColumns,
+  normalizeCustomFields,
   getEquipmentFormFields,
+  getEquipmentFormFieldsFromColumns,
   buildEquipmentFormValues,
   slugifyEquipmentView,
 } from "./dashboard.utils";
@@ -88,6 +102,7 @@ import { GlobalSearch } from "./components/GlobalSearch";
 import {
   AssignEquipmentModal,
   BorrowEquipmentModal,
+  ColumnsPickerModal,
   EquipmentFormModal,
   EquipmentView,
   ReturnEquipmentModal,
@@ -536,13 +551,14 @@ function Dashboard({ user, onLogout }) {
       handleSelectView("Departments");
     } else if (type === "equipment") {
       handleSelectView("All Equipment");
-      handleViewEquipmentCategory(slugifyEquipmentView(item.category || item.category_name) || "All");
+      handleViewEquipmentCategory(resolveEquipmentView(item.category || item.category_name) || "All");
     } else if (type === "users") {
       handleSelectView("Users");
     }
   }
   const [equipmentCategories, setEquipmentCategories] = useState([]);
   const [equipmentCategory, setEquipmentCategory] = useState("All");
+  const [equipmentTableColumns, setEquipmentTableColumns] = useState([]);
   const [isEquipmentLoading, setIsEquipmentLoading] = useState(initialDashboardView === "Equipment");
   const [equipmentError, setEquipmentError] = useState(null);
   const [equipmentFetchToken, setEquipmentFetchToken] = useState(0);
@@ -561,6 +577,9 @@ function Dashboard({ user, onLogout }) {
   const [equipmentToUnassign, setEquipmentToUnassign] = useState(null);
   const [isUnassigningEquipment, setIsUnassigningEquipment] = useState(false);
   const [unassignEquipmentError, setUnassignEquipmentError] = useState(null);
+  const [equipmentToDelete, setEquipmentToDelete] = useState(null);
+  const [isDeletingEquipment, setIsDeletingEquipment] = useState(false);
+  const [deleteEquipmentError, setDeleteEquipmentError] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(initialDashboardView === "Departments");
   const [departmentsError, setDepartmentsError] = useState(null);
@@ -705,6 +724,16 @@ function Dashboard({ user, onLogout }) {
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
   const [deleteCategoryError, setDeleteCategoryError] = useState(null);
+
+  const [isColumnsPickerOpen, setIsColumnsPickerOpen] = useState(false);
+  const [columnsPickerCategoryId, setColumnsPickerCategoryId] = useState(null);
+  const [columnsPickerCategoryLabel, setColumnsPickerCategoryLabel] = useState("");
+  const [availableViewFields, setAvailableViewFields] = useState([]);
+  const [isColumnsPickerLoading, setIsColumnsPickerLoading] = useState(false);
+  const [columnsPickerSelectedKeys, setColumnsPickerSelectedKeys] = useState([]);
+  const [isSavingColumns, setIsSavingColumns] = useState(false);
+  const [columnsPickerError, setColumnsPickerError] = useState(null);
+
   const notificationsRef = useRef(null);
   const profileMenuRef = useRef(null);
   const selectViewRef = useRef(null);
@@ -754,6 +783,27 @@ function Dashboard({ user, onLogout }) {
     if (equipmentFormTarget?.category) names.add(equipmentFormTarget.category);
     return [...names].sort();
   }, [equipmentCategories, equipmentFormTarget]);
+
+  const equipmentCategoryByLabel = useMemo(() => {
+    const map = new Map();
+    EQUIPMENT_VIEWS.forEach((view) => map.set(view.label, { slug: view.slug, categoryId: null }));
+    equipmentCategories.forEach((item) => map.set(item.label, { slug: item.slug, categoryId: item.categoryId }));
+    return map;
+  }, [equipmentCategories]);
+
+  const equipmentCategoryBySlug = useMemo(() => {
+    const map = new Map();
+    equipmentCategories.forEach((item) => map.set(item.slug, item));
+    return map;
+  }, [equipmentCategories]);
+
+  function resolveEquipmentView(label) {
+    return equipmentCategoryByLabel.get(label)?.slug || slugifyEquipmentView(label);
+  }
+
+  function resolveEquipmentCategoryId(label) {
+    return equipmentCategoryByLabel.get(label)?.categoryId ?? null;
+  }
 
   const sortedEmployees = useMemo(() => {
     if (!employeeSort.key) return employees;
@@ -877,11 +927,12 @@ function Dashboard({ user, onLogout }) {
 
     req
       .then((data) => {
+        const newId = id ?? data?.category_id ?? data?.id ?? data?.categoryId;
         logActivity({
           actor: user,
           action: isEdit ? "update" : "create",
           module: ACTIVITY_MODULES.CATEGORY,
-          entityId: id ?? data?.category_id ?? data?.id,
+          entityId: newId,
           entityLabel: payload.category_name,
           before: isEdit ? categoryFormTarget : null,
           after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
@@ -891,6 +942,61 @@ function Dashboard({ user, onLogout }) {
       })
       .catch((error) => setCategoryFormError(error.message || "Something went wrong."))
       .finally(() => setIsSavingCategory(false));
+  }
+
+  function handleOpenColumnsPicker(categoryId, categoryLabel) {
+    if (!categoryId) return;
+
+    setColumnsPickerCategoryId(categoryId);
+    setColumnsPickerCategoryLabel(categoryLabel || "");
+    setColumnsPickerError(null);
+    setIsColumnsPickerOpen(true);
+    setIsColumnsPickerLoading(true);
+
+    const fieldsRequest =
+      availableViewFields.length > 0
+        ? Promise.resolve(availableViewFields)
+        : fetchAvailableViewFields().then(normalizeAvailableFields);
+
+    Promise.all([fieldsRequest, fetchViewColumns(categoryId).then(normalizeViewColumns).catch(() => [])])
+      .then(([fields, currentColumns]) => {
+        setAvailableViewFields(fields);
+        setColumnsPickerSelectedKeys(currentColumns.map((column) => column.key));
+      })
+      .catch((error) => setColumnsPickerError(error.message || "Could not load fields."))
+      .finally(() => setIsColumnsPickerLoading(false));
+  }
+
+  function handleToggleColumnField(key) {
+    setColumnsPickerSelectedKeys((current) =>
+      current.includes(key) ? current.filter((item) => item !== key) : [...current, key]
+    );
+  }
+
+  function handleCloseColumnsPicker() {
+    setIsColumnsPickerOpen(false);
+    setColumnsPickerCategoryId(null);
+    setColumnsPickerError(null);
+  }
+
+  function handleSaveColumnsPicker() {
+    if (!columnsPickerCategoryId) return;
+
+    setIsSavingColumns(true);
+    setColumnsPickerError(null);
+
+    const payload = columnsPickerSelectedKeys.map((key, index) => {
+      const field = availableViewFields.find((item) => item.key === key);
+      return { field: key, header: field?.label || key, sort_order: index + 1 };
+    });
+
+    saveViewColumns(columnsPickerCategoryId, payload)
+      .then(() => {
+        setIsColumnsPickerOpen(false);
+        handleRetryEquipment();
+      })
+      .catch((error) => setColumnsPickerError(error.message || "Could not save columns."))
+      .finally(() => setIsSavingColumns(false));
   }
 
   function handleOpenDeleteCategory(category) {
@@ -1464,12 +1570,21 @@ function Dashboard({ user, onLogout }) {
 
     let ignore = false;
 
-    fetchEquipmentViews()
+    fetchViewColumnsSummary()
       .then((data) => {
         if (ignore) return;
-        const normalized = normalizeEquipmentViews(data);
-        setEquipmentCategories(normalized.length > 0 ? normalized : EQUIPMENT_VIEWS);
-        setEquipmentError(null);
+        const normalized = normalizeViewColumnsSummary(data);
+        if (normalized.length > 0) {
+          setEquipmentCategories(normalized);
+          setEquipmentError(null);
+          return;
+        }
+        return fetchEquipmentViews().then((legacyData) => {
+          if (ignore) return;
+          const legacyNormalized = normalizeEquipmentViews(legacyData);
+          setEquipmentCategories(legacyNormalized.length > 0 ? legacyNormalized : EQUIPMENT_VIEWS);
+          setEquipmentError(null);
+        });
       })
       .catch((error) => {
         if (!ignore) {
@@ -1903,6 +2018,12 @@ function Dashboard({ user, onLogout }) {
   }
 
   function handleOpenAddEquipmentItem() {
+    const activeEntry = equipmentCategoryBySlug.get(equipmentCategory);
+    if (activeEntry && activeEntry.columnCount === 0) {
+      handleOpenColumnsPicker(activeEntry.categoryId, activeEntry.label);
+      return;
+    }
+
     setEquipmentFormMode("add");
     setEquipmentFormTarget(null);
     const activeCategoryLabel =
@@ -1910,7 +2031,10 @@ function Dashboard({ user, onLogout }) {
         ? ""
         : equipmentCategories.find((item) => item.slug === equipmentCategory)?.label || "";
     const sampleRecord = equipmentCategory === "All" ? null : equipmentItems[0] || null;
-    const fields = getEquipmentFormFields(sampleRecord) || EQUIPMENT_FORM_FALLBACK_FIELDS;
+    const fields =
+      (equipmentCategory !== "All" && getEquipmentFormFieldsFromColumns(equipmentTableColumns)) ||
+      getEquipmentFormFields(sampleRecord) ||
+      EQUIPMENT_FORM_FALLBACK_FIELDS;
     setEquipmentFormFields(fields);
     setEquipmentFormValues({ ...buildEquipmentFormValues(fields, {}), category: activeCategoryLabel });
     setEquipmentFormError(null);
@@ -1923,12 +2047,32 @@ function Dashboard({ user, onLogout }) {
     fetchEquipmentStatuses()
       .then((data) => setEquipmentStatuses(excludeBrokenStatuses(data)))
       .catch(() => setEquipmentStatuses([]));
+
+    const activeCategoryId = equipmentCategoryBySlug.get(equipmentCategory)?.categoryId;
+    if (activeCategoryId != null) {
+      fetchCustomFields(activeCategoryId)
+        .then((data) => {
+          const customFields = normalizeCustomFields(data);
+          const extraFields = customFields.filter((field) => !fields.some((f) => f.key === field.key));
+          if (extraFields.length === 0) return;
+          const merged = [...fields, ...extraFields];
+          setEquipmentFormFields(merged);
+          setEquipmentFormValues((current) => ({
+            ...buildEquipmentFormValues(merged, {}),
+            ...current,
+          }));
+        })
+        .catch(() => {});
+    }
   }
 
   function handleOpenEditEquipmentItem(item) {
     setEquipmentFormMode("edit");
     setEquipmentFormTarget(item);
-    const fields = getEquipmentFormFields(item) || EQUIPMENT_FORM_FALLBACK_FIELDS;
+    const fields =
+      getEquipmentFormFieldsFromColumns(equipmentTableColumns) ||
+      getEquipmentFormFields(item) ||
+      EQUIPMENT_FORM_FALLBACK_FIELDS;
     setEquipmentFormFields(fields);
     setEquipmentFormValues(buildEquipmentFormValues(fields, item));
     setEquipmentFormError(null);
@@ -1941,6 +2085,19 @@ function Dashboard({ user, onLogout }) {
     fetchEquipmentStatuses()
       .then((data) => setEquipmentStatuses(excludeBrokenStatuses(data)))
       .catch(() => setEquipmentStatuses([]));
+
+    if (item.__category_id != null) {
+      fetchCustomFields(item.__category_id)
+        .then((data) => {
+          const customFields = normalizeCustomFields(data);
+          const extraFields = customFields.filter((field) => !fields.some((f) => f.key === field.key));
+          if (extraFields.length === 0) return;
+          const merged = [...fields, ...extraFields];
+          setEquipmentFormFields(merged);
+          setEquipmentFormValues(buildEquipmentFormValues(merged, item));
+        })
+        .catch(() => {});
+    }
   }
 
   function handleCloseEquipmentForm() {
@@ -1949,6 +2106,90 @@ function Dashboard({ user, onLogout }) {
 
   function handleEquipmentFormFieldChange(key, value) {
     setEquipmentFormValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleAddCustomField(label, type) {
+    const categoryId =
+      equipmentFormMode === "edit"
+        ? equipmentFormTarget?.__category_id ??
+          resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
+        : resolveEquipmentCategoryId(equipmentFormValues.category);
+
+    if (categoryId == null) return Promise.reject(new Error("Choose a category first."));
+
+    return createCustomField(categoryId, { field_label: label, field_type: type }).then((data) => {
+      const [normalized] = normalizeCustomFields([data?.field || data]);
+      const field = normalized || {
+        id: null,
+        key: slugifyEquipmentView(label).replace(/-/g, "_"),
+        label,
+        type,
+      };
+      setEquipmentFormFields((current) => [...current, field]);
+      setEquipmentFormValues((current) => ({ ...current, [field.key]: "" }));
+    });
+  }
+
+  function handleOpenColumnsPickerFromForm() {
+    const categoryId =
+      equipmentFormMode === "edit"
+        ? equipmentFormTarget?.__category_id ??
+          resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
+        : resolveEquipmentCategoryId(equipmentFormValues.category);
+
+    if (categoryId == null) return;
+
+    handleOpenColumnsPicker(categoryId, equipmentFormValues.category);
+  }
+
+  function handleRemoveCustomField(field) {
+    return deleteCustomField(field.id)
+      .catch((error) => {
+        if (error.status === 409) {
+          const confirmed = window.confirm(
+            `"${field.label}" already has data saved on some items. Delete it and that data anyway?`
+          );
+          if (confirmed) return deleteCustomField(field.id, true);
+        }
+        throw error;
+      })
+      .then(() => {
+        setEquipmentFormFields((current) => current.filter((item) => item.key !== field.key));
+        setEquipmentFormValues((current) => {
+          const next = { ...current };
+          delete next[field.key];
+          return next;
+        });
+      });
+  }
+
+  function handleRemoveStandardField(field) {
+    const categoryId =
+      equipmentFormMode === "edit"
+        ? equipmentFormTarget?.__category_id ??
+          resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
+        : resolveEquipmentCategoryId(equipmentFormValues.category);
+
+    if (categoryId == null) return Promise.reject(new Error("Choose a category first."));
+
+    const remainingFields = equipmentFormFields.filter((item) => item.key !== field.key);
+    const payload = remainingFields
+      .filter((item) => item.id == null)
+      .map((item, index) => ({ field: item.key, header: item.label, sort_order: index + 1 }));
+
+    return saveViewColumns(categoryId, payload).then(() => {
+      setEquipmentFormFields(remainingFields);
+      setEquipmentFormValues((current) => {
+        const next = { ...current };
+        delete next[field.key];
+        return next;
+      });
+      handleRetryEquipment();
+    });
+  }
+
+  function handleRemoveEquipmentField(field) {
+    return field.id != null ? handleRemoveCustomField(field) : handleRemoveStandardField(field);
   }
 
   function handleSubmitEquipmentForm(event) {
@@ -1963,12 +2204,18 @@ function Dashboard({ user, onLogout }) {
     const isEdit = equipmentFormMode === "edit";
     const view = isEdit
       ? equipmentFormTarget.__equipment_view ||
-        slugifyEquipmentView(equipmentFormTarget.category || equipmentFormTarget.category_name)
-      : slugifyEquipmentView(payload.category);
+        resolveEquipmentView(equipmentFormTarget.category || equipmentFormTarget.category_name)
+      : resolveEquipmentView(payload.category);
+
+    // "category" is implied by the view/URL, not a real per-item field — the
+    // backend rejects it as an unknown column if it's included in the body.
+    const requestPayload = Object.fromEntries(
+      Object.entries(payload).filter(([key]) => key !== "category")
+    );
 
     const request = isEdit
-      ? updateEquipmentByView(view, equipmentFormTarget.equipment_id, payload)
-      : createEquipmentByView(view, payload);
+      ? updateEquipmentByView(view, equipmentFormTarget.equipment_id, requestPayload)
+      : createEquipmentByView(view, requestPayload);
 
     request
       .then((data) => {
@@ -2037,6 +2284,45 @@ function Dashboard({ user, onLogout }) {
       })
       .catch((error) => setUnassignEquipmentError(error.message || "Something went wrong."))
       .finally(() => setIsUnassigningEquipment(false));
+  }
+
+  function handleOpenDeleteEquipment(item) {
+    setEquipmentToDelete(item);
+    setDeleteEquipmentError(null);
+  }
+
+  function handleCloseDeleteEquipment() {
+    setEquipmentToDelete(null);
+    setDeleteEquipmentError(null);
+  }
+
+  function handleConfirmDeleteEquipment() {
+    if (!equipmentToDelete?.equipment_id) return;
+
+    setIsDeletingEquipment(true);
+    setDeleteEquipmentError(null);
+
+    const view =
+      equipmentToDelete.__equipment_view ||
+      resolveEquipmentView(equipmentToDelete.category || equipmentToDelete.category_name);
+
+    deleteEquipmentByView(view, equipmentToDelete.equipment_id)
+      .then(() => {
+        logActivity({
+          actor: user,
+          action: "delete",
+          module: ACTIVITY_MODULES.EQUIPMENT,
+          entityId: equipmentToDelete.equipment_id,
+          entityLabel: getEquipmentDisplayName(equipmentToDelete),
+          before: equipmentToDelete,
+        });
+        setEquipmentToDelete(null);
+        handleRetryEquipment();
+        handleRetryNotifications();
+        handleViewEquipmentCategory(equipmentCategory);
+      })
+      .catch((error) => setDeleteEquipmentError(error.message || "Something went wrong."))
+      .finally(() => setIsDeletingEquipment(false));
   }
 
   function handleRetryReplacements() {
@@ -2422,6 +2708,7 @@ function Dashboard({ user, onLogout }) {
     const request =
       category === "All"
         ? Promise.allSettled(views.map((view) => fetchEquipmentByView(view.slug))).then((results) => {
+            setEquipmentTableColumns([]);
             const merged = [];
             let anyFulfilled = false;
             results.forEach((result, index) => {
@@ -2429,7 +2716,12 @@ function Dashboard({ user, onLogout }) {
               anyFulfilled = true;
               const view = views[index];
               extractEquipmentItems(result.value).forEach((item) => {
-                merged.push({ ...item, category: item.category || view.label, __equipment_view: view.slug });
+                merged.push({
+                  ...item,
+                  category: item.category || view.label,
+                  __equipment_view: view.slug,
+                  __category_id: view.categoryId ?? null,
+                });
               });
             });
             if (!anyFulfilled && views.length > 0) {
@@ -2439,10 +2731,12 @@ function Dashboard({ user, onLogout }) {
           })
         : fetchEquipmentByView(category).then((data) => {
             const view = views.find((item) => item.slug === category);
+            setEquipmentTableColumns(normalizeEquipmentTableColumns(data));
             return extractEquipmentItems(data).map((item) => ({
               ...item,
               category: item.category || view?.label || category,
               __equipment_view: category,
+              __category_id: view?.categoryId ?? null,
             }));
           });
 
@@ -2833,11 +3127,13 @@ function Dashboard({ user, onLogout }) {
               selectedCategory={equipmentCategory}
               onSelectCategory={handleSelectEquipmentCategory}
               items={equipmentItems}
+              columns={equipmentTableColumns}
               isItemsLoading={isEquipmentItemsLoading}
               itemsError={equipmentItemsError}
               onAddNew={handleOpenAddEquipmentItem}
               onEdit={handleOpenEditEquipmentItem}
               onUnassign={handleOpenUnassignEquipment}
+              onDelete={handleOpenDeleteEquipment}
               onAddCategory={handleOpenAddCategory}
               onEditCategory={handleOpenEditCategory}
               onDeleteCategory={handleOpenDeleteCategory}
@@ -3156,6 +3452,22 @@ function Dashboard({ user, onLogout }) {
         categoryOptions={equipmentFormCategoryOptions}
         categoryLocked={equipmentFormMode === "edit" || equipmentCategory !== "All"}
         fields={equipmentFormFields}
+        onAddField={handleAddCustomField}
+        onRemoveField={handleRemoveEquipmentField}
+        onOpenColumnsPicker={handleOpenColumnsPickerFromForm}
+      />
+
+      <ColumnsPickerModal
+        isOpen={isColumnsPickerOpen}
+        categoryLabel={columnsPickerCategoryLabel}
+        fields={availableViewFields}
+        selectedKeys={columnsPickerSelectedKeys}
+        onToggle={handleToggleColumnField}
+        onSave={handleSaveColumnsPicker}
+        onClose={handleCloseColumnsPicker}
+        isLoading={isColumnsPickerLoading}
+        isSaving={isSavingColumns}
+        error={columnsPickerError}
       />
 
       <AssignEquipmentModal
@@ -3315,6 +3627,21 @@ function Dashboard({ user, onLogout }) {
         onCancel={handleCloseUnassignEquipment}
         isConfirming={isUnassigningEquipment}
         error={unassignEquipmentError}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(equipmentToDelete)}
+        title="Delete this equipment?"
+        message={
+          equipmentToDelete
+            ? `"${getEquipmentDisplayName(equipmentToDelete)}" will be permanently removed. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete equipment"
+        onConfirm={handleConfirmDeleteEquipment}
+        onCancel={handleCloseDeleteEquipment}
+        isConfirming={isDeletingEquipment}
+        error={deleteEquipmentError}
       />
 
       <ConfirmDialog

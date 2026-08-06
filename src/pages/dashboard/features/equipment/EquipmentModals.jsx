@@ -1,74 +1,94 @@
-import { useEffect } from "react";
-import { FiX as X } from "react-icons/fi";
+import { useEffect, useState } from "react";
+import { FiPlusCircle as PlusCircle, FiX as X } from "react-icons/fi";
 import {
   EmployeeSelectDropdown,
   FormField,
   formInputClass,
 } from "../../components/SharedControls";
 
-function EquipmentDynamicField({ field, values, onChange, isSubmitting, departments }) {
+function EquipmentDynamicField({ field, values, onChange, isSubmitting, departments, onRemove }) {
   const id = `add-equipment-${field.key}`;
   const value = values[field.key] || "";
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState(null);
 
+  function handleRemove() {
+    setIsRemoving(true);
+    setRemoveError(null);
+    onRemove(field)
+      .catch((error) => setRemoveError(error.message || "Could not remove field."))
+      .finally(() => setIsRemoving(false));
+  }
+
+  const canRemove = Boolean(onRemove);
+
+  const label = (
+    <div className="mb-1.5 flex items-center justify-between gap-2">
+      <label className="text-xs font-semibold text-slate-600" htmlFor={id}>
+        {field.label}
+      </label>
+      {canRemove && (
+        <button
+          type="button"
+          onClick={handleRemove}
+          disabled={isSubmitting || isRemoving}
+          title="Remove field"
+          className="text-slate-400 outline-none transition hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <X size={13} />
+        </button>
+      )}
+    </div>
+  );
+
+  let input;
   if (field.type === "department-select") {
-    return (
-      <FormField label={field.label} htmlFor={id}>
-        <select
-          id={id}
-          autoComplete="off"
-          value={value}
-          onChange={(e) => onChange(field.key, e.target.value)}
-          className={formInputClass}
-          disabled={isSubmitting}
-        >
-          <option value="">—</option>
-          {departments.map((dept) => (
-            <option key={dept.department_id} value={dept.department_code}>
-              {dept.department_name}
-            </option>
-          ))}
-        </select>
-      </FormField>
+    input = (
+      <select
+        id={id}
+        autoComplete="off"
+        value={value}
+        onChange={(e) => onChange(field.key, e.target.value)}
+        className={formInputClass}
+        disabled={isSubmitting}
+      >
+        <option value="">—</option>
+        {departments.map((dept) => (
+          <option key={dept.department_id} value={dept.department_code}>
+            {dept.department_name}
+          </option>
+        ))}
+      </select>
     );
-  }
-
-  if (field.type === "yes-no-select") {
-    return (
-      <FormField label={field.label} htmlFor={id}>
-        <select
-          id={id}
-          autoComplete="off"
-          value={value}
-          onChange={(e) => onChange(field.key, e.target.value)}
-          className={formInputClass}
-          disabled={isSubmitting}
-        >
-          <option value="">—</option>
-          <option value="Yes">Yes</option>
-          <option value="No">No</option>
-        </select>
-      </FormField>
+  } else if (field.type === "yes-no-select") {
+    input = (
+      <select
+        id={id}
+        autoComplete="off"
+        value={value}
+        onChange={(e) => onChange(field.key, e.target.value)}
+        className={formInputClass}
+        disabled={isSubmitting}
+      >
+        <option value="">—</option>
+        <option value="Yes">Yes</option>
+        <option value="No">No</option>
+      </select>
     );
-  }
-
-  if (field.type === "date") {
-    return (
-      <FormField label={field.label} htmlFor={id}>
-        <input
-          id={id}
-          type="date"
-          autoComplete="off"
-          value={value}
-          onChange={(e) => onChange(field.key, e.target.value)}
-          className={formInputClass}
-          disabled={isSubmitting}
-        />
-      </FormField>
+  } else if (field.type === "date") {
+    input = (
+      <input
+        id={id}
+        type="date"
+        autoComplete="off"
+        value={value}
+        onChange={(e) => onChange(field.key, e.target.value)}
+        className={formInputClass}
+        disabled={isSubmitting}
+      />
     );
-  }
-
-  return (
-    <FormField label={field.label} htmlFor={id}>
+  } else {
+    input = (
       <input
         id={id}
         type="text"
@@ -78,7 +98,102 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
         className={formInputClass}
         disabled={isSubmitting}
       />
-    </FormField>
+    );
+  }
+
+  return (
+    <div>
+      {label}
+      {input}
+      {removeError && <p className="mt-1 text-[11px] font-medium text-rose-600">{removeError}</p>}
+    </div>
+  );
+}
+
+function AddCustomFieldControl({ onAdd, disabled }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [label, setLabel] = useState("");
+  const [type, setType] = useState("text");
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  if (!isOpen) {
+    return (
+      <div className="sm:col-span-2">
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          disabled={disabled}
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <PlusCircle size={15} />
+          Add field
+        </button>
+      </div>
+    );
+  }
+
+  function handleAdd() {
+    if (!label.trim()) {
+      setError("Enter a field name.");
+      return;
+    }
+    setIsSaving(true);
+    setError(null);
+    onAdd(label.trim(), type)
+      .then(() => {
+        setIsOpen(false);
+        setLabel("");
+        setType("text");
+      })
+      .catch((err) => setError(err.message || "Could not add field."))
+      .finally(() => setIsSaving(false));
+  }
+
+  return (
+    <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      {error && <p className="mb-2 text-[12px] font-medium text-rose-600">{error}</p>}
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="text"
+          autoComplete="off"
+          placeholder="Field name"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          className={`${formInputClass} max-w-56`}
+          disabled={isSaving}
+        />
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className={`${formInputClass} max-w-36`}
+          disabled={isSaving}
+        >
+          <option value="text">Text</option>
+          <option value="date">Date</option>
+          <option value="yes-no-select">Yes / No</option>
+        </select>
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={isSaving}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isSaving ? "Adding..." : "Add"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setIsOpen(false);
+            setError(null);
+          }}
+          disabled={isSaving}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -96,6 +211,9 @@ export function EquipmentFormModal({
   categoryOptions,
   categoryLocked = false,
   fields = [],
+  onAddField,
+  onRemoveField,
+  onOpenColumnsPicker,
 }) {
   useEffect(() => {
     function handleKeyDown(event) {
@@ -173,8 +291,13 @@ return (
                   onChange={onChange}
                   isSubmitting={isSubmitting}
                   departments={departments}
+                  onRemove={onRemoveField}
                 />
               ))}
+
+{onAddField && (
+                <AddCustomFieldControl onAdd={onAddField} disabled={isSubmitting || !values.category} />
+              )}
 
 <FormField label="Status" htmlFor="add-equipment-status">
                 <select
@@ -219,6 +342,16 @@ return (
             >
               Cancel
             </button>
+            {onOpenColumnsPicker && (
+              <button
+                type="button"
+                onClick={onOpenColumnsPicker}
+                disabled={isSubmitting || !values.category}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Add Columns
+              </button>
+            )}
             <button
               type="submit"
               disabled={isSubmitting}
@@ -228,6 +361,108 @@ return (
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+export function ColumnsPickerModal({
+  isOpen,
+  categoryLabel,
+  fields,
+  selectedKeys,
+  onToggle,
+  onSave,
+  onClose,
+  isLoading,
+  isSaving,
+  error,
+}) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-slate-950/60"
+        onClick={onClose}
+        aria-label="Close"
+      />
+      <div className="relative flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+          <div>
+            <h2 className="text-[15px] font-semibold text-slate-950">Configure columns</h2>
+            <p className="mt-0.5 text-[13px] text-slate-500">
+              Choose which fields appear for {categoryLabel || "this category"}.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto px-6 py-5">
+          {error && (
+            <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+              {error}
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="py-8 text-center text-[13px] text-slate-500">Loading fields...</div>
+          ) : fields.length === 0 ? (
+            <div className="py-8 text-center text-[13px] text-slate-500">No fields available.</div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {fields.map((field) => (
+                <label
+                  key={field.key}
+                  className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 transition hover:border-slate-300"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedKeys.includes(field.key)}
+                    onChange={() => onToggle(field.key)}
+                    className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
+                  />
+                  {field.label}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={isSaving || isLoading}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSaving ? "Saving..." : "Save columns"}
+          </button>
+        </div>
       </div>
     </div>
   );

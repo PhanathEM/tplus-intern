@@ -13,6 +13,7 @@ import { RecordCellValue } from "../../components/RecordsTableView";
 export function EquipmentItemsTable({
   category,
   items,
+  configuredColumns = [],
   isLoading,
   error,
   onRetry,
@@ -22,14 +23,19 @@ export function EquipmentItemsTable({
   onFilterStatus,
   onEdit,
   onUnassign,
+  onDelete,
   onAddNew,
   canCreate = true,
   canManage = true,
   showBackButton = true,
 }) {
+  const baseColumns = useMemo(
+    () => configuredColumns.map(({ key, label }) => ({ key, label })),
+    [configuredColumns]
+  );
   const columns = useMemo(
-    () => getRecordColumns(items, []).filter((column) => !column.key.startsWith("__")),
-    [items]
+    () => getRecordColumns(items, baseColumns).filter((column) => !column.key.startsWith("__")),
+    [items, baseColumns]
   );
 
 return (
@@ -139,6 +145,15 @@ return (
                             >
                               Edit
                             </button>
+                            {onDelete && (
+                              <button
+                                type="button"
+                                onClick={() => onDelete(item)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                              >
+                                Delete
+                              </button>
+                            )}
                           </div>
                         </td>
                       )}
@@ -186,11 +201,13 @@ export function EquipmentView({
   selectedCategory,
   onSelectCategory,
   items,
+  columns,
   isItemsLoading,
   itemsError,
   onAddNew,
   onEdit,
   onUnassign,
+  onDelete,
   statuses,
   statusFilter,
   onFilterStatus,
@@ -208,10 +225,13 @@ export function EquipmentView({
     [categories]
   );
 
-  const selectedCategoryLabel = useMemo(() => {
-    if (selectedCategory === "All") return "All equipment";
-    return categories.find((item) => item.slug === selectedCategory)?.label || selectedCategory;
-  }, [selectedCategory, categories]);
+  const selectedCategoryEntry = useMemo(
+    () => categories.find((item) => item.slug === selectedCategory) || null,
+    [selectedCategory, categories]
+  );
+
+  const selectedCategoryLabel =
+    selectedCategory === "All" ? "All equipment" : selectedCategoryEntry?.label || selectedCategory;
 
   const filteredItems = useMemo(() => {
     if (statusFilter === "All") return items;
@@ -251,6 +271,7 @@ export function EquipmentView({
         <EquipmentItemsTable
           category={selectedCategoryLabel}
           items={filteredItems}
+          configuredColumns={selectedCategory === "All" ? [] : columns}
           isLoading={isItemsLoading}
           error={itemsError}
           onRetry={onRetry}
@@ -260,6 +281,7 @@ export function EquipmentView({
           onFilterStatus={onFilterStatus}
           onEdit={onEdit}
           onUnassign={onUnassign}
+          onDelete={onDelete}
           onAddNew={onAddNew}
           canCreate={canCreate}
           canManage={canManage}

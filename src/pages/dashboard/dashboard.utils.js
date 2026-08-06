@@ -55,18 +55,105 @@ export function humanizeEquipmentView(slug) {
     .join(" ");
 }
 
+// GET /api/equipment/views -> { views: [{ key, label, category, column_count, item_count, configured }] }
 export function normalizeEquipmentViews(data) {
-  const list = Array.isArray(data) ? data : [];
+  const list = Array.isArray(data) ? data : Array.isArray(data?.views) ? data.views : [];
   return list
     .map((entry) => {
       if (typeof entry === "string") {
-        return { slug: entry, label: humanizeEquipmentView(entry), count: null };
+        return { slug: entry, categoryId: null, label: humanizeEquipmentView(entry), count: null, columnCount: null };
       }
-      const slug = entry?.view || entry?.slug || entry?.key || entry?.name || entry?.category || "";
+      const slug = entry?.key || entry?.view || entry?.slug || "";
       if (!slug) return null;
-      const label = entry.label || humanizeEquipmentView(slug);
-      const count = entry.total_items ?? entry.count ?? null;
-      return { slug, label, count };
+      const label = entry.label || entry.category || humanizeEquipmentView(slug);
+      const count = entry.item_count ?? entry.count ?? null;
+      const columnCount = entry.configured === false ? 0 : entry.column_count ?? null;
+      return { slug, categoryId: entry.category_id ?? null, label, count, columnCount };
+    })
+    .filter(Boolean);
+}
+
+// ---------------------------------------------------------------------------
+// View columns / custom fields (per-category configuration)
+// ---------------------------------------------------------------------------
+
+// GET /api/view-columns -> { count, unconfigured, views: [{ category_id, view_key, category_name, column_count, item_count }] }
+export function normalizeViewColumnsSummary(data) {
+  const list = Array.isArray(data) ? data : Array.isArray(data?.views) ? data.views : [];
+  return list
+    .map((entry) => {
+      if (typeof entry === "string") {
+        return { slug: entry, categoryId: null, label: humanizeEquipmentView(entry), count: null, columnCount: null };
+      }
+      const slug = entry?.view_key || entry?.view || entry?.slug || "";
+      const categoryId = entry?.category_id ?? entry?.categoryId ?? entry?.id ?? null;
+      if (!slug && categoryId == null) return null;
+      const label = entry.category_name || entry.name || entry.label || humanizeEquipmentView(slug);
+      const count = entry.item_count ?? entry.count ?? null;
+      const columnCount = entry.column_count ?? null;
+      return { slug: slug || String(categoryId), categoryId, label, count, columnCount };
+    })
+    .filter(Boolean);
+}
+
+// GET /api/view-columns/available-fields -> { equipment_fields: [{field, suggested_header, data_type}], derived_fields: [{field, header}] }
+export function normalizeAvailableFields(data) {
+  const equipmentFields = Array.isArray(data?.equipment_fields) ? data.equipment_fields : [];
+  const derivedFields = Array.isArray(data?.derived_fields) ? data.derived_fields : [];
+  const list = Array.isArray(data) ? data : [...equipmentFields, ...derivedFields];
+
+  return list
+    .map((entry) => {
+      const key = entry?.field || entry?.field_key || entry?.key || "";
+      if (!key) return null;
+      const label = entry.suggested_header || entry.header || entry.field_label || humanizeFieldKey(key);
+      const rawType = String(entry?.data_type || entry?.field_type || "").toLowerCase();
+      const type = rawType === "date" ? "date" : "text";
+      return { id: null, key, label, type };
+    })
+    .filter(Boolean);
+}
+
+// GET /api/view-columns/{categoryId} -> { category_id, category_name, view_key, column_count, columns: [{view_column_id, field_name, header_text, sort_order}] }
+export function normalizeViewColumns(data) {
+  const list = Array.isArray(data) ? data : Array.isArray(data?.columns) ? data.columns : [];
+  return list
+    .map((entry) => {
+      const key = entry?.field_name || entry?.field || entry?.key || "";
+      if (!key) return null;
+      const id = entry?.view_column_id ?? entry?.id ?? null;
+      const label = entry?.header_text || entry?.label || humanizeFieldKey(key);
+      return { id, key, label };
+    })
+    .filter(Boolean);
+}
+
+// GET /api/equipment/{view} -> { ..., columns: [{ field, header }], items: [...] }
+export function normalizeEquipmentTableColumns(data) {
+  const list = Array.isArray(data?.columns) ? data.columns : [];
+  return list
+    .map((entry) => {
+      const key = entry?.field || entry?.key || "";
+      if (!key) return null;
+      return { key, label: entry?.header || humanizeFieldKey(key) };
+    })
+    .filter(Boolean);
+}
+
+// GET /api/custom-fields/{categoryId} -> { category_id, category_name, count, fields: [{field_id, field_key, field_label, field_type}] }
+export function normalizeCustomFields(data) {
+  const list = Array.isArray(data) ? data : Array.isArray(data?.fields) ? data.fields : [];
+  return list
+    .map((entry) => {
+      const key = entry?.field_key || entry?.field_name || entry?.field || entry?.key || "";
+      if (!key) return null;
+      const id = entry?.field_id ?? entry?.id ?? null;
+      const label = entry?.field_label || entry?.header_text || entry?.label || humanizeFieldKey(key);
+      const rawType = String(entry?.field_type || entry?.type || "").toLowerCase();
+      let type = "text";
+      if (rawType === "date") type = "date";
+      else if (["boolean", "yesno", "yes_no", "yes-no"].includes(rawType)) type = "yes-no-select";
+      return { id, key, label, type };
     })
     .filter(Boolean);
 }
@@ -87,6 +174,10 @@ const EQUIPMENT_FORM_FIELD_TYPES = {
   av_license: "yes-no-select",
 };
 
+function inferEquipmentFieldType(key) {
+  return EQUIPMENT_FORM_FIELD_TYPES[key] || (key.endsWith("_date") ? "date" : "text");
+}
+
 export function getEquipmentFormFields(sampleRecord) {
   if (!sampleRecord || typeof sampleRecord !== "object") return null;
   return Object.keys(sampleRecord)
@@ -94,7 +185,21 @@ export function getEquipmentFormFields(sampleRecord) {
     .map((key) => ({
       key,
       label: humanizeFieldKey(key),
-      type: EQUIPMENT_FORM_FIELD_TYPES[key] || (key.endsWith("_date") ? "date" : "text"),
+      type: inferEquipmentFieldType(key),
+    }));
+}
+
+// Build Add/Edit form fields from a category's configured table columns
+// (the same list saved via the "Configure columns" picker), so the form
+// always matches what was ticked there.
+export function getEquipmentFormFieldsFromColumns(columns) {
+  if (!Array.isArray(columns) || columns.length === 0) return null;
+  return columns
+    .filter((column) => !EQUIPMENT_FORM_EXCLUDED_KEYS.has(column.key))
+    .map((column) => ({
+      key: column.key,
+      label: column.label || humanizeFieldKey(column.key),
+      type: inferEquipmentFieldType(column.key),
     }));
 }
 

@@ -1,5 +1,6 @@
 export {
   EquipmentFormModal,
+  ColumnsPickerModal,
   AssignEquipmentModal,
   BorrowEquipmentModal,
   ReturnEquipmentModal,
