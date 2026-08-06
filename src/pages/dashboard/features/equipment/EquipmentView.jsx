@@ -1,8 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import {
   FiAlertTriangle as AlertTriangle,
   FiBox as Box,
   FiChevronDown as ChevronDown,
+  FiChevronLeft as ChevronLeft,
+  FiChevronRight as ChevronRight,
   FiPlusCircle as PlusCircle,
   FiRefreshCw as RefreshCw,
 } from "react-icons/fi";
@@ -25,6 +27,7 @@ export function EquipmentItemsTable({
   onUnassign,
   onDelete,
   onAddNew,
+  isUnconfigured = false,
   canCreate = true,
   canManage = true,
   showBackButton = true,
@@ -78,6 +81,12 @@ return (
 
 {isLoading ? (
           <div className="px-5 py-10 text-center text-[13px] text-slate-500">Loading equipment...</div>
+        ) : isUnconfigured ? (
+          <EmptyState
+            icon={Box}
+            title="Empty"
+            description={`${category} has no columns configured yet. Click "Add New Item" to set them up.`}
+          />
         ) : error ? (
           <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
             <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500">
@@ -170,25 +179,54 @@ return (
 }
 
 function CategoryTabs({ options, selected, onSelect }) {
+  const scrollRef = useRef(null);
+
+  function scrollByAmount(amount) {
+    scrollRef.current?.scrollBy({ left: amount, behavior: "smooth" });
+  }
+
   return (
-    <div className="flex flex-wrap gap-2 overflow-x-auto border-b border-slate-100 px-5 py-3">
-      {options.map((option) => {
-        const isActive = option.value === selected;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onSelect(option.value)}
-            className={`inline-flex h-8 shrink-0 items-center rounded-full px-3.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${
-              isActive
-                ? "bg-slate-950 text-white"
-                : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-            }`}
-          >
-            {option.label}
-          </button>
-        );
-      })}
+    <div className="flex items-center gap-1 border-b border-slate-100 pl-5 pr-2 py-3">
+      <button
+        type="button"
+        onClick={() => scrollByAmount(-240)}
+        aria-label="Scroll categories left"
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400"
+      >
+        <ChevronLeft size={16} />
+      </button>
+
+      <div
+        ref={scrollRef}
+        className="flex flex-nowrap gap-2 overflow-x-auto scroll-smooth scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {options.map((option) => {
+          const isActive = option.value === selected;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onSelect(option.value)}
+              className={`inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${
+                isActive
+                  ? "bg-slate-950 text-white"
+                  : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => scrollByAmount(240)}
+        aria-label="Scroll categories right"
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400"
+      >
+        <ChevronRight size={16} />
+      </button>
     </div>
   );
 }
@@ -212,6 +250,8 @@ export function EquipmentView({
   statusFilter,
   onFilterStatus,
   onAddCategory,
+  onEditCategory,
+  onDeleteCategory,
   canManage = true,
   canCreate = true,
 }) {
@@ -233,6 +273,8 @@ export function EquipmentView({
   const selectedCategoryLabel =
     selectedCategory === "All" ? "All equipment" : selectedCategoryEntry?.label || selectedCategory;
 
+  const isUnconfigured = selectedCategory !== "All" && selectedCategoryEntry?.columnCount === 0;
+
   const filteredItems = useMemo(() => {
     if (statusFilter === "All") return items;
     return items.filter((item) => (item.status || item.status_name) === statusFilter);
@@ -250,16 +292,36 @@ export function EquipmentView({
               </p>
             )}
           </div>
-          {canCreate && (
-            <button
-              type="button"
-              onClick={onAddCategory}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-            >
-              <PlusCircle size={15} />
-              Add New Category
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {canCreate && selectedCategory !== "All" && selectedCategoryEntry && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onEditCategory(selectedCategoryEntry)}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                >
+                  Edit Category
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDeleteCategory(selectedCategoryEntry)}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3.5 text-[13px] font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                >
+                  Delete Category
+                </button>
+              </>
+            )}
+            {canCreate && (
+              <button
+                type="button"
+                onClick={onAddCategory}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              >
+                <PlusCircle size={15} />
+                Add New Category
+              </button>
+            )}
+          </div>
         </div>
 
         <CategoryTabs
@@ -274,6 +336,7 @@ export function EquipmentView({
           configuredColumns={selectedCategory === "All" ? [] : columns}
           isLoading={isItemsLoading}
           error={itemsError}
+          isUnconfigured={isUnconfigured}
           onRetry={onRetry}
           onBack={null}
           statusOptions={statusOptions}

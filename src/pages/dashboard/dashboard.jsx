@@ -889,7 +889,7 @@ function Dashboard({ user, onLogout }) {
     setCategoryFormMode("edit");
     setCategoryFormTarget(category);
     setCategoryFormValues({
-      category_name: category.category_name || category.category || "",
+      category_name: category.category_name || category.category || category.label || "",
       description: category.description || "",
     });
     setCategoryFormError(null);
@@ -994,9 +994,45 @@ function Dashboard({ user, onLogout }) {
       .then(() => {
         setIsColumnsPickerOpen(false);
         handleRetryEquipment();
+        refreshOpenEquipmentFormFields(columnsPickerCategoryId);
       })
       .catch((error) => setColumnsPickerError(error.message || "Could not save columns."))
       .finally(() => setIsSavingColumns(false));
+  }
+
+  function refreshOpenEquipmentFormFields(categoryId) {
+    if (!isEquipmentFormOpen) return;
+
+    const openCategoryId =
+      equipmentFormMode === "edit"
+        ? equipmentFormTarget?.__category_id ??
+          resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
+        : resolveEquipmentCategoryId(equipmentFormValues.category);
+
+    if (openCategoryId == null || openCategoryId !== categoryId) return;
+
+    Promise.all([
+      fetchViewColumns(categoryId).then(normalizeViewColumns).catch(() => []),
+      fetchCustomFields(categoryId).then(normalizeCustomFields).catch(() => []),
+    ]).then(([standardColumns, customFields]) => {
+      const standardFields = getEquipmentFormFieldsFromColumns(standardColumns) || [];
+      const extraCustomFields = customFields.filter(
+        (field) => !standardFields.some((item) => item.key === field.key)
+      );
+      const mergedFields = [...standardFields, ...extraCustomFields];
+
+      setEquipmentFormFields(mergedFields);
+      setEquipmentFormValues((current) => {
+        const next = buildEquipmentFormValues(mergedFields, {});
+        mergedFields.forEach(({ key }) => {
+          if (current[key] !== undefined) next[key] = current[key];
+        });
+        next.category = current.category;
+        next.status = current.status;
+        next.remark = current.remark;
+        return next;
+      });
+    });
   }
 
   function handleOpenDeleteCategory(category) {
@@ -1023,7 +1059,8 @@ function Dashboard({ user, onLogout }) {
           action: "delete",
           module: ACTIVITY_MODULES.CATEGORY,
           entityId: id,
-          entityLabel: categoryToDelete?.category_name || categoryToDelete?.category || `Category ${id}`,
+          entityLabel:
+            categoryToDelete?.category_name || categoryToDelete?.category || categoryToDelete?.label || `Category ${id}`,
           before: categoryToDelete,
         });
         setCategoryToDelete(null);
@@ -3663,7 +3700,9 @@ function Dashboard({ user, onLogout }) {
         title="Delete this category?"
         message={
           categoryToDelete
-            ? `"${categoryToDelete.category_name || categoryToDelete.category}" will be permanently removed. This cannot be undone.`
+            ? `"${
+                categoryToDelete.category_name || categoryToDelete.category || categoryToDelete.label
+              }" will be permanently removed. This cannot be undone.`
             : ""
         }
         confirmLabel="Delete category"
