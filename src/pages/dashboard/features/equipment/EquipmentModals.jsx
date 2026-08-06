@@ -1,11 +1,86 @@
 import { useEffect } from "react";
 import { FiX as X } from "react-icons/fi";
-import { ADD_EQUIPMENT_TEXT_FIELDS } from "../../dashboard.config";
 import {
   EmployeeSelectDropdown,
   FormField,
   formInputClass,
 } from "../../components/SharedControls";
+
+function EquipmentDynamicField({ field, values, onChange, isSubmitting, departments }) {
+  const id = `add-equipment-${field.key}`;
+  const value = values[field.key] || "";
+
+  if (field.type === "department-select") {
+    return (
+      <FormField label={field.label} htmlFor={id}>
+        <select
+          id={id}
+          autoComplete="off"
+          value={value}
+          onChange={(e) => onChange(field.key, e.target.value)}
+          className={formInputClass}
+          disabled={isSubmitting}
+        >
+          <option value="">—</option>
+          {departments.map((dept) => (
+            <option key={dept.department_id} value={dept.department_code}>
+              {dept.department_name}
+            </option>
+          ))}
+        </select>
+      </FormField>
+    );
+  }
+
+  if (field.type === "yes-no-select") {
+    return (
+      <FormField label={field.label} htmlFor={id}>
+        <select
+          id={id}
+          autoComplete="off"
+          value={value}
+          onChange={(e) => onChange(field.key, e.target.value)}
+          className={formInputClass}
+          disabled={isSubmitting}
+        >
+          <option value="">—</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </FormField>
+    );
+  }
+
+  if (field.type === "date") {
+    return (
+      <FormField label={field.label} htmlFor={id}>
+        <input
+          id={id}
+          type="date"
+          autoComplete="off"
+          value={value}
+          onChange={(e) => onChange(field.key, e.target.value)}
+          className={formInputClass}
+          disabled={isSubmitting}
+        />
+      </FormField>
+    );
+  }
+
+  return (
+    <FormField label={field.label} htmlFor={id}>
+      <input
+        id={id}
+        type="text"
+        autoComplete="off"
+        value={value}
+        onChange={(e) => onChange(field.key, e.target.value)}
+        className={formInputClass}
+        disabled={isSubmitting}
+      />
+    </FormField>
+  );
+}
 
 export function EquipmentFormModal({
   isOpen,
@@ -19,6 +94,8 @@ export function EquipmentFormModal({
   departments,
   statuses,
   categoryOptions,
+  categoryLocked = false,
+  fields = [],
 }) {
   useEffect(() => {
     function handleKeyDown(event) {
@@ -77,7 +154,7 @@ return (
                   value={values.category}
                   onChange={(e) => onChange("category", e.target.value)}
                   className={formInputClass}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || categoryLocked}
                 >
                   <option value="">Select category</option>
                   {categoryOptions.map((option) => (
@@ -88,37 +165,16 @@ return (
                 </select>
               </FormField>
 
-{ADD_EQUIPMENT_TEXT_FIELDS.map((field) => (
-                <FormField key={field.key} label={field.label} htmlFor={`add-equipment-${field.key}`}>
-                  <input
-                    id={`add-equipment-${field.key}`}
-                    type="text"
-                    autoComplete="off"
-                    value={values[field.key]}
-                    onChange={(e) => onChange(field.key, e.target.value)}
-                    className={formInputClass}
-                    disabled={isSubmitting}
-                  />
-                </FormField>
+{fields.map((field) => (
+                <EquipmentDynamicField
+                  key={field.key}
+                  field={field}
+                  values={values}
+                  onChange={onChange}
+                  isSubmitting={isSubmitting}
+                  departments={departments}
+                />
               ))}
-
-<FormField label="Department" htmlFor="add-equipment-department">
-                <select
-                  id="add-equipment-department"
-                  autoComplete="off"
-                  value={values.department}
-                  onChange={(e) => onChange("department", e.target.value)}
-                  className={formInputClass}
-                  disabled={isSubmitting}
-                >
-                  <option value="">—</option>
-                  {departments.map((dept) => (
-                    <option key={dept.department_id} value={dept.department_code}>
-                      {dept.department_name}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
 
 <FormField label="Status" htmlFor="add-equipment-status">
                 <select
@@ -136,60 +192,6 @@ return (
                     </option>
                   ))}
                 </select>
-              </FormField>
-
-<FormField label="Windows License" htmlFor="add-equipment-windows_license">
-                <select
-                  id="add-equipment-windows_license"
-                  autoComplete="off"
-                  value={values.windows_license}
-                  onChange={(e) => onChange("windows_license", e.target.value)}
-                  className={formInputClass}
-                  disabled={isSubmitting}
-                >
-                  <option value="">—</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </FormField>
-
-<FormField label="AV License" htmlFor="add-equipment-av_license">
-                <select
-                  id="add-equipment-av_license"
-                  autoComplete="off"
-                  value={values.av_license}
-                  onChange={(e) => onChange("av_license", e.target.value)}
-                  className={formInputClass}
-                  disabled={isSubmitting}
-                >
-                  <option value="">—</option>
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </FormField>
-
-<FormField label="Purchase Date" htmlFor="add-equipment-purchase_date">
-                <input
-                  id="add-equipment-purchase_date"
-                  type="date"
-                  autoComplete="off"
-                  value={values.purchase_date}
-                  onChange={(e) => onChange("purchase_date", e.target.value)}
-                  className={formInputClass}
-                  disabled={isSubmitting}
-                />
-              </FormField>
-
-<FormField label="Received Date" htmlFor="add-equipment-received_date">
-                <input
-                  id="add-equipment-received_date"
-                  type="date"
-                  autoComplete="off"
-                  value={values.received_date}
-                  onChange={(e) => onChange("received_date", e.target.value)}
-                  className={formInputClass}
-                  disabled={isSubmitting}
-                />
               </FormField>
             </div>
 

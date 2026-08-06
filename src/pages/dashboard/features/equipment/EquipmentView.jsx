@@ -6,7 +6,6 @@ import {
   FiPlusCircle as PlusCircle,
   FiRefreshCw as RefreshCw,
 } from "react-icons/fi";
-import { equipmentItemColumns } from "../../dashboard.config";
 import { getRecordColumns } from "../../dashboard.utils";
 import { CategoryDropdown, EmptyState } from "../../components/SharedControls";
 import { RecordCellValue } from "../../components/RecordsTableView";
@@ -23,10 +22,15 @@ export function EquipmentItemsTable({
   onFilterStatus,
   onEdit,
   onUnassign,
+  onAddNew,
+  canCreate = true,
   canManage = true,
   showBackButton = true,
 }) {
-  const columns = useMemo(() => getRecordColumns(items, equipmentItemColumns), [items]);
+  const columns = useMemo(
+    () => getRecordColumns(items, []).filter((column) => !column.key.startsWith("__")),
+    [items]
+  );
 
 return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -51,7 +55,19 @@ return (
               </p>
             )}
           </div>
-          <CategoryDropdown options={statusOptions} selected={statusFilter} onSelect={onFilterStatus} label="Status" />
+          <div className="flex items-center gap-2">
+            {canCreate && onAddNew && (
+              <button
+                type="button"
+                onClick={onAddNew}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              >
+                <PlusCircle size={15} />
+                Add New Item
+              </button>
+            )}
+            <CategoryDropdown options={statusOptions} selected={statusFilter} onSelect={onFilterStatus} label="Status" />
+          </div>
         </div>
 
 {isLoading ? (
@@ -138,6 +154,30 @@ return (
   );
 }
 
+function CategoryTabs({ options, selected, onSelect }) {
+  return (
+    <div className="flex flex-wrap gap-2 overflow-x-auto border-b border-slate-100 px-5 py-3">
+      {options.map((option) => {
+        const isActive = option.value === selected;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onSelect(option.value)}
+            className={`inline-flex h-8 shrink-0 items-center rounded-full px-3.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${
+              isActive
+                ? "bg-slate-950 text-white"
+                : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function EquipmentView({
   categories,
   isLoading,
@@ -161,11 +201,22 @@ export function EquipmentView({
   const statusOptions = useMemo(() => ["All", ...statuses.map((item) => item.status_name)], [statuses]);
 
   const categoryOptions = useMemo(
-    () => ["All Equipments", ...categories.map((item) => item.category)],
+    () => [
+      { value: "All", label: "All Equipments" },
+      ...categories.map((item) => ({ value: item.slug, label: item.label })),
+    ],
     [categories]
   );
 
-  const summaryLabel = selectedCategory === "All" ? "All equipment" : selectedCategory;
+  const selectedCategoryLabel = useMemo(() => {
+    if (selectedCategory === "All") return "All equipment";
+    return categories.find((item) => item.slug === selectedCategory)?.label || selectedCategory;
+  }, [selectedCategory, categories]);
+
+  const filteredItems = useMemo(() => {
+    if (statusFilter === "All") return items;
+    return items.filter((item) => (item.status || item.status_name) === statusFilter);
+  }, [items, statusFilter]);
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -175,43 +226,31 @@ export function EquipmentView({
             <h2 className="text-[15px] font-semibold text-slate-950">Equipment</h2>
             {!isLoading && !error && (
               <p className="mt-0.5 text-[13px] text-slate-500">
-                {items.length} item{items.length === 1 ? "" : "s"} · {selectedCategory === "All" ? "All categories" : selectedCategory}
+                {filteredItems.length} item{filteredItems.length === 1 ? "" : "s"} · {selectedCategoryLabel}
               </p>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {canCreate && (
-              <>
-                <button
-                  type="button"
-                  onClick={onAddNew}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                >
-                  <PlusCircle size={15} />
-                  Add New Item
-                </button>
-                <button
-                  type="button"
-                  onClick={onAddCategory}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                >
-                  <PlusCircle size={15} />
-                  Add New Category
-                </button>
-              </>
-            )}
-            <CategoryDropdown
-              options={categoryOptions}
-              selected={selectedCategory === "All" ? "All Equipments" : selectedCategory}
-              onSelect={(value) => onSelectCategory(value === "All Equipments" ? "All" : value)}
-              label="Category"
-            />
-          </div>
+          {canCreate && (
+            <button
+              type="button"
+              onClick={onAddCategory}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            >
+              <PlusCircle size={15} />
+              Add New Category
+            </button>
+          )}
         </div>
 
+        <CategoryTabs
+          options={categoryOptions}
+          selected={selectedCategory}
+          onSelect={onSelectCategory}
+        />
+
         <EquipmentItemsTable
-          category={summaryLabel}
-          items={items}
+          category={selectedCategoryLabel}
+          items={filteredItems}
           isLoading={isItemsLoading}
           error={itemsError}
           onRetry={onRetry}
@@ -221,6 +260,8 @@ export function EquipmentView({
           onFilterStatus={onFilterStatus}
           onEdit={onEdit}
           onUnassign={onUnassign}
+          onAddNew={onAddNew}
+          canCreate={canCreate}
           canManage={canManage}
           showBackButton={false}
         />

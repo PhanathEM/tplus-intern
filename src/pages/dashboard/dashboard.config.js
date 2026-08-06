@@ -105,37 +105,6 @@ export const userPermissionSections = navSections
   }))
   .filter((section) => section.permissions.length > 0);
 
-export const equipmentItemColumns = [
-  { key: "equipment_id", label: "Equipment ID" },
-  { key: "category", label: "Category" },
-  { key: "device_type", label: "Device Type" },
-  { key: "device_model", label: "Device Model" },
-  { key: "manufacturer", label: "Manufacturer" },
-  { key: "computer_name", label: "Computer Name" },
-  { key: "equipment_code", label: "Equipment Code" },
-  { key: "service_tag", label: "Service Tag" },
-  { key: "serial_no", label: "Serial No" },
-  { key: "product_id", label: "Product ID" },
-  { key: "mac_address", label: "MAC Address" },
-  { key: "ip_address", label: "IP Address" },
-  { key: "os_type", label: "OS Type" },
-  { key: "os_version", label: "OS Version" },
-  { key: "cpu", label: "CPU" },
-  { key: "ram", label: "RAM" },
-  { key: "hd", label: "HD" },
-  { key: "windows_license", label: "Windows License" },
-  { key: "av_license", label: "AV License" },
-  { key: "location", label: "Location" },
-  { key: "department", label: "Department" },
-  { key: "status", label: "Status" },
-  { key: "purchase_date", label: "Purchase Date" },
-  { key: "received_date", label: "Received Date" },
-  { key: "assigned_date", label: "Assigned Date" },
-  { key: "owner_id", label: "Owner ID" },
-  { key: "owner_name", label: "Owner Name" },
-  { key: "remark", label: "Remark" },
-];
-
 export const replacementColumns = [
   { key: "replacement_id", label: "Replacement ID" },
   { key: "employee_id", label: "Employee ID" },
@@ -270,49 +239,42 @@ export const cloudUsageColumns = [
   { key: "amount", label: "Amount" },
 ];
 
-export const EQUIPMENT_CATEGORY_OPTIONS = ["Desktop", "Laptop", "PC"];
-
-export const ADD_EQUIPMENT_TEXT_FIELDS = [
-  { key: "device_type", label: "Device Type" },
-  { key: "device_model", label: "Device Model" },
-  { key: "manufacturer", label: "Manufacturer" },
-  { key: "equipment_code", label: "Equipment Code" },
-  { key: "service_tag", label: "Service Tag" },
-  { key: "serial_no", label: "Serial No" },
-  { key: "product_id", label: "Product ID" },
-  { key: "mac_address", label: "MAC Address" },
-  { key: "ip_address", label: "IP Address" },
-  { key: "os_type", label: "OS Type" },
-  { key: "os_version", label: "OS Version" },
-  { key: "cpu", label: "CPU" },
-  { key: "ram", label: "RAM" },
-  { key: "hd", label: "HD" },
+export const EQUIPMENT_VIEWS = [
+  { slug: "cctv", label: "CCTV" },
+  { slug: "laptop", label: "Laptop" },
+  { slug: "desktop", label: "Desktop" },
+  { slug: "pc", label: "PC" },
+  { slug: "monitor", label: "Monitor" },
+  { slug: "network-device", label: "Network Device" },
+  { slug: "access-control", label: "Access Control" },
+  { slug: "server", label: "Server" },
+  { slug: "accessory", label: "Accessory" },
 ];
 
-export const ADD_EQUIPMENT_INITIAL_VALUES = {
-  category: "",
-  device_type: "",
-  device_model: "",
-  manufacturer: "",
-  equipment_code: "",
-  service_tag: "",
-  serial_no: "",
-  product_id: "",
-  mac_address: "",
-  ip_address: "",
-  os_type: "",
-  os_version: "",
-  cpu: "",
-  ram: "",
-  hd: "",
-  windows_license: "",
-  av_license: "",
-  purchase_date: "",
-  received_date: "",
-  department: "",
-  status: "",
-  remark: "",
-};
+// Used only when no sample record exists yet to infer a category's own fields from
+// (e.g. the "All Equipments" tab, or a brand-new category with no items).
+export const EQUIPMENT_FORM_FALLBACK_FIELDS = [
+  { key: "device_type", label: "Device Type", type: "text" },
+  { key: "device_model", label: "Device Model", type: "text" },
+  { key: "manufacturer", label: "Manufacturer", type: "text" },
+  { key: "equipment_code", label: "Equipment Code", type: "text" },
+  { key: "service_tag", label: "Service Tag", type: "text" },
+  { key: "serial_no", label: "Serial No", type: "text" },
+  { key: "product_id", label: "Product ID", type: "text" },
+  { key: "mac_address", label: "MAC Address", type: "text" },
+  { key: "ip_address", label: "IP Address", type: "text" },
+  { key: "os_type", label: "OS Type", type: "text" },
+  { key: "os_version", label: "OS Version", type: "text" },
+  { key: "cpu", label: "CPU", type: "text" },
+  { key: "ram", label: "RAM", type: "text" },
+  { key: "hd", label: "HD", type: "text" },
+  { key: "location", label: "Location", type: "text" },
+  { key: "department", label: "Department", type: "department-select" },
+  { key: "windows_license", label: "Windows License", type: "yes-no-select" },
+  { key: "av_license", label: "AV License", type: "yes-no-select" },
+  { key: "purchase_date", label: "Purchase Date", type: "date" },
+  { key: "received_date", label: "Received Date", type: "date" },
+];
 
 export const availableStockColumns = [
   { key: "equipment_id", label: "Equipment ID" },

@@ -14,12 +14,20 @@ export function fetchEquipmentStatuses() {
   return apiGet("/api/statuses");
 }
 
-export function createEquipment(payload) {
-  return apiPost("/api/stock/add", payload);
+export function fetchEquipmentViews() {
+  return apiGet("/api/equipment/views");
 }
 
-export function updateEquipment(equipmentId, payload) {
-  return apiPut(`/api/equipment/${equipmentId}`, payload);
+export function fetchEquipmentByView(view) {
+  return apiGet(`/api/equipment/${view}`);
+}
+
+export function createEquipmentByView(view, payload) {
+  return apiPost(`/api/equipment/${view}`, payload);
+}
+
+export function updateEquipmentByView(view, equipmentId, payload) {
+  return apiPut(`/api/equipment/${view}/${equipmentId}`, payload);
 }
 
 export function fetchAvailableStock() {

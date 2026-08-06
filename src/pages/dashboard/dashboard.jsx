@@ -15,8 +15,10 @@ import {
   fetchEquipmentCategorySummary,
   fetchEquipmentByCategory,
   fetchEquipmentStatuses,
-  createEquipment,
-  updateEquipment,
+  fetchEquipmentViews,
+  fetchEquipmentByView,
+  createEquipmentByView,
+  updateEquipmentByView,
   fetchAvailableStock,
   assignEquipment,
   unassignEquipment,
@@ -51,18 +53,27 @@ import {
   fetchBorrowHistory,
 } from "../../services/borrowService";
 import {
-  ADD_EQUIPMENT_INITIAL_VALUES,
   ASSIGN_EQUIPMENT_INITIAL_VALUES,
   BORROW_EQUIPMENT_INITIAL_VALUES,
   BORROW_HISTORY_INITIAL_FILTERS,
   EMPLOYEE_FORM_INITIAL_VALUES,
   EMPLOYEES_PAGE_SIZE,
-  EQUIPMENT_CATEGORY_OPTIONS,
+  EQUIPMENT_VIEWS,
+  EQUIPMENT_FORM_FALLBACK_FIELDS,
   RETURN_EQUIPMENT_INITIAL_VALUES,
   navSections,
   navItemsByLabel,
 } from "./dashboard.config";
-import { getEmployeeDepartmentCode, groupEmployeeSearchResults, normalizeRecordList } from "./dashboard.utils";
+import {
+  getEmployeeDepartmentCode,
+  groupEmployeeSearchResults,
+  normalizeRecordList,
+  extractEquipmentItems,
+  normalizeEquipmentViews,
+  getEquipmentFormFields,
+  buildEquipmentFormValues,
+  slugifyEquipmentView,
+} from "./dashboard.utils";
 import { buildDashboardNotifications, getLicenseExpiryAlerts } from "./dashboard.notifications";
 import {
   DASHBOARD_DEFAULT_VIEW,
@@ -525,7 +536,7 @@ function Dashboard({ user, onLogout }) {
       handleSelectView("Departments");
     } else if (type === "equipment") {
       handleSelectView("All Equipment");
-      handleViewEquipmentCategory(item.category || item.category_name || "All", "All");
+      handleViewEquipmentCategory(slugifyEquipmentView(item.category || item.category_name) || "All");
     } else if (type === "users") {
       handleSelectView("Users");
     }
@@ -535,7 +546,6 @@ function Dashboard({ user, onLogout }) {
   const [isEquipmentLoading, setIsEquipmentLoading] = useState(initialDashboardView === "Equipment");
   const [equipmentError, setEquipmentError] = useState(null);
   const [equipmentFetchToken, setEquipmentFetchToken] = useState(0);
-  const [equipmentDetailCategory, setEquipmentDetailCategory] = useState(null);
   const [equipmentItems, setEquipmentItems] = useState([]);
   const [isEquipmentItemsLoading, setIsEquipmentItemsLoading] = useState(false);
   const [equipmentItemsError, setEquipmentItemsError] = useState(null);
@@ -544,7 +554,8 @@ function Dashboard({ user, onLogout }) {
   const [isEquipmentFormOpen, setIsEquipmentFormOpen] = useState(false);
   const [equipmentFormMode, setEquipmentFormMode] = useState("add");
   const [equipmentFormTarget, setEquipmentFormTarget] = useState(null);
-  const [equipmentFormValues, setEquipmentFormValues] = useState(ADD_EQUIPMENT_INITIAL_VALUES);
+  const [equipmentFormFields, setEquipmentFormFields] = useState(EQUIPMENT_FORM_FALLBACK_FIELDS);
+  const [equipmentFormValues, setEquipmentFormValues] = useState({});
   const [isSavingEquipment, setIsSavingEquipment] = useState(false);
   const [equipmentFormError, setEquipmentFormError] = useState(null);
   const [equipmentToUnassign, setEquipmentToUnassign] = useState(null);
@@ -737,8 +748,8 @@ function Dashboard({ user, onLogout }) {
   const hasUnreadNotifications = unreadNotificationCount > 0;
 
   const equipmentFormCategoryOptions = useMemo(() => {
-    const names = new Set(EQUIPMENT_CATEGORY_OPTIONS);
-    equipmentCategories.forEach((item) => names.add(item.category));
+    const names = new Set(EQUIPMENT_VIEWS.map((view) => view.label));
+    equipmentCategories.forEach((item) => names.add(item.label));
     if (equipmentFormTarget?.category_name) names.add(equipmentFormTarget.category_name);
     if (equipmentFormTarget?.category) names.add(equipmentFormTarget.category);
     return [...names].sort();
@@ -1310,9 +1321,6 @@ function Dashboard({ user, onLogout }) {
       setIsDepartmentsLoading(true);
       setDepartmentsError(null);
     }
-    if (activeView === "Equipment" && label !== "Equipment") {
-      setEquipmentDetailCategory(null);
-    }
     if (updateUrl) {
       syncDashboardPath(label);
     }
@@ -1456,15 +1464,18 @@ function Dashboard({ user, onLogout }) {
 
     let ignore = false;
 
-    fetchEquipmentCategorySummary()
+    fetchEquipmentViews()
       .then((data) => {
-        if (!ignore) {
-          setEquipmentCategories(data);
-          setEquipmentError(null);
-        }
+        if (ignore) return;
+        const normalized = normalizeEquipmentViews(data);
+        setEquipmentCategories(normalized.length > 0 ? normalized : EQUIPMENT_VIEWS);
+        setEquipmentError(null);
       })
       .catch((error) => {
-        if (!ignore) setEquipmentError(error.message || "Something went wrong.");
+        if (!ignore) {
+          setEquipmentCategories(EQUIPMENT_VIEWS);
+          setEquipmentError(error.message || "Something went wrong.");
+        }
       })
       .finally(() => {
         if (!ignore) setIsEquipmentLoading(false);
@@ -1477,8 +1488,8 @@ function Dashboard({ user, onLogout }) {
 
   useEffect(() => {
     if (!isEquipmentView) return;
-    handleViewEquipmentCategory(equipmentCategory, equipmentStatusFilter);
-  }, [isEquipmentView, equipmentFetchToken, equipmentCategory, equipmentStatusFilter]);
+    handleViewEquipmentCategory(equipmentCategory);
+  }, [isEquipmentView, equipmentFetchToken, equipmentCategory]);
 
   useEffect(() => {
     if (!isEquipmentView) return;
@@ -1894,7 +1905,14 @@ function Dashboard({ user, onLogout }) {
   function handleOpenAddEquipmentItem() {
     setEquipmentFormMode("add");
     setEquipmentFormTarget(null);
-    setEquipmentFormValues(ADD_EQUIPMENT_INITIAL_VALUES);
+    const activeCategoryLabel =
+      equipmentCategory === "All"
+        ? ""
+        : equipmentCategories.find((item) => item.slug === equipmentCategory)?.label || "";
+    const sampleRecord = equipmentCategory === "All" ? null : equipmentItems[0] || null;
+    const fields = getEquipmentFormFields(sampleRecord) || EQUIPMENT_FORM_FALLBACK_FIELDS;
+    setEquipmentFormFields(fields);
+    setEquipmentFormValues({ ...buildEquipmentFormValues(fields, {}), category: activeCategoryLabel });
     setEquipmentFormError(null);
     setIsEquipmentFormOpen(true);
 
@@ -1910,30 +1928,9 @@ function Dashboard({ user, onLogout }) {
   function handleOpenEditEquipmentItem(item) {
     setEquipmentFormMode("edit");
     setEquipmentFormTarget(item);
-    setEquipmentFormValues({
-      category: item.category_name || item.category || "",
-      device_type: item.device_type || "",
-      device_model: item.device_model || "",
-      manufacturer: item.manufacturer || "",
-      equipment_code: item.equipment_code || "",
-      service_tag: item.service_tag || "",
-      serial_no: item.serial_no || "",
-      product_id: item.product_id || "",
-      mac_address: item.mac_address || "",
-      ip_address: item.ip_address || "",
-      os_type: item.os_type || "",
-      os_version: item.os_version || "",
-      cpu: item.cpu || "",
-      ram: item.ram || "",
-      hd: item.hd || "",
-      windows_license: item.windows_license || "",
-      av_license: item.av_license || "",
-      purchase_date: item.purchase_date ? item.purchase_date.slice(0, 10) : "",
-      received_date: item.received_date ? item.received_date.slice(0, 10) : "",
-      department: item.department_code || item.department || "",
-      status: item.status || item.status_name || "",
-      remark: item.remark || "",
-    });
+    const fields = getEquipmentFormFields(item) || EQUIPMENT_FORM_FALLBACK_FIELDS;
+    setEquipmentFormFields(fields);
+    setEquipmentFormValues(buildEquipmentFormValues(fields, item));
     setEquipmentFormError(null);
     setIsEquipmentFormOpen(true);
 
@@ -1964,7 +1961,14 @@ function Dashboard({ user, onLogout }) {
     );
 
     const isEdit = equipmentFormMode === "edit";
-    const request = isEdit ? updateEquipment(equipmentFormTarget.equipment_id, payload) : createEquipment(payload);
+    const view = isEdit
+      ? equipmentFormTarget.__equipment_view ||
+        slugifyEquipmentView(equipmentFormTarget.category || equipmentFormTarget.category_name)
+      : slugifyEquipmentView(payload.category);
+
+    const request = isEdit
+      ? updateEquipmentByView(view, equipmentFormTarget.equipment_id, payload)
+      : createEquipmentByView(view, payload);
 
     request
       .then((data) => {
@@ -1980,9 +1984,7 @@ function Dashboard({ user, onLogout }) {
         setIsEquipmentFormOpen(false);
         handleRetryEquipment();
         handleRetryNotifications();
-        if (equipmentDetailCategory) {
-          handleViewEquipmentCategory(equipmentDetailCategory, equipmentStatusFilter);
-        }
+        handleViewEquipmentCategory(equipmentCategory);
       })
       .catch((error) => setEquipmentFormError(error.message || "Something went wrong."))
       .finally(() => setIsSavingEquipment(false));
@@ -2028,9 +2030,7 @@ function Dashboard({ user, onLogout }) {
         handleRetryEquipment();
         handleRetryAvailableStock();
         handleRetryNotifications();
-        if (equipmentDetailCategory) {
-          handleViewEquipmentCategory(equipmentDetailCategory, equipmentStatusFilter);
-        }
+        handleViewEquipmentCategory(equipmentCategory);
         const term = employeeSearchTerm.trim();
         if (hasSearchedEmployees && term) runEmployeeSearch(term);
         if (employeeDetailTarget) handleRetryEmployeeDetail();
@@ -2412,30 +2412,52 @@ function Dashboard({ user, onLogout }) {
       .finally(() => setIsBorrowing(false));
   }
 
-  function handleViewEquipmentCategory(category, status = "All") {
+  function handleViewEquipmentCategory(category) {
     setEquipmentCategory(category);
-    setEquipmentDetailCategory(category);
-    setEquipmentStatusFilter(status);
     setIsEquipmentItemsLoading(true);
     setEquipmentItemsError(null);
 
-    const queryCategory = category === "All" ? "" : category;
-    fetchEquipmentByCategory(queryCategory, status)
-      .then((data) => setEquipmentItems(Array.isArray(data) ? data : []))
+    const views = equipmentCategories.length > 0 ? equipmentCategories : EQUIPMENT_VIEWS;
+
+    const request =
+      category === "All"
+        ? Promise.allSettled(views.map((view) => fetchEquipmentByView(view.slug))).then((results) => {
+            const merged = [];
+            let anyFulfilled = false;
+            results.forEach((result, index) => {
+              if (result.status !== "fulfilled") return;
+              anyFulfilled = true;
+              const view = views[index];
+              extractEquipmentItems(result.value).forEach((item) => {
+                merged.push({ ...item, category: item.category || view.label, __equipment_view: view.slug });
+              });
+            });
+            if (!anyFulfilled && views.length > 0) {
+              throw new Error("Could not load any equipment categories.");
+            }
+            return merged;
+          })
+        : fetchEquipmentByView(category).then((data) => {
+            const view = views.find((item) => item.slug === category);
+            return extractEquipmentItems(data).map((item) => ({
+              ...item,
+              category: item.category || view?.label || category,
+              __equipment_view: category,
+            }));
+          });
+
+    request
+      .then((items) => setEquipmentItems(items))
       .catch((error) => setEquipmentItemsError(error.message || "Something went wrong."))
       .finally(() => setIsEquipmentItemsLoading(false));
   }
 
   function handleSelectEquipmentCategory(category) {
-    handleViewEquipmentCategory(category, equipmentStatusFilter);
+    handleViewEquipmentCategory(category);
   }
 
   function handleFilterEquipmentStatus(status) {
-    handleViewEquipmentCategory(equipmentCategory, status);
-  }
-
-  function handleBackToEquipmentCategories() {
-    setEquipmentDetailCategory(null);
+    setEquipmentStatusFilter(status);
   }
 
   function runEmployeeSearch(term) {
@@ -2810,12 +2832,9 @@ function Dashboard({ user, onLogout }) {
               onRetry={handleRetryEquipment}
               selectedCategory={equipmentCategory}
               onSelectCategory={handleSelectEquipmentCategory}
-              detailCategory={equipmentDetailCategory}
               items={equipmentItems}
               isItemsLoading={isEquipmentItemsLoading}
               itemsError={equipmentItemsError}
-              onViewCategory={handleViewEquipmentCategory}
-              onBackToCategories={handleBackToEquipmentCategories}
               onAddNew={handleOpenAddEquipmentItem}
               onEdit={handleOpenEditEquipmentItem}
               onUnassign={handleOpenUnassignEquipment}
@@ -3135,6 +3154,8 @@ function Dashboard({ user, onLogout }) {
         departments={departments}
         statuses={equipmentStatuses}
         categoryOptions={equipmentFormCategoryOptions}
+        categoryLocked={equipmentFormMode === "edit" || equipmentCategory !== "All"}
+        fields={equipmentFormFields}
       />
 
       <AssignEquipmentModal
