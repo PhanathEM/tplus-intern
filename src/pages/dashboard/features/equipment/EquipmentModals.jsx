@@ -87,6 +87,18 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
         disabled={isSubmitting}
       />
     );
+  } else if (field.type === "number") {
+    input = (
+      <input
+        id={id}
+        type="number"
+        autoComplete="off"
+        value={value}
+        onChange={(e) => onChange(field.key, e.target.value)}
+        className={formInputClass}
+        disabled={isSubmitting}
+      />
+    );
   } else {
     input = (
       <input
@@ -110,26 +122,32 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
   );
 }
 
-function AddCustomFieldControl({ onAdd, disabled }) {
+const FALLBACK_CUSTOM_FIELD_TYPES = [
+  { value: "text", label: "Text" },
+  { value: "number", label: "Number" },
+  { value: "date", label: "Date" },
+  { value: "boolean", label: "Yes/No" },
+];
+
+function AddCustomFieldControl({ onAdd, disabled, types }) {
+  const typeOptions = types && types.length > 0 ? types : FALLBACK_CUSTOM_FIELD_TYPES;
   const [isOpen, setIsOpen] = useState(false);
   const [label, setLabel] = useState("");
-  const [type, setType] = useState("text");
+  const [type, setType] = useState(typeOptions[0].value);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
 
   if (!isOpen) {
     return (
-      <div className="sm:col-span-2">
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          disabled={disabled}
-          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <PlusCircle size={15} />
-          Add field
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        disabled={disabled}
+        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[13px] font-semibold text-slate-600 outline-none transition hover:border-slate-400 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <PlusCircle size={15} />
+        Add field
+      </button>
     );
   }
 
@@ -144,14 +162,14 @@ function AddCustomFieldControl({ onAdd, disabled }) {
       .then(() => {
         setIsOpen(false);
         setLabel("");
-        setType("text");
+        setType(typeOptions[0].value);
       })
       .catch((err) => setError(err.message || "Could not add field."))
       .finally(() => setIsSaving(false));
   }
 
   return (
-    <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+    <div className="col-span-full rounded-lg border border-slate-200 bg-slate-50 p-3">
       {error && <p className="mb-2 text-[12px] font-medium text-rose-600">{error}</p>}
       <div className="flex flex-wrap items-center gap-2">
         <input
@@ -169,9 +187,11 @@ function AddCustomFieldControl({ onAdd, disabled }) {
           className={`${formInputClass} max-w-36`}
           disabled={isSaving}
         >
-          <option value="text">Text</option>
-          <option value="date">Date</option>
-          <option value="yes-no-select">Yes / No</option>
+          {typeOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
         <button
           type="button"
@@ -197,6 +217,62 @@ function AddCustomFieldControl({ onAdd, disabled }) {
   );
 }
 
+function CustomFieldCheckboxItem({ field, onRemove, onError }) {
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  function handleChange() {
+    setIsRemoving(true);
+    onError(null);
+    onRemove(field)
+      .catch((err) => onError(err.message || "Could not remove field."))
+      .finally(() => setIsRemoving(false));
+  }
+
+  return (
+    <label
+      title="Custom field — uncheck to remove it from this category"
+      className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] font-medium text-slate-700 transition hover:border-slate-300"
+    >
+      <input
+        type="checkbox"
+        checked
+        disabled={isRemoving}
+        onChange={handleChange}
+        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
+      />
+      {field.label}
+    </label>
+  );
+}
+
+function ReusableFieldCheckboxItem({ field, onReuse, onError }) {
+  const [isSaving, setIsSaving] = useState(false);
+
+  function handleChange() {
+    setIsSaving(true);
+    onError(null);
+    onReuse(field)
+      .catch((err) => onError(err.message || "Could not add field."))
+      .finally(() => setIsSaving(false));
+  }
+
+  return (
+    <label
+      title="Existing custom field from another category — check to reuse it here"
+      className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[13px] font-medium text-slate-500 transition hover:border-slate-400 hover:text-slate-700"
+    >
+      <input
+        type="checkbox"
+        checked={false}
+        disabled={isSaving}
+        onChange={handleChange}
+        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
+      />
+      {field.label}
+    </label>
+  );
+}
+
 export function EquipmentFormModal({
   isOpen,
   mode,
@@ -211,7 +287,6 @@ export function EquipmentFormModal({
   categoryOptions,
   categoryLocked = false,
   fields = [],
-  onAddField,
   onRemoveField,
   onOpenColumnsPicker,
 }) {
@@ -295,10 +370,6 @@ return (
                 />
               ))}
 
-{onAddField && (
-                <AddCustomFieldControl onAdd={onAddField} disabled={isSubmitting || !values.category} />
-              )}
-
 <FormField label="Status" htmlFor="add-equipment-status">
                 <select
                   id="add-equipment-status"
@@ -372,11 +443,18 @@ export function ColumnsPickerModal({
   fields,
   selectedKeys,
   onToggle,
+  customFields = [],
+  reusableFields = [],
+  fieldTypes,
+  onAddField,
+  onRemoveField,
+  onReuseField,
   onSave,
   onClose,
   isLoading,
   isSaving,
   error,
+  onError,
 }) {
   useEffect(() => {
     function handleKeyDown(event) {
@@ -396,7 +474,7 @@ export function ColumnsPickerModal({
         onClick={onClose}
         aria-label="Close"
       />
-      <div className="relative flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950">Configure columns</h2>
@@ -414,19 +492,19 @@ export function ColumnsPickerModal({
           </button>
         </div>
 
-        <div className="overflow-y-auto px-6 py-5">
-          {error && (
-            <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
-              {error}
-            </div>
-          )}
+        {error && (
+          <div className="mx-6 mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+            {error}
+          </div>
+        )}
 
+        <div className="overflow-y-auto px-6 py-5">
           {isLoading ? (
             <div className="py-8 text-center text-[13px] text-slate-500">Loading fields...</div>
-          ) : fields.length === 0 ? (
+          ) : fields.length === 0 && customFields.length === 0 && reusableFields.length === 0 && !onAddField ? (
             <div className="py-8 text-center text-[13px] text-slate-500">No fields available.</div>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {fields.map((field) => (
                 <label
                   key={field.key}
@@ -441,27 +519,46 @@ export function ColumnsPickerModal({
                   {field.label}
                 </label>
               ))}
+
+              {customFields.map((field) => (
+                <CustomFieldCheckboxItem key={field.key} field={field} onRemove={onRemoveField} onError={onError} />
+              ))}
+
+              {onReuseField &&
+                reusableFields.map((field) => (
+                  <ReusableFieldCheckboxItem key={field.key} field={field} onReuse={onReuseField} onError={onError} />
+                ))}
+
+              {onAddField && <AddCustomFieldControl onAdd={onAddField} types={fieldTypes} />}
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSaving}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={isSaving || isLoading}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSaving ? "Saving..." : "Save columns"}
-          </button>
+        <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-4">
+          <p className="text-[12px] text-amber-600">
+            {!isLoading && selectedKeys.length === 0
+              ? "Tick at least one field above (any one) to save."
+              : ""}
+          </p>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSaving}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={isSaving || isLoading || selectedKeys.length === 0}
+              title={selectedKeys.length === 0 ? "Tick at least one field above to save" : undefined}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSaving ? "Saving..." : "Save columns"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

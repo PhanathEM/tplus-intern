@@ -25,8 +25,9 @@ import {
   fetchViewColumns,
   saveViewColumns,
   fetchCustomFields,
+  fetchCustomFieldTypes,
   createCustomField,
-  deleteCustomField,
+  removeCustomFieldFromCategory,
   fetchAvailableStock,
   assignEquipment,
   unassignEquipment,
@@ -83,6 +84,7 @@ import {
   normalizeViewColumns,
   normalizeEquipmentTableColumns,
   normalizeCustomFields,
+  normalizeCustomFieldTypes,
   getEquipmentFormFields,
   getEquipmentFormFieldsFromColumns,
   buildEquipmentFormValues,
@@ -729,10 +731,14 @@ function Dashboard({ user, onLogout }) {
   const [columnsPickerCategoryId, setColumnsPickerCategoryId] = useState(null);
   const [columnsPickerCategoryLabel, setColumnsPickerCategoryLabel] = useState("");
   const [availableViewFields, setAvailableViewFields] = useState([]);
+  const [customFieldTypes, setCustomFieldTypes] = useState([]);
   const [isColumnsPickerLoading, setIsColumnsPickerLoading] = useState(false);
   const [columnsPickerSelectedKeys, setColumnsPickerSelectedKeys] = useState([]);
+  const [columnsPickerCustomFields, setColumnsPickerCustomFields] = useState([]);
+  const [reusableCustomFields, setReusableCustomFields] = useState([]);
   const [isSavingColumns, setIsSavingColumns] = useState(false);
   const [columnsPickerError, setColumnsPickerError] = useState(null);
+  const [columnsPickerReopenEquipmentForm, setColumnsPickerReopenEquipmentForm] = useState(false);
 
   const notificationsRef = useRef(null);
   const profileMenuRef = useRef(null);
@@ -958,10 +964,32 @@ function Dashboard({ user, onLogout }) {
         ? Promise.resolve(availableViewFields)
         : fetchAvailableViewFields().then(normalizeAvailableFields);
 
-    Promise.all([fieldsRequest, fetchViewColumns(categoryId).then(normalizeViewColumns).catch(() => [])])
-      .then(([fields, currentColumns]) => {
+    const typesRequest =
+      customFieldTypes.length > 0
+        ? Promise.resolve(customFieldTypes)
+        : fetchCustomFieldTypes().then(normalizeCustomFieldTypes).catch(() => []);
+
+    Promise.all([
+      fieldsRequest,
+      fetchViewColumns(categoryId).then(normalizeViewColumns).catch(() => []),
+      fetchCustomFields(categoryId).catch(() => null),
+      typesRequest,
+    ])
+      .then(([fields, currentColumns, customFieldsData, types]) => {
         setAvailableViewFields(fields);
-        setColumnsPickerSelectedKeys(currentColumns.map((column) => column.key));
+        let selectedKeys = currentColumns.map((column) => column.key);
+        // The backend requires at least one standard column per category —
+        // custom fields alone don't satisfy it. Pre-tick a sensible default
+        // for a brand-new category so the picker is savable right away
+        // instead of blocking on a rule the user has no reason to expect.
+        if (selectedKeys.length === 0) {
+          const fallback = fields.find((f) => f.key === "status") || fields.find((f) => f.key === "remark") || fields[0];
+          if (fallback) selectedKeys = [fallback.key];
+        }
+        setColumnsPickerSelectedKeys(selectedKeys);
+        setColumnsPickerCustomFields(normalizeCustomFields(customFieldsData));
+        setReusableCustomFields(normalizeCustomFields(customFieldsData?.available_to_add));
+        if (types.length > 0) setCustomFieldTypes(types);
       })
       .catch((error) => setColumnsPickerError(error.message || "Could not load fields."))
       .finally(() => setIsColumnsPickerLoading(false));
@@ -973,10 +1001,17 @@ function Dashboard({ user, onLogout }) {
     );
   }
 
+  function handleReopenEquipmentFormIfNeeded() {
+    if (!columnsPickerReopenEquipmentForm) return;
+    setColumnsPickerReopenEquipmentForm(false);
+    setIsEquipmentFormOpen(true);
+  }
+
   function handleCloseColumnsPicker() {
     setIsColumnsPickerOpen(false);
     setColumnsPickerCategoryId(null);
     setColumnsPickerError(null);
+    handleReopenEquipmentFormIfNeeded();
   }
 
   function handleSaveColumnsPicker() {
@@ -995,13 +1030,14 @@ function Dashboard({ user, onLogout }) {
         setIsColumnsPickerOpen(false);
         handleRetryEquipment();
         refreshOpenEquipmentFormFields(columnsPickerCategoryId);
+        handleReopenEquipmentFormIfNeeded();
       })
       .catch((error) => setColumnsPickerError(error.message || "Could not save columns."))
       .finally(() => setIsSavingColumns(false));
   }
 
   function refreshOpenEquipmentFormFields(categoryId) {
-    if (!isEquipmentFormOpen) return;
+    if (!isEquipmentFormOpen && !columnsPickerReopenEquipmentForm) return;
 
     const openCategoryId =
       equipmentFormMode === "edit"
@@ -2145,28 +2181,6 @@ function Dashboard({ user, onLogout }) {
     setEquipmentFormValues((current) => ({ ...current, [key]: value }));
   }
 
-  function handleAddCustomField(label, type) {
-    const categoryId =
-      equipmentFormMode === "edit"
-        ? equipmentFormTarget?.__category_id ??
-          resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
-        : resolveEquipmentCategoryId(equipmentFormValues.category);
-
-    if (categoryId == null) return Promise.reject(new Error("Choose a category first."));
-
-    return createCustomField(categoryId, { field_label: label, field_type: type }).then((data) => {
-      const [normalized] = normalizeCustomFields([data?.field || data]);
-      const field = normalized || {
-        id: null,
-        key: slugifyEquipmentView(label).replace(/-/g, "_"),
-        label,
-        type,
-      };
-      setEquipmentFormFields((current) => [...current, field]);
-      setEquipmentFormValues((current) => ({ ...current, [field.key]: "" }));
-    });
-  }
-
   function handleOpenColumnsPickerFromForm() {
     const categoryId =
       equipmentFormMode === "edit"
@@ -2176,28 +2190,73 @@ function Dashboard({ user, onLogout }) {
 
     if (categoryId == null) return;
 
+    setColumnsPickerReopenEquipmentForm(true);
+    setIsEquipmentFormOpen(false);
     handleOpenColumnsPicker(categoryId, equipmentFormValues.category);
   }
 
+  function removeCustomFieldWithConfirm(categoryId, field) {
+    return removeCustomFieldFromCategory(categoryId, field.id).catch((error) => {
+      if (error.status === 409) {
+        const confirmed = window.confirm(
+          `"${field.label}" already has data saved on some items. Remove it and that data anyway?`
+        );
+        if (confirmed) return removeCustomFieldFromCategory(categoryId, field.id, true);
+      }
+      throw error;
+    });
+  }
+
   function handleRemoveCustomField(field) {
-    return deleteCustomField(field.id)
-      .catch((error) => {
-        if (error.status === 409) {
-          const confirmed = window.confirm(
-            `"${field.label}" already has data saved on some items. Delete it and that data anyway?`
-          );
-          if (confirmed) return deleteCustomField(field.id, true);
-        }
-        throw error;
-      })
-      .then(() => {
-        setEquipmentFormFields((current) => current.filter((item) => item.key !== field.key));
-        setEquipmentFormValues((current) => {
-          const next = { ...current };
-          delete next[field.key];
-          return next;
-        });
+    const categoryId =
+      equipmentFormMode === "edit"
+        ? equipmentFormTarget?.__category_id ??
+          resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
+        : resolveEquipmentCategoryId(equipmentFormValues.category);
+
+    if (categoryId == null) return Promise.reject(new Error("Choose a category first."));
+
+    return removeCustomFieldWithConfirm(categoryId, field).then(() => {
+      setEquipmentFormFields((current) => current.filter((item) => item.key !== field.key));
+      setEquipmentFormValues((current) => {
+        const next = { ...current };
+        delete next[field.key];
+        return next;
       });
+    });
+  }
+
+  function handleAddCustomFieldFromPicker(label, type) {
+    if (!columnsPickerCategoryId) return Promise.reject(new Error("Choose a category first."));
+
+    return createCustomField(columnsPickerCategoryId, { field_label: label, field_type: type }).then((data) => {
+      const [normalized] = normalizeCustomFields([data?.field || data]);
+      const field = normalized || {
+        id: null,
+        key: slugifyEquipmentView(label).replace(/-/g, "_"),
+        label,
+        type,
+      };
+      setColumnsPickerCustomFields((current) => [...current, field]);
+      setReusableCustomFields((current) => current.filter((item) => item.key !== field.key));
+      handleRetryEquipment();
+      refreshOpenEquipmentFormFields(columnsPickerCategoryId);
+    });
+  }
+
+  function handleReuseCustomFieldFromPicker(field) {
+    return handleAddCustomFieldFromPicker(field.label, field.rawType);
+  }
+
+  function handleRemoveCustomFieldFromPicker(field) {
+    return removeCustomFieldWithConfirm(columnsPickerCategoryId, field).then(() => {
+      setColumnsPickerCustomFields((current) => current.filter((item) => item.key !== field.key));
+      setReusableCustomFields((current) =>
+        current.some((item) => item.key === field.key) ? current : [...current, field]
+      );
+      handleRetryEquipment();
+      refreshOpenEquipmentFormFields(columnsPickerCategoryId);
+    });
   }
 
   function handleRemoveStandardField(field) {
@@ -3488,7 +3547,6 @@ function Dashboard({ user, onLogout }) {
         categoryOptions={equipmentFormCategoryOptions}
         categoryLocked={equipmentFormMode === "edit" || equipmentCategory !== "All"}
         fields={equipmentFormFields}
-        onAddField={handleAddCustomField}
         onRemoveField={handleRemoveEquipmentField}
         onOpenColumnsPicker={handleOpenColumnsPickerFromForm}
       />
@@ -3499,11 +3557,18 @@ function Dashboard({ user, onLogout }) {
         fields={availableViewFields}
         selectedKeys={columnsPickerSelectedKeys}
         onToggle={handleToggleColumnField}
+        customFields={columnsPickerCustomFields}
+        reusableFields={reusableCustomFields}
+        fieldTypes={customFieldTypes}
+        onAddField={handleAddCustomFieldFromPicker}
+        onRemoveField={handleRemoveCustomFieldFromPicker}
+        onReuseField={handleReuseCustomFieldFromPicker}
         onSave={handleSaveColumnsPicker}
         onClose={handleCloseColumnsPicker}
         isLoading={isColumnsPickerLoading}
         isSaving={isSavingColumns}
         error={columnsPickerError}
+        onError={setColumnsPickerError}
       />
 
       <AssignEquipmentModal

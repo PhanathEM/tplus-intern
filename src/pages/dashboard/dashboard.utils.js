@@ -151,11 +151,31 @@ export function normalizeCustomFields(data) {
       if (!key) return null;
       const id = entry?.field_id ?? entry?.id ?? null;
       const label = entry?.field_label || entry?.header_text || entry?.label || humanizeFieldKey(key);
-      const rawType = String(entry?.field_type || entry?.type || "").toLowerCase();
-      let type = "text";
-      if (rawType === "date") type = "date";
-      else if (["boolean", "yesno", "yes_no", "yes-no"].includes(rawType)) type = "yes-no-select";
-      return { id, key, label, type };
+      const rawType = entry?.field_type || entry?.type || "text";
+      const type = normalizeCustomFieldType(rawType);
+      return { id, key, label, type, rawType };
+    })
+    .filter(Boolean);
+}
+
+function normalizeCustomFieldType(rawType) {
+  const value = String(rawType || "").toLowerCase();
+  if (value === "date") return "date";
+  if (value === "number") return "number";
+  if (["boolean", "yesno", "yes_no", "yes-no"].includes(value)) return "yes-no-select";
+  return "text";
+}
+
+// GET /api/custom-fields/types -> { types: [{ value, label, input }] }
+// `value` is kept as the backend's own raw type string (e.g. "boolean") since
+// that's exactly what must be sent back in POST /api/custom-fields/{categoryId}.
+export function normalizeCustomFieldTypes(data) {
+  const list = Array.isArray(data) ? data : Array.isArray(data?.types) ? data.types : [];
+  return list
+    .map((entry) => {
+      const value = entry?.value || entry?.type || "";
+      if (!value) return null;
+      return { value, label: entry?.label || humanizeFieldKey(value) };
     })
     .filter(Boolean);
 }

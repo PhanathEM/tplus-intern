@@ -50,20 +50,40 @@ export function saveViewColumns(categoryId, columns) {
   return apiPut(`/api/view-columns/${categoryId}`, { columns });
 }
 
+// Returns { fields: [...attached to this category], available_to_add: [...existing fields not yet attached] }
 export function fetchCustomFields(categoryId) {
-  return apiGet(`/api/custom-fields/${categoryId}`);
+  return apiGet(`/api/custom-fields/category/${categoryId}`);
+}
+
+// Every custom field ever created, across all categories — used to offer
+// reuse of an existing field instead of creating a duplicate.
+export function fetchAllCustomFields() {
+  return apiGet("/api/custom-fields");
+}
+
+export function fetchCustomFieldTypes() {
+  return apiGet("/api/custom-fields/types");
 }
 
 export function createCustomField(categoryId, payload) {
-  return apiPost(`/api/custom-fields/${categoryId}`, payload);
+  return apiPost("/api/custom-fields", { ...payload, category_id: categoryId });
 }
 
 export function updateCustomField(fieldId, payload) {
   return apiPut(`/api/custom-fields/field/${fieldId}`, payload);
 }
 
+// Removes a field from just this one category (unlinks; doesn't touch other
+// categories that reuse the same field).
+export function removeCustomFieldFromCategory(categoryId, fieldId, confirm = false) {
+  return apiDelete(
+    `/api/custom-fields/category/${categoryId}/field/${fieldId}${confirm ? "?confirm=true" : ""}`
+  );
+}
+
+// Deletes a field everywhere it's used.
 export function deleteCustomField(fieldId, confirm = false) {
-  return apiDelete(`/api/custom-fields/field/${fieldId}${confirm ? "?confirm=true" : ""}`);
+  return apiDelete(`/api/custom-fields/${fieldId}${confirm ? "?confirm=true" : ""}`);
 }
 
 export function fetchAvailableStock() {
