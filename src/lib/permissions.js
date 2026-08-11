@@ -31,7 +31,7 @@ export const PERMISSION_DEFINITIONS = [
   { value: PERMISSIONS.SSD_UPGRADE, label: "SSD Upgrade" },
   { value: PERMISSIONS.SSD_PROCUREMENT, label: "SSD Procurement" },
   { value: PERMISSIONS.ANTIVIRUS_INSTALL, label: "Antivirus Install" },
-  { value: PERMISSIONS.LICENSE, label: "License" },
+  { value: PERMISSIONS.LICENSE, label: "Software License" },
   { value: PERMISSIONS.CLOUD_RATE, label: "Cloud Rate" },
   { value: PERMISSIONS.CLOUD_USAGE, label: "Cloud Usage" },
   { value: PERMISSIONS.SERVICE_USAGE, label: "Service Usage" },

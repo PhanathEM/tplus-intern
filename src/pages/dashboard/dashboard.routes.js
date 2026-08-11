@@ -17,7 +17,7 @@ export const dashboardRouteByView = {
   "SSD Upgrade": "ssd-upgrade",
   "SSD Procurement": "ssd-procurement",
   "Antivirus Install": "antivirus-install",
-  License: "license",
+  "Software License": "license",
   "Cloud Rate": "cloud-rate",
   "Cloud Usage": "cloud-usage",
   "Service Usage": "service-usage",

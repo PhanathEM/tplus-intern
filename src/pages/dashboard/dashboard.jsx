@@ -45,8 +45,8 @@ import { fetchSsdProcurement } from "../../services/ssdProcurementService";
 import { fetchAntivirusInstalls } from "../../services/antivirusService";
 import { createLicense, deleteLicense, fetchLicenses, updateLicense } from "../../services/licenseService";
 import {
-  assignEquipmentLicense,
-  fetchEquipmentLicense,
+  assignEquipmentLicenses,
+  fetchEquipmentLicenseOptions,
   unassignEquipmentLicense,
 } from "../../services/equipmentLicenseService";
 import { fetchCloudRates } from "../../services/cloudRateService";
@@ -88,6 +88,7 @@ import {
   normalizeAvailableFields,
   normalizeViewColumns,
   normalizeEquipmentTableColumns,
+  normalizeEquipmentLicenseOptions,
   normalizeCustomFields,
   normalizeCustomFieldTypes,
   getEquipmentFormFields,
@@ -592,9 +593,8 @@ function Dashboard({ user, onLogout }) {
   const [softwareLicenseOptions, setSoftwareLicenseOptions] = useState([]);
   const [isSoftwareLicenseOptionsLoading, setIsSoftwareLicenseOptionsLoading] = useState(false);
   const [softwareLicenseOptionsError, setSoftwareLicenseOptionsError] = useState(null);
-  const [equipmentLicenseSelection, setEquipmentLicenseSelection] = useState(null);
-  const [equipmentLicenseInitialId, setEquipmentLicenseInitialId] = useState(null);
-  const [equipmentLicenseLabel, setEquipmentLicenseLabel] = useState(null);
+  const [equipmentLicenseSelectedIds, setEquipmentLicenseSelectedIds] = useState([]);
+  const [equipmentLicenseInitialIds, setEquipmentLicenseInitialIds] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(initialDashboardView === "Departments");
   const [departmentsError, setDepartmentsError] = useState(null);
@@ -625,7 +625,7 @@ function Dashboard({ user, onLogout }) {
   const [antivirusError, setAntivirusError] = useState(null);
   const [antivirusFetchToken, setAntivirusFetchToken] = useState(0);
   const [licenses, setLicenses] = useState([]);
-  const [isLicensesLoading, setIsLicensesLoading] = useState(initialDashboardView === "License");
+  const [isLicensesLoading, setIsLicensesLoading] = useState(initialDashboardView === "Software License");
   const [licensesError, setLicensesError] = useState(null);
   const [licensesFetchToken, setLicensesFetchToken] = useState(0);
   const [isLicenseFormOpen, setIsLicenseFormOpen] = useState(false);
@@ -788,7 +788,7 @@ function Dashboard({ user, onLogout }) {
   const sidebarBadges = useMemo(
     () =>
       licenseExpiryAlerts.length > 0
-        ? { License: { value: licenseExpiryAlerts.length, tone: "danger" } }
+        ? { "Software License": { value: licenseExpiryAlerts.length, tone: "danger" } }
         : {},
     [licenseExpiryAlerts.length]
   );
@@ -1482,7 +1482,7 @@ function Dashboard({ user, onLogout }) {
       setIsAntivirusLoading(true);
       setAntivirusError(null);
     }
-    if (label === "License" && label !== activeView) {
+    if (label === "Software License" && label !== activeView) {
       setIsLicensesLoading(true);
       setLicensesError(null);
     }
@@ -1644,7 +1644,7 @@ function Dashboard({ user, onLogout }) {
   const isSsdUpgradeView = activeView === "SSD Upgrade" && hasActiveViewAccess;
   const isSsdProcurementView = activeView === "SSD Procurement" && hasActiveViewAccess;
   const isAntivirusView = activeView === "Antivirus Install" && hasActiveViewAccess;
-  const isLicenseView = activeView === "License" && hasActiveViewAccess;
+  const isLicenseView = activeView === "Software License" && hasActiveViewAccess;
   const isCloudRateView = activeView === "Cloud Rate" && hasActiveViewAccess;
   const isServerUsageView = activeView === "Service Usage" && hasActiveViewAccess;
   const isCloudUsageView = activeView === "Cloud Usage" && hasActiveViewAccess;
@@ -2129,9 +2129,8 @@ function Dashboard({ user, onLogout }) {
     setEquipmentFormFields(fields);
     setEquipmentFormValues({ ...buildEquipmentFormValues(fields, {}), category: activeCategoryLabel });
     setEquipmentFormError(null);
-    setEquipmentLicenseSelection(null);
-    setEquipmentLicenseInitialId(null);
-    setEquipmentLicenseLabel(null);
+    setEquipmentLicenseSelectedIds([]);
+    setEquipmentLicenseInitialIds([]);
     setIsEquipmentFormOpen(true);
 
     fetchDepartments()
@@ -2170,9 +2169,13 @@ function Dashboard({ user, onLogout }) {
     setEquipmentFormFields(fields);
     setEquipmentFormValues(buildEquipmentFormValues(fields, item));
     setEquipmentFormError(null);
-    setEquipmentLicenseSelection(null);
-    setEquipmentLicenseInitialId(null);
-    setEquipmentLicenseLabel(null);
+    // Equipment list rows already carry their assigned licenses (software_licenses),
+    // so the picker's initial selection can be read straight off item — no extra fetch.
+    const currentLicenseIds = Array.isArray(item.software_licenses)
+      ? item.software_licenses.map((license) => license.license_id).filter((id) => id != null)
+      : [];
+    setEquipmentLicenseSelectedIds(currentLicenseIds);
+    setEquipmentLicenseInitialIds(currentLicenseIds);
     setIsEquipmentFormOpen(true);
 
     fetchDepartments()
@@ -2182,22 +2185,6 @@ function Dashboard({ user, onLogout }) {
     fetchEquipmentStatuses()
       .then((data) => setEquipmentStatuses(excludeBrokenStatuses(data)))
       .catch(() => setEquipmentStatuses([]));
-
-    if (item.equipment_id != null) {
-      fetchEquipmentLicense(item.equipment_id)
-        .then((data) => {
-          const record = (data && typeof data === "object" && (data.license || data)) || null;
-          const licenseId = record?.license_id ?? null;
-          setEquipmentLicenseSelection(licenseId);
-          setEquipmentLicenseInitialId(licenseId);
-          setEquipmentLicenseLabel(record?.product_name ?? null);
-        })
-        .catch(() => {
-          setEquipmentLicenseSelection(null);
-          setEquipmentLicenseInitialId(null);
-          setEquipmentLicenseLabel(null);
-        });
-    }
 
     if (item.__category_id != null) {
       fetchCustomFields(item.__category_id)
@@ -2226,8 +2213,8 @@ function Dashboard({ user, onLogout }) {
     setIsSoftwareLicenseOptionsLoading(true);
     setSoftwareLicenseOptionsError(null);
 
-    fetchLicenses()
-      .then((data) => setSoftwareLicenseOptions(normalizeRecordList(data)))
+    fetchEquipmentLicenseOptions()
+      .then((data) => setSoftwareLicenseOptions(normalizeEquipmentLicenseOptions(data)))
       .catch((error) => setSoftwareLicenseOptionsError(error.message || "Could not load licenses."))
       .finally(() => setIsSoftwareLicenseOptionsLoading(false));
   }
@@ -2237,12 +2224,11 @@ function Dashboard({ user, onLogout }) {
   }
 
   function handleToggleSoftwareLicenseSelection(licenseId) {
-    setEquipmentLicenseSelection((current) => {
-      const next = String(current) === String(licenseId) ? null : licenseId;
-      const option = softwareLicenseOptions.find((license) => String(license.license_id) === String(next));
-      setEquipmentLicenseLabel(option?.product_name ?? null);
-      return next;
-    });
+    setEquipmentLicenseSelectedIds((current) =>
+      current.some((id) => String(id) === String(licenseId))
+        ? current.filter((id) => String(id) !== String(licenseId))
+        : [...current, licenseId]
+    );
   }
 
   function handleOpenColumnsPickerFromForm() {
@@ -2380,17 +2366,28 @@ function Dashboard({ user, onLogout }) {
     request
       .then((data) => {
         const savedEquipmentId = isEdit ? equipmentFormTarget.equipment_id : data?.equipment_id;
-        const licenseChanged = String(equipmentLicenseSelection) !== String(equipmentLicenseInitialId);
+
+        const licenseIdsToAdd = equipmentLicenseSelectedIds.filter(
+          (id) => !equipmentLicenseInitialIds.some((initialId) => String(initialId) === String(id))
+        );
+        const licenseIdsToRemove = equipmentLicenseInitialIds.filter(
+          (id) => !equipmentLicenseSelectedIds.some((selectedId) => String(selectedId) === String(id))
+        );
 
         const licenseSync =
-          savedEquipmentId != null && licenseChanged
-            ? equipmentLicenseSelection
-              ? assignEquipmentLicense(savedEquipmentId, { license_id: equipmentLicenseSelection })
-              : unassignEquipmentLicense(savedEquipmentId)
+          savedEquipmentId != null
+            ? Promise.all([
+                licenseIdsToAdd.length > 0
+                  ? assignEquipmentLicenses(savedEquipmentId, licenseIdsToAdd)
+                  : Promise.resolve(),
+                ...licenseIdsToRemove.map((license_id) =>
+                  unassignEquipmentLicense(savedEquipmentId, license_id)
+                ),
+              ])
             : Promise.resolve();
 
         return licenseSync.catch((licenseError) => {
-          console.error("Could not update software license assignment:", licenseError);
+          console.error("Could not update software license assignments:", licenseError);
         }).then(() => {
           logActivity({
             actor: user,
@@ -2580,7 +2577,7 @@ function Dashboard({ user, onLogout }) {
 
     const valuesToSave = requiresExpiry
       ? licenseFormValues
-      : { ...licenseFormValues, date_start: "", date_expire: "" };
+      : { ...licenseFormValues, date_expire: "" };
 
     const payload = Object.fromEntries(
       Object.entries(valuesToSave).filter(([, value]) => value.trim() !== "")
@@ -3300,7 +3297,7 @@ function Dashboard({ user, onLogout }) {
                 ...homeStats,
                 "Stock Available": notificationData.availableStock.length,
                 "Currently Borrowed": notificationData.currentBorrows.length,
-                License: notificationData.licenses.length,
+                "Software License": notificationData.licenses.length,
                 "My Activity": myActivityEntries.length,
                 "Activity Log": activityEntries.length,
               }}
@@ -3651,13 +3648,13 @@ function Dashboard({ user, onLogout }) {
         onRemoveField={handleRemoveEquipmentField}
         onOpenColumnsPicker={handleOpenColumnsPickerFromForm}
         onOpenSoftwareLicense={handleOpenSoftwareLicensePicker}
-        softwareLicenseLabel={equipmentLicenseLabel}
+        softwareLicenseCount={equipmentLicenseSelectedIds.length}
       />
 
       <SoftwareLicensePickerModal
         isOpen={isSoftwareLicensePickerOpen}
         licenses={softwareLicenseOptions}
-        selectedId={equipmentLicenseSelection}
+        selectedIds={equipmentLicenseSelectedIds}
         onToggle={handleToggleSoftwareLicenseSelection}
         onClose={handleCloseSoftwareLicensePicker}
         isLoading={isSoftwareLicenseOptionsLoading}
@@ -3794,13 +3791,13 @@ function Dashboard({ user, onLogout }) {
 
       <ConfirmDialog
         isOpen={Boolean(licenseToDelete)}
-        title="Delete this license?"
+        title="Delete this software license?"
         message={
           licenseToDelete
             ? `"${licenseToDelete.product_name}" will be permanently removed. This cannot be undone.`
             : ""
         }
-        confirmLabel="Delete license"
+        confirmLabel="Delete software license"
         onConfirm={handleConfirmDeleteLicense}
         onCancel={handleCloseDeleteLicense}
         isConfirming={isDeletingLicense}

@@ -9,7 +9,7 @@ export const ACTIVITY_MODULES = {
   CATEGORY: "Category",
   BORROW: "Borrow",
   USER: "User",
-  LICENSE: "License",
+  LICENSE: "Software License",
 };
 
 export const ACTIVITY_ACTIONS = {

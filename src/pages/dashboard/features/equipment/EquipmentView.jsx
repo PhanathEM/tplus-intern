@@ -37,7 +37,12 @@ export function EquipmentItemsTable({
     [configuredColumns]
   );
   const columns = useMemo(
-    () => getRecordColumns(items, baseColumns).filter((column) => !column.key.startsWith("__")),
+    () =>
+      getRecordColumns(items, baseColumns).filter(
+        // software_licenses is the raw array behind license_names/license_status/etc. —
+        // those flat fields already display fine as columns, the array itself doesn't.
+        (column) => !column.key.startsWith("__") && column.key !== "software_licenses"
+      ),
     [items, baseColumns]
   );
 

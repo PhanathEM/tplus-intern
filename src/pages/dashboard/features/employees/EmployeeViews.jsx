@@ -83,7 +83,11 @@ export function EmployeeSearchPanel({
       ) : (
         <div className="divide-y divide-slate-100">
           {employeeGroups.map((group) => (
-            <div key={group.employee_id ?? group.owner_name} className="p-5">
+            <div
+              key={group.employee_id ?? group.owner_name}
+              onClick={() => onViewDetail(group)}
+              className="cursor-pointer p-5 transition hover:bg-slate-50/70"
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
                   <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500">
@@ -102,25 +106,24 @@ export function EmployeeSearchPanel({
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
                     {group.devices.length} device{group.devices.length === 1 ? "" : "s"}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => onViewDetail(group)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                  >
-                    View Detail
-                  </button>
                   {canManage && (
                     <>
                       <button
                         type="button"
-                        onClick={() => onEdit(group)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(group);
+                        }}
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                       >
                         Edit
                       </button>
                       <button
                         type="button"
-                        onClick={() => onDelete(group)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(group);
+                        }}
                         className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                       >
                         Delete
@@ -440,7 +443,11 @@ export function EmployeeDirectoryTable({
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {employees.map((employee) => (
-                  <tr key={employee.employee_id} className="transition hover:bg-slate-50/70">
+                  <tr
+                    key={employee.employee_id}
+                    onClick={() => onViewDetail(employee)}
+                    className="cursor-pointer transition hover:bg-slate-50/70"
+                  >
                     <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-950">
                       {employee.full_name || "—"}
                     </td>
@@ -452,25 +459,24 @@ export function EmployeeDirectoryTable({
                     <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{employee.location || "—"}</td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onViewDetail(employee)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                        >
-                          View Detail
-                        </button>
                         {canManage && (
                           <>
                             <button
                               type="button"
-                              onClick={() => onEdit(employee)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(employee);
+                              }}
                               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                             >
                               Edit
                             </button>
                             <button
                               type="button"
-                              onClick={() => onDelete(employee)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(employee);
+                              }}
                               className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                             >
                               Delete

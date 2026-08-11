@@ -142,6 +142,13 @@ export function normalizeEquipmentTableColumns(data) {
     .filter(Boolean);
 }
 
+// GET /api/equipment/licenses -> { count, licenses: [{ license_id, product_name, ..., install_count }] }
+export function normalizeEquipmentLicenseOptions(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.licenses)) return data.licenses;
+  return [];
+}
+
 // GET /api/custom-fields/{categoryId} -> { category_id, category_name, count, fields: [{field_id, field_key, field_label, field_type}] }
 export function normalizeCustomFields(data) {
   const list = Array.isArray(data) ? data : Array.isArray(data?.fields) ? data.fields : [];
@@ -187,6 +194,14 @@ const EQUIPMENT_FORM_EXCLUDED_KEYS = new Set([
   "remark",
   "owner_id",
   "owner_name",
+  // Derived from the equipment's assigned licenses (see software_licenses)
+  // instead of being real, directly-editable columns — managed through the
+  // "Software License" picker, not typed into the form.
+  "license_names",
+  "license_date_start",
+  "license_date_expire",
+  "license_status",
+  "software_licenses",
 ]);
 
 const EQUIPMENT_FORM_FIELD_TYPES = {

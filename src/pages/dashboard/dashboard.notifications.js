@@ -165,10 +165,10 @@ export function buildDashboardNotifications({ currentBorrows = [], availableStoc
     .forEach(({ license, info }) => {
       notifications.push({
         id: `license-expiry-${license.license_id || licenseName(license)}`,
-        title: info.isExpired ? "License expired" : "License expiring soon",
+        title: info.isExpired ? "Software license expired" : "Software license expiring soon",
         detail: `${licenseName(license)} ${info.isExpired ? "expired" : "expires"} on ${info.dateLabel}`,
         time: info.isExpired ? "Needs renewal" : info.label,
-        targetView: "License",
+        targetView: "Software License",
         tone: info.tone,
       });
     });

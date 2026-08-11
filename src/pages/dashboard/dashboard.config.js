@@ -52,7 +52,7 @@ export const navSections = [
     label: "Software & Security",
     items: [
       { label: "Antivirus Install", icon: Shield, permission: PERMISSIONS.ANTIVIRUS_INSTALL },
-      { label: "License", icon: Key, permission: PERMISSIONS.LICENSE },
+      { label: "Software License", icon: Key, permission: PERMISSIONS.LICENSE },
     ],
   },
   {

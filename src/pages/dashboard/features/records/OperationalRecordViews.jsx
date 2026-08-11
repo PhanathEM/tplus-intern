@@ -80,10 +80,10 @@ export function LicenseFormModal({
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950">
-              {isEdit ? "Edit license" : "Add license"}
+              {isEdit ? "Edit software license" : "Add software license"}
             </h2>
             <p className="mt-0.5 text-[13px] text-slate-500">
-              {isEdit ? "Update this license's details." : "Create a new license renewal record."}
+              {isEdit ? "Update this software license's details." : "Create a new software license renewal record."}
             </p>
           </div>
           <button
@@ -153,7 +153,7 @@ export function LicenseFormModal({
                   value={values.date_start}
                   onChange={(e) => onChange("date_start", e.target.value)}
                   className={formInputClass}
-                  disabled={isSubmitting || !requiresExpiry}
+                  disabled={isSubmitting}
                 />
               </FormField>
 
@@ -175,8 +175,8 @@ export function LicenseFormModal({
               {!requiresExpiry && (
                 <div className="sm:col-span-2 -mt-2 text-xs text-slate-500">
                   {values.license_type === "Perpetual"
-                    ? "Perpetual licenses are bought once and never expire."
-                    : "Free licenses are always active and don't need dates."}
+                    ? "Perpetual licenses are bought once and never expire, so no expiry date is needed."
+                    : "Free licenses are always active, so no expiry date is needed."}
                 </div>
               )}
 
@@ -209,7 +209,7 @@ export function LicenseFormModal({
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add license"}
+              {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add software license"}
             </button>
           </div>
         </form>
@@ -324,13 +324,13 @@ export function LicensesView({
     <RecordsTableView
       records={licenses}
       columnsConfig={licenseColumns}
-      title="Licenses"
-      recordLabel="license"
-      loadingText="Loading licenses..."
-      errorTitle="Couldn't load licenses"
+      title="Software Licenses"
+      recordLabel="software license"
+      loadingText="Loading software licenses..."
+      errorTitle="Couldn't load software licenses"
       emptyIcon={Key}
-      emptyTitle="No licenses found"
-      emptyDescription="License records will appear here."
+      emptyTitle="No software licenses found"
+      emptyDescription="Software license records will appear here."
       rowKey={(license, index) => license.license_id ?? index}
       isLoading={isLoading}
       error={error}
@@ -353,7 +353,7 @@ export function LicensesView({
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             >
               <PlusCircle size={15} />
-              Add License
+              Add Software License
             </button>
           )}
         </>

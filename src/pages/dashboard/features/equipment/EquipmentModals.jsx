@@ -290,7 +290,7 @@ export function EquipmentFormModal({
   onRemoveField,
   onOpenColumnsPicker,
   onOpenSoftwareLicense,
-  softwareLicenseLabel,
+  softwareLicenseCount = 0,
 }) {
   useEffect(() => {
     function handleKeyDown(event) {
@@ -414,7 +414,7 @@ return (
                 disabled={isSubmitting}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {softwareLicenseLabel ? `Software License: ${softwareLicenseLabel}` : "Software License"}
+                {softwareLicenseCount > 0 ? `Software License (${softwareLicenseCount})` : "Software License"}
               </button>
             ) : (
               <span />
@@ -585,7 +585,7 @@ export function ColumnsPickerModal({
 export function SoftwareLicensePickerModal({
   isOpen,
   licenses = [],
-  selectedId,
+  selectedIds = [],
   onToggle,
   onClose,
   isLoading,
@@ -614,7 +614,7 @@ export function SoftwareLicensePickerModal({
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950">Software License</h2>
             <p className="mt-0.5 text-[13px] text-slate-500">
-              Choose one license to link to this equipment.
+              Choose one or more licenses to link to this equipment.
             </p>
           </div>
           <button
@@ -643,7 +643,7 @@ export function SoftwareLicensePickerModal({
           ) : (
             <div className="flex flex-col gap-2">
               {licenses.map((license) => {
-                const isChecked = String(license.license_id) === String(selectedId);
+                const isChecked = selectedIds.some((id) => String(id) === String(license.license_id));
                 return (
                   <label
                     key={license.license_id}
@@ -663,8 +663,14 @@ export function SoftwareLicensePickerModal({
                         </span>
                       </span>
                     </span>
-                    {license.status && (
-                      <span className="shrink-0 text-xs font-normal text-slate-400">{license.status}</span>
+                    {license.install_count != null ? (
+                      <span className="shrink-0 text-xs font-normal text-slate-400">
+                        {license.install_count} installed
+                      </span>
+                    ) : (
+                      license.status && (
+                        <span className="shrink-0 text-xs font-normal text-slate-400">{license.status}</span>
+                      )
                     )}
                   </label>
                 );
