@@ -4,7 +4,7 @@ export const PERMISSIONS = {
   EMPLOYEE: "employee",
   DEPARTMENTS: "departments",
   EQUIPMENT: "equipment",
-  STOCK_AVAILABLE: "stock_available",
+  ASSIGN_EQUIPMENT: "assign_equipment",
   CURRENTLY_BORROWED: "currently_borrowed",
   BORROW_HISTORY: "borrow_history",
   DEVICE_REPLACEMENT: "device_replacement",
@@ -12,6 +12,7 @@ export const PERMISSIONS = {
   SSD_PROCUREMENT: "ssd_procurement",
   ANTIVIRUS_INSTALL: "antivirus_install",
   LICENSE: "license",
+  EQUIPMENT_STATUS: "equipment_status",
   CLOUD_RATE: "cloud_rate",
   CLOUD_USAGE: "cloud_usage",
   SERVICE_USAGE: "service_usage",
@@ -24,7 +25,7 @@ export const PERMISSION_DEFINITIONS = [
   { value: PERMISSIONS.EMPLOYEE, label: "Employee" },
   { value: PERMISSIONS.DEPARTMENTS, label: "Departments" },
   { value: PERMISSIONS.EQUIPMENT, label: "All Equipment" },
-  { value: PERMISSIONS.STOCK_AVAILABLE, label: "Stock Available" },
+  { value: PERMISSIONS.ASSIGN_EQUIPMENT, label: "Assign" },
   { value: PERMISSIONS.CURRENTLY_BORROWED, label: "Currently Borrowed" },
   { value: PERMISSIONS.BORROW_HISTORY, label: "Borrow History" },
   { value: PERMISSIONS.DEVICE_REPLACEMENT, label: "Device Replacement" },
@@ -38,12 +39,15 @@ export const PERMISSION_DEFINITIONS = [
   { value: PERMISSIONS.USERS, label: "Users" },
   { value: PERMISSIONS.ACTIVITY_LOG, label: "Activity Log" },
   { value: PERMISSIONS.RECYCLE_BIN, label: "Recycle Bin" },
+  { value: PERMISSIONS.EQUIPMENT_STATUS, label: "Status" },
 ];
 
 const ADMIN_ONLY_DEFAULT_PERMISSIONS = new Set([
   PERMISSIONS.USERS,
   PERMISSIONS.ACTIVITY_LOG,
   PERMISSIONS.RECYCLE_BIN,
+  PERMISSIONS.EQUIPMENT_STATUS,
+  PERMISSIONS.ASSIGN_EQUIPMENT,
 ]);
 
 export const ALL_PERMISSION_VALUES = PERMISSION_DEFINITIONS.map((permission) => permission.value);

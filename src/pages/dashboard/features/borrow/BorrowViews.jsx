@@ -1,59 +1,9 @@
 import { useMemo } from "react";
-import {
-  FiAlertTriangle as AlertTriangle,
-  FiBox as Box,
-  FiRefreshCw as RefreshCw,
-  FiSearch as Search,
-} from "react-icons/fi";
-import {
-  availableStockColumns,
-  borrowHistoryColumns,
-  currentBorrowColumns,
-} from "../../dashboard.config";
+import { FiAlertTriangle as AlertTriangle, FiRefreshCw as RefreshCw, FiSearch as Search } from "react-icons/fi";
+import { borrowHistoryColumns, currentBorrowColumns } from "../../dashboard.config";
 import { getRecordColumns } from "../../dashboard.utils";
 import { EmptyState, EmployeeSelectDropdown, formInputClass } from "../../components/SharedControls";
 import { RecordCellValue, RecordsTableView } from "../../components/RecordsTableView";
-
-export function AvailableStockView({ stock, isLoading, error, onRetry, onAssign, onBorrow, canManage = true }) {
-  return (
-    <RecordsTableView
-      records={stock}
-      columnsConfig={availableStockColumns}
-      title="Stock available"
-      recordLabel="item"
-      loadingText="Loading available stock..."
-      errorTitle="Couldn't load available stock"
-      emptyIcon={Box}
-      emptyTitle="No available stock"
-      emptyDescription="Unassigned equipment will appear here."
-      rowKey={(item, index) => item.equipment_id ?? index}
-      isLoading={isLoading}
-      error={error}
-      onRetry={onRetry}
-      renderRowActions={
-        canManage &&
-        ((item) => (
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => onAssign(item)}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-            >
-              Assign
-            </button>
-            <button
-              type="button"
-              onClick={() => onBorrow(item)}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-            >
-              Borrow
-            </button>
-          </div>
-        ))
-      }
-    />
-  );
-}
 
 export function CurrentBorrowsView({ loans, isLoading, error, onRetry, onReturn, canManage = true }) {
   return (

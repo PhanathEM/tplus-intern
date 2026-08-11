@@ -31,6 +31,7 @@ function equipmentName(record) {
   return (
     record.computer_name ||
     record.device_model ||
+    record.asset_code ||
     record.equipment_code ||
     record.service_tag ||
     `Equipment #${record.equipment_id || record.borrow_id || "N/A"}`
@@ -141,7 +142,7 @@ export function buildDashboardNotifications({ currentBorrows = [], availableStoc
       title: "No available stock",
       detail: "There is no unassigned equipment available.",
       time: "Stock alert",
-      targetView: "Stock Available",
+      targetView: "All Equipment",
       tone: "danger",
     });
   } else {
@@ -154,7 +155,7 @@ export function buildDashboardNotifications({ currentBorrows = [], availableStoc
           title: "Low stock",
           detail: `${category} has ${count} available item${count === 1 ? "" : "s"} left.`,
           time: "Stock alert",
-          targetView: "Stock Available",
+          targetView: "All Equipment",
           tone: count === 0 ? "danger" : "warning",
         });
       });

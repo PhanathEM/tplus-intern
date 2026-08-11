@@ -10,6 +10,7 @@ export const ACTIVITY_MODULES = {
   BORROW: "Borrow",
   USER: "User",
   LICENSE: "Software License",
+  STATUS: "Status",
 };
 
 export const ACTIVITY_ACTIONS = {

@@ -48,8 +48,8 @@ function getResultLabel(type, item) {
     return (
       item.computer_name ||
       item.device_model ||
-      item.equipment_code ||
       item.asset_code ||
+      item.equipment_code ||
       `Equipment #${item.equipment_id}`
     );
   }
@@ -70,7 +70,7 @@ function getResultDetail(type, item) {
   if (type === "equipment") {
     return joinDetail([
       item.category || item.category_name || item.device_type,
-      item.equipment_code || item.asset_code || item.service_tag,
+      item.asset_code || item.equipment_code || item.service_tag,
       item.owner_name,
     ]);
   }

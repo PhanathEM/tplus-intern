@@ -26,6 +26,8 @@ export function EquipmentItemsTable({
   onEdit,
   onUnassign,
   onDelete,
+  onBorrow,
+  borrowableStatusNames,
   onAddNew,
   isUnconfigured = false,
   canCreate = true,
@@ -152,6 +154,15 @@ return (
                                 Unassign
                               </button>
                             )}
+                            {!hasOwner && onBorrow && borrowableStatusNames?.has(item.status) && (
+                              <button
+                                type="button"
+                                onClick={() => onBorrow(item)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                              >
+                                Borrow
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => onEdit(item)}
@@ -251,6 +262,7 @@ export function EquipmentView({
   onEdit,
   onUnassign,
   onDelete,
+  onBorrow,
   statuses,
   statusFilter,
   onFilterStatus,
@@ -261,6 +273,11 @@ export function EquipmentView({
   canCreate = true,
 }) {
   const statusOptions = useMemo(() => ["All", ...statuses.map((item) => item.status_name)], [statuses]);
+
+  const borrowableStatusNames = useMemo(
+    () => new Set(statuses.filter((item) => item.is_borrowable).map((item) => item.status_name)),
+    [statuses]
+  );
 
   const categoryOptions = useMemo(
     () => [
@@ -350,6 +367,8 @@ export function EquipmentView({
           onEdit={onEdit}
           onUnassign={onUnassign}
           onDelete={onDelete}
+          onBorrow={onBorrow}
+          borrowableStatusNames={borrowableStatusNames}
           onAddNew={onAddNew}
           canCreate={canCreate}
           canManage={canManage}

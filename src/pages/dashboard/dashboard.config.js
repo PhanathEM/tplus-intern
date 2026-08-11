@@ -11,9 +11,11 @@ import {
   FiSearch as Search,
   FiShield as Shield,
   FiShoppingCart as ShoppingCart,
+  FiSliders as Sliders,
   FiTrash2 as Trash2,
   FiUsers as Users,
   FiUserCheck as UserCheck,
+  FiUserPlus as UserPlus,
   FiLayers as Layers,
 } from "react-icons/fi";
 import { PERMISSIONS } from "../../lib/permissions";
@@ -38,7 +40,7 @@ export const navSections = [
         icon: Box,
         children: [
           { label: "All Equipment", icon: Box, permission: PERMISSIONS.EQUIPMENT },
-          { label: "Stock Available", icon: Box, permission: PERMISSIONS.STOCK_AVAILABLE },
+          { label: "Assign", icon: UserPlus, permission: PERMISSIONS.ASSIGN_EQUIPMENT, adminOnly: true },
           { label: "Currently Borrowed", icon: RefreshCw, permission: PERMISSIONS.CURRENTLY_BORROWED },
           { label: "Borrow History", icon: Search, permission: PERMISSIONS.BORROW_HISTORY },
         ],
@@ -84,6 +86,12 @@ export const navSections = [
         label: "Recycle Bin",
         icon: Trash2,
         permission: PERMISSIONS.RECYCLE_BIN,
+        adminOnly: true,
+      },
+      {
+        label: "Status",
+        icon: Sliders,
+        permission: PERMISSIONS.EQUIPMENT_STATUS,
         adminOnly: true,
       },
     ],
@@ -258,7 +266,7 @@ export const EQUIPMENT_FORM_FALLBACK_FIELDS = [
   { key: "device_type", label: "Device Type", type: "text" },
   { key: "device_model", label: "Device Model", type: "text" },
   { key: "manufacturer", label: "Manufacturer", type: "text" },
-  { key: "equipment_code", label: "Equipment Code", type: "text" },
+  { key: "asset_code", label: "Asset Code", type: "text" },
   { key: "service_tag", label: "Service Tag", type: "text" },
   { key: "serial_no", label: "Serial No", type: "text" },
   { key: "product_id", label: "Product ID", type: "text" },
@@ -277,38 +285,6 @@ export const EQUIPMENT_FORM_FALLBACK_FIELDS = [
   { key: "received_date", label: "Received Date", type: "date" },
 ];
 
-export const availableStockColumns = [
-  { key: "equipment_id", label: "Equipment ID" },
-  { key: "category", label: "Category" },
-  { key: "device_type", label: "Device Type" },
-  { key: "device_model", label: "Device Model" },
-  { key: "manufacturer", label: "Manufacturer" },
-  { key: "computer_name", label: "Computer Name" },
-  { key: "equipment_code", label: "Equipment Code" },
-  { key: "service_tag", label: "Service Tag" },
-  { key: "mac_address", label: "MAC Address" },
-  { key: "ip_address", label: "IP Address" },
-  { key: "cpu", label: "CPU" },
-  { key: "ram", label: "RAM" },
-  { key: "hd", label: "HD" },
-  { key: "location", label: "Location" },
-  { key: "department", label: "Department" },
-  { key: "status", label: "Status" },
-  { key: "purchase_date", label: "Purchase Date" },
-  { key: "received_date", label: "Received Date" },
-  { key: "remark", label: "Remark" },
-];
-
-export const ASSIGN_EQUIPMENT_INITIAL_VALUES = {
-  employee_id: "",
-  assigned_date: "",
-  computer_name: "",
-  ip_address: "",
-  location: "",
-  department: "",
-  status: "",
-};
-
 export const BORROW_EQUIPMENT_INITIAL_VALUES = {
   employee_id: "",
   expected_return_date: "",
@@ -322,7 +298,7 @@ export const currentBorrowColumns = [
   { key: "category_name", label: "Category" },
   { key: "device_model", label: "Device Model" },
   { key: "computer_name", label: "Computer Name" },
-  { key: "equipment_code", label: "Equipment Code" },
+  { key: "asset_code", label: "Asset Code" },
   { key: "service_tag", label: "Service Tag" },
   { key: "borrower_name", label: "Borrower" },
   { key: "borrower_department", label: "Department" },
@@ -340,7 +316,7 @@ export const borrowHistoryColumns = [
   { key: "category_name", label: "Category" },
   { key: "device_model", label: "Device Model" },
   { key: "computer_name", label: "Computer Name" },
-  { key: "equipment_code", label: "Equipment Code" },
+  { key: "asset_code", label: "Asset Code" },
   { key: "borrower_name", label: "Borrower" },
   { key: "borrower_department", label: "Department" },
   { key: "loan_status", label: "Status" },

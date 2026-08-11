@@ -29,7 +29,6 @@ import {
   createCustomField,
   removeCustomFieldFromCategory,
   fetchAvailableStock,
-  assignEquipment,
   unassignEquipment,
 } from "../../services/equipmentService";
 import {
@@ -60,6 +59,13 @@ import {
 } from "../../services/departmentService";
 import { createCategory, updateCategory, deleteCategory } from "../../services/categoryService";
 import { fetchUsers, updateUser, resetUserPassword } from "../../services/userService";
+import { fetchStatuses, createStatus, updateStatus, deleteStatus } from "../../services/statusService";
+import {
+  fetchAssignFormData,
+  fetchAssignableEquipment,
+  fetchAssignEmployees,
+  submitAssign,
+} from "../../services/assignService";
 import {
   createBorrow,
   fetchCurrentBorrows,
@@ -67,7 +73,6 @@ import {
   fetchBorrowHistory,
 } from "../../services/borrowService";
 import {
-  ASSIGN_EQUIPMENT_INITIAL_VALUES,
   BORROW_EQUIPMENT_INITIAL_VALUES,
   BORROW_HISTORY_INITIAL_FILTERS,
   EMPLOYEE_FORM_INITIAL_VALUES,
@@ -108,7 +113,6 @@ import { ConfirmDialog, EmptyState } from "./components/SharedControls";
 import { SidebarBrand, SidebarNavigation } from "./components/Sidebar";
 import { GlobalSearch } from "./components/GlobalSearch";
 import {
-  AssignEquipmentModal,
   BorrowEquipmentModal,
   ColumnsPickerModal,
   EquipmentFormModal,
@@ -132,11 +136,7 @@ import {
   DepartmentFormModal,
   DepartmentsView,
 } from "./features/departments/DepartmentViews";
-import {
-  AvailableStockView,
-  BorrowHistoryView,
-  CurrentBorrowsView,
-} from "./features/borrow/BorrowViews";
+import { BorrowHistoryView, CurrentBorrowsView } from "./features/borrow/BorrowViews";
 import {
   EmployeeDetailModal,
   EmployeeDirectoryTable,
@@ -144,6 +144,8 @@ import {
   EmployeeSearchPanel,
 } from "./features/employees/EmployeeViews";
 import { ResetPasswordModal, UserPermissionsModal, UsersView } from "./features/users/UserViews";
+import { StatusesView, StatusFormModal } from "./features/statuses/StatusViews";
+import { AssignEquipmentView } from "./features/assign/AssignView";
 import { ActivityLogView, MyActivityView } from "./features/activity/ActivityViews";
 import {
   canAccessDashboardView,
@@ -231,12 +233,21 @@ const LICENSE_FORM_INITIAL_VALUES = {
   remark: "",
 };
 
+const STATUS_FORM_INITIAL_VALUES = {
+  status_name: "",
+  description: "",
+  sort_order: "",
+  has_owner: false,
+  is_assignable: false,
+  is_borrowable: false,
+  is_active: true,
+};
+
 function Dashboard({ user, onLogout }) {
   const canCreateRecords = isAdmin(user);
   const canManageEquipment = hasPermission(user, PERMISSIONS.EQUIPMENT);
   const canManageDepartments = hasPermission(user, PERMISSIONS.DEPARTMENTS);
   const canManageEmployees = hasPermission(user, PERMISSIONS.EMPLOYEE);
-  const canManageStock = hasPermission(user, PERMISSIONS.STOCK_AVAILABLE);
   const canManageBorrows = hasPermission(user, PERMISSIONS.CURRENTLY_BORROWED);
   const canManageActivityLog = hasPermission(user, PERMISSIONS.ACTIVITY_LOG);
   const [activityEntries, setActivityEntries] = useState(() => getActivityLog());
@@ -378,6 +389,8 @@ function Dashboard({ user, onLogout }) {
   );
   const firstAccessibleDashboardView = accessibleDashboardViews[0] || null;
   const canManageUsers = canAccessDashboardView(user, "Users", navItemsByLabel);
+  const canManageStatuses = canAccessDashboardView(user, "Status", navItemsByLabel);
+  const canManageAssign = canAccessDashboardView(user, "Assign", navItemsByLabel);
   const initialDashboardView = getInitialDashboardView();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -517,7 +530,7 @@ function Dashboard({ user, onLogout }) {
             key: "equipment",
             items: list
               .filter((item) =>
-                `${item.computer_name || ""} ${item.equipment_code || ""} ${item.service_tag || ""} ${item.device_model || ""
+                `${item.computer_name || ""} ${item.asset_code || item.equipment_code || ""} ${item.service_tag || ""} ${item.device_model || ""
                   } ${item.owner_name || ""}`
                   .toLowerCase()
                   .includes(lowerTerm)
@@ -604,6 +617,21 @@ function Dashboard({ user, onLogout }) {
   const [isUsersLoading, setIsUsersLoading] = useState(initialDashboardView === "Users");
   const [usersError, setUsersError] = useState(null);
   const [usersFetchToken, setUsersFetchToken] = useState(0);
+  const [statuses, setStatuses] = useState([]);
+  const [isStatusesLoading, setIsStatusesLoading] = useState(initialDashboardView === "Status");
+  const [statusesError, setStatusesError] = useState(null);
+  const [statusesFetchToken, setStatusesFetchToken] = useState(0);
+  const [showInactiveStatuses, setShowInactiveStatuses] = useState(false);
+  const [isStatusFormOpen, setIsStatusFormOpen] = useState(false);
+  const [statusFormMode, setStatusFormMode] = useState("add");
+  const [statusFormTarget, setStatusFormTarget] = useState(null);
+  const [statusFormValues, setStatusFormValues] = useState(STATUS_FORM_INITIAL_VALUES);
+  const [isSavingStatus, setIsSavingStatus] = useState(false);
+  const [statusFormError, setStatusFormError] = useState(null);
+  const [statusToDelete, setStatusToDelete] = useState(null);
+  const [isDeletingStatus, setIsDeletingStatus] = useState(false);
+  const [deleteStatusError, setDeleteStatusError] = useState(null);
+  const [deleteStatusBlocked, setDeleteStatusBlocked] = useState(false);
   const [replacements, setReplacements] = useState([]);
   const [isReplacementsLoading, setIsReplacementsLoading] = useState(
     initialDashboardView === "Device Replacement"
@@ -649,18 +677,35 @@ function Dashboard({ user, onLogout }) {
   const [isCloudUsageLoading, setIsCloudUsageLoading] = useState(initialDashboardView === "Cloud Usage");
   const [cloudUsageError, setCloudUsageError] = useState(null);
   const [cloudUsageFetchToken, setCloudUsageFetchToken] = useState(0);
-  const [availableStock, setAvailableStock] = useState([]);
-  const [isAvailableStockLoading, setIsAvailableStockLoading] = useState(
-    initialDashboardView === "Stock Available"
-  );
-  const [availableStockError, setAvailableStockError] = useState(null);
-  const [availableStockFetchToken, setAvailableStockFetchToken] = useState(0);
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [assignTarget, setAssignTarget] = useState(null);
-  const [assignValues, setAssignValues] = useState(ASSIGN_EQUIPMENT_INITIAL_VALUES);
-  const [isAssigning, setIsAssigning] = useState(false);
-  const [assignError, setAssignError] = useState(null);
   const [assignEmployeeOptions, setAssignEmployeeOptions] = useState([]);
+  const [assignFormData, setAssignFormData] = useState({
+    positions: [],
+    statuses: [],
+    categories: [],
+    locations: [],
+  });
+  const [isAssignFormDataLoading, setIsAssignFormDataLoading] = useState(initialDashboardView === "Assign");
+  const [assignFormDataError, setAssignFormDataError] = useState(null);
+  const [assignFormDataFetchToken, setAssignFormDataFetchToken] = useState(0);
+  const [assignDeviceQuery, setAssignDeviceQuery] = useState("");
+  const [assignDeviceCategory, setAssignDeviceCategory] = useState("All");
+  const [assignDeviceOptions, setAssignDeviceOptions] = useState([]);
+  const [isAssignDeviceLoading, setIsAssignDeviceLoading] = useState(false);
+  const [assignDeviceError, setAssignDeviceError] = useState(null);
+  const [assignSelectedDevice, setAssignSelectedDevice] = useState(null);
+  const [assignPosition, setAssignPosition] = useState("");
+  const [assignEmployeeQuery, setAssignEmployeeQuery] = useState("");
+  const [assignEmployeeSearchOptions, setAssignEmployeeSearchOptions] = useState([]);
+  const [isAssignEmployeeSearchLoading, setIsAssignEmployeeSearchLoading] = useState(false);
+  const [assignEmployeeSearchError, setAssignEmployeeSearchError] = useState(null);
+  const [assignSelectedEmployee, setAssignSelectedEmployee] = useState(null);
+  const [assignStatus, setAssignStatus] = useState("Working/Using");
+  const [assignDate, setAssignDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [isSubmittingAssign, setIsSubmittingAssign] = useState(false);
+  const [assignSubmitError, setAssignSubmitError] = useState(null);
+  const [assignSubmitSuccess, setAssignSubmitSuccess] = useState(null);
+  const [assignConflict, setAssignConflict] = useState(null);
+  const [isResolvingAssignConflict, setIsResolvingAssignConflict] = useState(false);
   const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
   const [borrowTarget, setBorrowTarget] = useState(null);
   const [borrowValues, setBorrowValues] = useState(BORROW_EQUIPMENT_INITIAL_VALUES);
@@ -1498,10 +1543,6 @@ function Dashboard({ user, onLogout }) {
       setIsCloudUsageLoading(true);
       setCloudUsageError(null);
     }
-    if (label === "Stock Available" && label !== activeView) {
-      setIsAvailableStockLoading(true);
-      setAvailableStockError(null);
-    }
     if (label === "Currently Borrowed" && label !== activeView) {
       setIsCurrentBorrowsLoading(true);
       setCurrentBorrowsError(null);
@@ -1648,10 +1689,11 @@ function Dashboard({ user, onLogout }) {
   const isCloudRateView = activeView === "Cloud Rate" && hasActiveViewAccess;
   const isServerUsageView = activeView === "Service Usage" && hasActiveViewAccess;
   const isCloudUsageView = activeView === "Cloud Usage" && hasActiveViewAccess;
-  const isAvailableStockView = activeView === "Stock Available" && hasActiveViewAccess;
+  const isAssignView = activeView === "Assign" && hasActiveViewAccess;
   const isCurrentBorrowsView = activeView === "Currently Borrowed" && hasActiveViewAccess;
   const isBorrowHistoryView = activeView === "Borrow History" && hasActiveViewAccess;
   const isUsersView = activeView === "Users" && hasActiveViewAccess;
+  const isStatusView = activeView === "Status" && hasActiveViewAccess;
   const isMyActivityView = activeView === "My Activity" && hasActiveViewAccess;
   const isActivityLogView = activeView === "Activity Log" && hasActiveViewAccess;
   const isRecycleBinView = activeView === "Recycle Bin" && hasActiveViewAccess;
@@ -1913,6 +1955,110 @@ function Dashboard({ user, onLogout }) {
   }, [isUsersView, usersFetchToken]);
 
   useEffect(() => {
+    if (!isStatusView) return;
+
+    let ignore = false;
+
+    fetchStatuses(showInactiveStatuses)
+      .then((data) => {
+        if (ignore) return;
+        const list = Array.isArray(data) ? data : data?.statuses;
+        setStatuses(Array.isArray(list) ? list : []);
+        setStatusesError(null);
+      })
+      .catch((error) => {
+        if (!ignore) setStatusesError(error.message || "Something went wrong.");
+      })
+      .finally(() => {
+        if (!ignore) setIsStatusesLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isStatusView, statusesFetchToken, showInactiveStatuses]);
+
+  useEffect(() => {
+    if (!isAssignView) return;
+
+    let ignore = false;
+
+    fetchAssignFormData()
+      .then((data) => {
+        if (ignore) return;
+        setAssignFormData({
+          positions: Array.isArray(data?.positions) ? data.positions : [],
+          statuses: Array.isArray(data?.statuses) ? data.statuses : [],
+          categories: Array.isArray(data?.categories) ? data.categories : [],
+          locations: Array.isArray(data?.locations) ? data.locations : [],
+        });
+        setAssignFormDataError(null);
+      })
+      .catch((error) => {
+        if (!ignore) setAssignFormDataError(error.message || "Something went wrong.");
+      })
+      .finally(() => {
+        if (!ignore) setIsAssignFormDataLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isAssignView, assignFormDataFetchToken]);
+
+  useEffect(() => {
+    if (!isAssignView || assignSelectedDevice) return;
+
+    let ignore = false;
+    const timer = setTimeout(() => {
+      setIsAssignDeviceLoading(true);
+      fetchAssignableEquipment({ q: assignDeviceQuery.trim(), category: assignDeviceCategory })
+        .then((data) => {
+          if (ignore) return;
+          setAssignDeviceOptions(Array.isArray(data?.equipment) ? data.equipment : []);
+          setAssignDeviceError(null);
+        })
+        .catch((error) => {
+          if (!ignore) setAssignDeviceError(error.message || "Something went wrong.");
+        })
+        .finally(() => {
+          if (!ignore) setIsAssignDeviceLoading(false);
+        });
+    }, 300);
+
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, [isAssignView, assignSelectedDevice, assignDeviceQuery, assignDeviceCategory]);
+
+  useEffect(() => {
+    if (!isAssignView || !assignPosition || assignSelectedEmployee) return;
+
+    let ignore = false;
+    const timer = setTimeout(() => {
+      setIsAssignEmployeeSearchLoading(true);
+      fetchAssignEmployees({ position: assignPosition, q: assignEmployeeQuery.trim() })
+        .then((data) => {
+          if (ignore) return;
+          setAssignEmployeeSearchOptions(Array.isArray(data?.employees) ? data.employees : []);
+          setAssignEmployeeSearchError(null);
+        })
+        .catch((error) => {
+          if (!ignore) setAssignEmployeeSearchError(error.message || "Something went wrong.");
+        })
+        .finally(() => {
+          if (!ignore) setIsAssignEmployeeSearchLoading(false);
+        });
+    }, 300);
+
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, [isAssignView, assignPosition, assignSelectedEmployee, assignEmployeeQuery]);
+
+  useEffect(() => {
     if (!isRecycleBinView) return;
 
     let ignore = false;
@@ -2007,32 +2153,6 @@ function Dashboard({ user, onLogout }) {
       ignore = true;
     };
   }, [isCloudUsageView, cloudUsageFetchToken]);
-
-  useEffect(() => {
-    if (!isAvailableStockView) return;
-
-    let ignore = false;
-
-    fetchAvailableStock()
-      .then((data) => {
-        const records = Array.isArray(data?.equipment) ? data.equipment : [];
-        if (!ignore) {
-          setAvailableStock(records);
-          setNotificationData((current) => ({ ...current, availableStock: records }));
-          setAvailableStockError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setAvailableStockError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsAvailableStockLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isAvailableStockView, availableStockFetchToken]);
 
   useEffect(() => {
     if (!isCurrentBorrowsView) return;
@@ -2414,6 +2534,7 @@ function Dashboard({ user, onLogout }) {
       item?.name ||
       item?.computer_name ||
       [item?.device_type, item?.device_model].filter(Boolean).join(" - ") ||
+      item?.asset_code ||
       item?.equipment_code ||
       item?.service_tag ||
       item?.serial_no ||
@@ -2449,7 +2570,6 @@ function Dashboard({ user, onLogout }) {
         });
         setEquipmentToUnassign(null);
         handleRetryEquipment();
-        handleRetryAvailableStock();
         handleRetryNotifications();
         handleViewEquipmentCategory(equipmentCategory);
         const term = employeeSearchTerm.trim();
@@ -2639,6 +2759,283 @@ function Dashboard({ user, onLogout }) {
       .finally(() => setIsDeletingLicense(false));
   }
 
+  function handleRetryStatuses() {
+    setIsStatusesLoading(true);
+    setStatusesError(null);
+    setStatusesFetchToken((value) => value + 1);
+  }
+
+  function handleToggleShowInactiveStatuses(checked) {
+    setIsStatusesLoading(true);
+    setShowInactiveStatuses(checked);
+  }
+
+  function handleOpenAddStatus() {
+    setStatusFormMode("add");
+    setStatusFormTarget(null);
+    setStatusFormValues(STATUS_FORM_INITIAL_VALUES);
+    setStatusFormError(null);
+    setIsStatusFormOpen(true);
+  }
+
+  function handleOpenEditStatus(status) {
+    setStatusFormMode("edit");
+    setStatusFormTarget(status);
+    setStatusFormValues({
+      status_name: status.status_name || "",
+      description: status.description || "",
+      sort_order: status.sort_order != null ? String(status.sort_order) : "",
+      has_owner: Boolean(status.has_owner),
+      is_assignable: Boolean(status.is_assignable),
+      is_borrowable: Boolean(status.is_borrowable),
+      is_active: status.is_active !== false,
+    });
+    setStatusFormError(null);
+    setIsStatusFormOpen(true);
+  }
+
+  function handleCloseStatusForm() {
+    setIsStatusFormOpen(false);
+    setStatusFormError(null);
+  }
+
+  function handleStatusFormFieldChange(key, value) {
+    setStatusFormValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleSubmitStatusForm(event) {
+    event.preventDefault();
+
+    if (!statusFormValues.status_name.trim()) {
+      setStatusFormError("Please enter a status name.");
+      return;
+    }
+
+    setIsSavingStatus(true);
+    setStatusFormError(null);
+
+    const payload = {
+      status_name: statusFormValues.status_name.trim(),
+      has_owner: statusFormValues.has_owner,
+      is_assignable: statusFormValues.is_assignable,
+      is_borrowable: statusFormValues.is_borrowable,
+      is_active: statusFormValues.is_active,
+    };
+    if (statusFormValues.description.trim()) payload.description = statusFormValues.description.trim();
+    if (statusFormValues.sort_order !== "") payload.sort_order = Number(statusFormValues.sort_order);
+
+    const isEdit = statusFormMode === "edit";
+    const request = isEdit
+      ? updateStatus(statusFormTarget.status_id, payload)
+      : createStatus(payload);
+
+    request
+      .then((data) => {
+        logActivity({
+          actor: user,
+          action: isEdit ? "update" : "create",
+          module: ACTIVITY_MODULES.STATUS,
+          entityId: isEdit ? statusFormTarget.status_id : data?.status_id,
+          entityLabel: payload.status_name,
+          before: isEdit ? statusFormTarget : null,
+          after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
+        });
+        setIsStatusFormOpen(false);
+        setStatusFormValues(STATUS_FORM_INITIAL_VALUES);
+        handleRetryStatuses();
+      })
+      .catch((error) => setStatusFormError(error.response?.data?.error || error.message || "Could not save status."))
+      .finally(() => setIsSavingStatus(false));
+  }
+
+  function handleOpenDeleteStatus(status) {
+    setStatusToDelete(status);
+    setDeleteStatusError(null);
+    setDeleteStatusBlocked(false);
+  }
+
+  function handleCloseDeleteStatus() {
+    setStatusToDelete(null);
+    setDeleteStatusError(null);
+    setDeleteStatusBlocked(false);
+  }
+
+  function handleHideStatusInstead() {
+    if (!statusToDelete) return;
+
+    setIsDeletingStatus(true);
+    setDeleteStatusError(null);
+
+    updateStatus(statusToDelete.status_id, { is_active: false })
+      .then(() => {
+        logActivity({
+          actor: user,
+          action: "update",
+          module: ACTIVITY_MODULES.STATUS,
+          entityId: statusToDelete.status_id,
+          entityLabel: statusToDelete.status_name,
+          before: statusToDelete,
+          after: { ...statusToDelete, is_active: false },
+        });
+        setStatusToDelete(null);
+        setDeleteStatusBlocked(false);
+        handleRetryStatuses();
+      })
+      .catch((error) => setDeleteStatusError(error.message || "Could not hide status."))
+      .finally(() => setIsDeletingStatus(false));
+  }
+
+  function handleConfirmDeleteStatus() {
+    if (!statusToDelete) return;
+
+    setIsDeletingStatus(true);
+    setDeleteStatusError(null);
+    setDeleteStatusBlocked(false);
+
+    deleteStatus(statusToDelete.status_id)
+      .then(() => {
+        logActivity({
+          actor: user,
+          action: "delete",
+          module: ACTIVITY_MODULES.STATUS,
+          entityId: statusToDelete.status_id,
+          entityLabel: statusToDelete.status_name,
+          before: statusToDelete,
+        });
+        setStatusToDelete(null);
+        handleRetryStatuses();
+      })
+      .catch((error) => {
+        const data = error.response?.data;
+        const equipmentCount = data?.equipment_count ?? 0;
+        setDeleteStatusBlocked(equipmentCount > 0);
+        setDeleteStatusError(
+          equipmentCount > 0
+            ? `${data?.error || `Cannot delete "${statusToDelete.status_name}"`} Hide it instead to keep it out of dropdowns without breaking existing records.`
+            : data?.error || error.message || "Could not delete status."
+        );
+      })
+      .finally(() => setIsDeletingStatus(false));
+  }
+
+  function handleRetryAssignFormData() {
+    setIsAssignFormDataLoading(true);
+    setAssignFormDataError(null);
+    setAssignFormDataFetchToken((value) => value + 1);
+  }
+
+  function handleAssignDeviceQueryChange(value) {
+    setAssignDeviceQuery(value);
+  }
+
+  function handleAssignDeviceCategoryChange(value) {
+    setAssignDeviceCategory(value);
+  }
+
+  function handleSelectAssignDevice(device) {
+    setAssignSelectedDevice(device);
+    setAssignConflict(null);
+    setAssignSubmitError(null);
+  }
+
+  function handleClearAssignDevice() {
+    setAssignSelectedDevice(null);
+    setAssignConflict(null);
+    setAssignSubmitError(null);
+  }
+
+  function handleAssignPositionChange(value) {
+    setAssignPosition(value);
+    setAssignSelectedEmployee(null);
+    setAssignEmployeeQuery("");
+    setAssignEmployeeSearchOptions([]);
+  }
+
+  function handleAssignEmployeeQueryChange(value) {
+    setAssignEmployeeQuery(value);
+  }
+
+  function handleSelectAssignEmployee(employee) {
+    setAssignSelectedEmployee(employee);
+  }
+
+  function handleClearAssignEmployee() {
+    setAssignSelectedEmployee(null);
+  }
+
+  function handleAssignStatusChange(value) {
+    setAssignStatus(value);
+  }
+
+  function handleAssignDateChange(value) {
+    setAssignDate(value);
+  }
+
+  function performAssignSubmit() {
+    if (!assignSelectedDevice || !assignSelectedEmployee) return;
+
+    setIsSubmittingAssign(true);
+    setAssignSubmitError(null);
+    setAssignSubmitSuccess(null);
+    setAssignConflict(null);
+
+    const payload = {
+      equipment_id: assignSelectedDevice.equipment_id,
+      employee_id: assignSelectedEmployee.employee_id,
+      status: assignStatus,
+      assigned_date: assignDate,
+    };
+
+    submitAssign(payload)
+      .then((data) => {
+        logActivity({
+          actor: user,
+          action: "assign",
+          module: ACTIVITY_MODULES.EQUIPMENT,
+          entityId: assignSelectedDevice.equipment_id,
+          entityLabel: assignSelectedDevice.display_name,
+          after: payload,
+        });
+        setAssignSubmitSuccess(data?.message || `Assigned to ${assignSelectedEmployee.full_name}.`);
+        setAssignSelectedDevice(null);
+        setAssignDeviceQuery("");
+        setAssignSelectedEmployee(null);
+        setAssignEmployeeQuery("");
+        handleRetryEquipment();
+        handleRetryNotifications();
+      })
+      .catch((error) => {
+        const data = error.response?.data;
+        if (error.status === 409) {
+          setAssignConflict({ current_owner: data?.current_owner || null });
+          setAssignSubmitError(data?.error || "That device already belongs to someone.");
+        } else {
+          setAssignSubmitError(data?.error || error.message || "Could not assign equipment.");
+        }
+      })
+      .finally(() => setIsSubmittingAssign(false));
+  }
+
+  function handleSubmitAssignPage(event) {
+    event.preventDefault();
+    performAssignSubmit();
+  }
+
+  function handleResolveAssignConflict() {
+    if (!assignSelectedDevice) return;
+
+    setIsResolvingAssignConflict(true);
+
+    unassignEquipment(assignSelectedDevice.equipment_id)
+      .then(() => {
+        setAssignConflict(null);
+        setAssignSubmitError(null);
+        performAssignSubmit();
+      })
+      .catch((error) => setAssignSubmitError(error.message || "Could not unassign the device."))
+      .finally(() => setIsResolvingAssignConflict(false));
+  }
+
   function handleRetryCloudRates() {
     setIsCloudRatesLoading(true);
     setCloudRatesError(null);
@@ -2657,11 +3054,6 @@ function Dashboard({ user, onLogout }) {
     setCloudUsageFetchToken((value) => value + 1);
   }
 
-  function handleRetryAvailableStock() {
-    setIsAvailableStockLoading(true);
-    setAvailableStockError(null);
-    setAvailableStockFetchToken((value) => value + 1);
-  }
 
   function handleRetryCurrentBorrows() {
     setIsCurrentBorrowsLoading(true);
@@ -2726,7 +3118,11 @@ function Dashboard({ user, onLogout }) {
           action: "return",
           module: ACTIVITY_MODULES.BORROW,
           entityId: returnTarget.borrow_id,
-          entityLabel: returnTarget.computer_name || returnTarget.equipment_code || `Borrow ${returnTarget.borrow_id}`,
+          entityLabel:
+            returnTarget.computer_name ||
+            returnTarget.asset_code ||
+            returnTarget.equipment_code ||
+            `Borrow ${returnTarget.borrow_id}`,
           before: returnTarget,
           after: payload,
         });
@@ -2736,77 +3132,6 @@ function Dashboard({ user, onLogout }) {
       })
       .catch((error) => setReturnError(error.message || "Something went wrong."))
       .finally(() => setIsReturning(false));
-  }
-
-  function handleOpenAssignEquipment(item) {
-    setAssignTarget(item);
-    setAssignValues(ASSIGN_EQUIPMENT_INITIAL_VALUES);
-    setAssignError(null);
-    setIsAssignModalOpen(true);
-
-    fetchEmployees()
-      .then((data) => setAssignEmployeeOptions(Array.isArray(data) ? data : []))
-      .catch(() => setAssignEmployeeOptions([]));
-
-    fetchDepartments()
-      .then((data) => setDepartments(Array.isArray(data) ? data : []))
-      .catch(() => setDepartments([]));
-
-    fetchEquipmentStatuses()
-      .then((data) => setEquipmentStatuses(excludeBrokenStatuses(data)))
-      .catch(() => setEquipmentStatuses([]));
-  }
-
-  function handleCloseAssignEquipment() {
-    setIsAssignModalOpen(false);
-  }
-
-  function handleAssignFieldChange(key, value) {
-    setAssignValues((current) => ({ ...current, [key]: value }));
-  }
-
-  function handleAssignEmployeeSelect(employee) {
-    setAssignValues((current) => ({
-      ...current,
-      employee_id: String(employee.employee_id),
-      department: getEmployeeDepartmentCode(employee) || current.department,
-    }));
-  }
-
-  function handleSubmitAssignEquipment(event) {
-    event.preventDefault();
-    if (!assignTarget) return;
-
-    if (!assignValues.employee_id) {
-      setAssignError("Please select an employee.");
-      return;
-    }
-
-    setIsAssigning(true);
-    setAssignError(null);
-
-    const payload = { equipment_id: assignTarget.equipment_id };
-    for (const [key, value] of Object.entries(assignValues)) {
-      if (value.trim() === "") continue;
-      payload[key] = key === "employee_id" ? Number(value) : value;
-    }
-
-    assignEquipment(payload)
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "assign",
-          module: ACTIVITY_MODULES.EQUIPMENT,
-          entityId: assignTarget.equipment_id,
-          entityLabel: getEquipmentDisplayName(assignTarget),
-          after: payload,
-        });
-        setIsAssignModalOpen(false);
-        handleRetryAvailableStock();
-        handleRetryNotifications();
-      })
-      .catch((error) => setAssignError(error.message || "Something went wrong."))
-      .finally(() => setIsAssigning(false));
   }
 
   function handleOpenBorrowEquipment(item) {
@@ -2868,7 +3193,7 @@ function Dashboard({ user, onLogout }) {
           after: payload,
         });
         setIsBorrowModalOpen(false);
-        handleRetryAvailableStock();
+        handleRetryEquipment();
         handleRetryNotifications();
       })
       .catch((error) => setBorrowError(error.message || "Something went wrong."))
@@ -3295,7 +3620,6 @@ function Dashboard({ user, onLogout }) {
               navSections={visibleHomeNavSections}
               stats={{
                 ...homeStats,
-                "Stock Available": notificationData.availableStock.length,
                 "Currently Borrowed": notificationData.currentBorrows.length,
                 "Software License": notificationData.licenses.length,
                 "My Activity": myActivityEntries.length,
@@ -3327,6 +3651,7 @@ function Dashboard({ user, onLogout }) {
               onEdit={handleOpenEditEquipmentItem}
               onUnassign={handleOpenUnassignEquipment}
               onDelete={handleOpenDeleteEquipment}
+              onBorrow={handleOpenBorrowEquipment}
               onAddCategory={handleOpenAddCategory}
               onEditCategory={handleOpenEditCategory}
               onDeleteCategory={handleOpenDeleteCategory}
@@ -3427,18 +3752,6 @@ function Dashboard({ user, onLogout }) {
             />
           )}
 
-          {isAvailableStockView && (
-            <AvailableStockView
-              canManage={canManageStock}
-              stock={availableStock}
-              isLoading={isAvailableStockLoading}
-              error={availableStockError}
-              onRetry={handleRetryAvailableStock}
-              onAssign={handleOpenAssignEquipment}
-              onBorrow={handleOpenBorrowEquipment}
-            />
-          )}
-
           {isCurrentBorrowsView && (
             <CurrentBorrowsView
               canManage={canManageBorrows}
@@ -3488,10 +3801,11 @@ function Dashboard({ user, onLogout }) {
             !isCloudRateView &&
             !isServerUsageView &&
             !isCloudUsageView &&
-            !isAvailableStockView &&
+            !isAssignView &&
             !isCurrentBorrowsView &&
             !isBorrowHistoryView &&
             !isUsersView &&
+            !isStatusView &&
             !isMyActivityView &&
             !isActivityLogView &&
             !isRecycleBinView && (
@@ -3566,6 +3880,80 @@ function Dashboard({ user, onLogout }) {
                     title="Not available"
                     description="This page is admin-only."
                   />
+                </div>
+              </div>
+            ))}
+
+          {isStatusView &&
+            (canManageStatuses ? (
+              <StatusesView
+                statuses={statuses}
+                isLoading={isStatusesLoading}
+                error={statusesError}
+                onRetry={handleRetryStatuses}
+                showInactive={showInactiveStatuses}
+                onToggleShowInactive={handleToggleShowInactiveStatuses}
+                onAddNew={handleOpenAddStatus}
+                onEdit={handleOpenEditStatus}
+                onDelete={handleOpenDeleteStatus}
+              />
+            ) : (
+              <div className="px-4 py-6 sm:px-6 lg:px-8">
+                <div className="rounded-xl border border-slate-200 bg-white">
+                  <EmptyState
+                    icon={Box}
+                    title="Not available"
+                    description="This page is admin-only."
+                  />
+                </div>
+              </div>
+            ))}
+
+          {isAssignView &&
+            (canManageAssign ? (
+              <AssignEquipmentView
+                isFormDataLoading={isAssignFormDataLoading}
+                formDataError={assignFormDataError}
+                onRetryFormData={handleRetryAssignFormData}
+                categories={assignFormData.categories}
+                positions={assignFormData.positions}
+                statuses={assignFormData.statuses}
+                deviceQuery={assignDeviceQuery}
+                onDeviceQueryChange={handleAssignDeviceQueryChange}
+                deviceCategory={assignDeviceCategory}
+                onDeviceCategoryChange={handleAssignDeviceCategoryChange}
+                deviceOptions={assignDeviceOptions}
+                isDeviceLoading={isAssignDeviceLoading}
+                deviceError={assignDeviceError}
+                selectedDevice={assignSelectedDevice}
+                onSelectDevice={handleSelectAssignDevice}
+                onClearDevice={handleClearAssignDevice}
+                position={assignPosition}
+                onPositionChange={handleAssignPositionChange}
+                employeeQuery={assignEmployeeQuery}
+                onEmployeeQueryChange={handleAssignEmployeeQueryChange}
+                employeeOptions={assignEmployeeSearchOptions}
+                isEmployeeLoading={isAssignEmployeeSearchLoading}
+                employeeError={assignEmployeeSearchError}
+                selectedEmployee={assignSelectedEmployee}
+                onSelectEmployee={handleSelectAssignEmployee}
+                onClearEmployee={handleClearAssignEmployee}
+                status={assignStatus}
+                onStatusChange={handleAssignStatusChange}
+                assignedDate={assignDate}
+                onAssignedDateChange={handleAssignDateChange}
+                onSubmit={handleSubmitAssignPage}
+                isSubmitting={isSubmittingAssign}
+                submitError={assignSubmitError}
+                submitSuccess={assignSubmitSuccess}
+                conflict={assignConflict}
+                onResolveConflict={handleResolveAssignConflict}
+                isResolvingConflict={isResolvingAssignConflict}
+              />
+            ) : (
+              <div className="px-4 py-6 sm:px-6 lg:px-8">
+                <div className="rounded-xl border border-slate-200 bg-white">
+                  <EmptyState icon={Box} title="Not available" description="This page is admin-only." />
                 </div>
               </div>
             ))}
@@ -3681,21 +4069,6 @@ function Dashboard({ user, onLogout }) {
         onError={setColumnsPickerError}
       />
 
-      <AssignEquipmentModal
-        isOpen={isAssignModalOpen}
-        equipment={assignTarget}
-        values={assignValues}
-        onChange={handleAssignFieldChange}
-        onSelectEmployee={handleAssignEmployeeSelect}
-        onSubmit={handleSubmitAssignEquipment}
-        onClose={handleCloseAssignEquipment}
-        isSubmitting={isAssigning}
-        error={assignError}
-        employees={assignEmployeeOptions}
-        departments={departments}
-        statuses={equipmentStatuses}
-      />
-
       <BorrowEquipmentModal
         isOpen={isBorrowModalOpen}
         equipment={borrowTarget}
@@ -3802,6 +4175,35 @@ function Dashboard({ user, onLogout }) {
         onCancel={handleCloseDeleteLicense}
         isConfirming={isDeletingLicense}
         error={deleteLicenseError}
+      />
+
+      <StatusFormModal
+        isOpen={isStatusFormOpen}
+        mode={statusFormMode}
+        values={statusFormValues}
+        onChange={handleStatusFormFieldChange}
+        onSubmit={handleSubmitStatusForm}
+        onClose={handleCloseStatusForm}
+        isSubmitting={isSavingStatus}
+        error={statusFormError}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(statusToDelete)}
+        title="Delete this status?"
+        message={
+          statusToDelete
+            ? `"${statusToDelete.status_name}" will be permanently removed. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete status"
+        onConfirm={handleConfirmDeleteStatus}
+        onCancel={handleCloseDeleteStatus}
+        isConfirming={isDeletingStatus}
+        error={deleteStatusError}
+        blocked={deleteStatusBlocked}
+        blockedActionLabel="Hide instead"
+        onBlockedAction={handleHideStatusInstead}
       />
 
       <ConfirmDialog

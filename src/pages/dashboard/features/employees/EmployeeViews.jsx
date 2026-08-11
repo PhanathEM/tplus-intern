@@ -527,6 +527,14 @@ export function EmployeeDirectoryTable({
   );
 }
 
+const EMPLOYEE_DEVICE_DETAIL_HIDDEN_KEYS = new Set([
+  "employee_id",
+  "employee_department_id",
+  "category_id",
+  "equipment_id",
+  "device_department_id",
+]);
+
 export function EmployeeDetailModal({
   employee,
   devices,
@@ -618,7 +626,9 @@ export function EmployeeDetailModal({
                     )}
                   </div>
                   <dl className="grid grid-cols-1 gap-x-4 gap-y-2.5 p-4 sm:grid-cols-2">
-                    {Object.entries(device).map(([key, value]) => (
+                    {Object.entries(device)
+                      .filter(([key]) => !EMPLOYEE_DEVICE_DETAIL_HIDDEN_KEYS.has(key))
+                      .map(([key, value]) => (
                       <div key={key} className="min-w-0">
                         <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
                           {humanizeFieldKey(key)}

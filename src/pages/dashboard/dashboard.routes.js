@@ -10,7 +10,7 @@ export const dashboardRouteByView = {
   Departments: "departments",
   Equipment: "equipment",
   "All Equipment": "equipment",
-  "Stock Available": "stock-available",
+  Assign: "assign",
   "Currently Borrowed": "currently-borrowed",
   "Borrow History": "borrow-history",
   "Device Replacement": "device-replacement",
@@ -25,6 +25,7 @@ export const dashboardRouteByView = {
   "My Activity": "my-activity",
   "Activity Log": "activity-log",
   "Recycle Bin": "recycle-bin",
+  Status: "status",
 };
 
 const dashboardViewByRoute = Object.fromEntries(
