@@ -22,7 +22,7 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
 
   const visibleSections = getVisibleNavSections(user, navSections);
 
-return (
+  return (
     <nav className={`scrollbar-thin-dark flex-1 overflow-y-auto py-4 ${collapsed ? "px-3" : "px-4"}`}>
       {visibleSections.map((section, sectionIdx) => (
         <div key={section.label} className={sectionIdx === 0 ? "" : "mt-5"}>
@@ -34,7 +34,7 @@ return (
             sectionIdx !== 0 && <div className="mx-2 mb-3 border-t border-white/10" />
           )}
 
-<div className="space-y-0.5">
+          <div className="space-y-0.5">
             {section.items.map((item) => {
               const Icon = item.icon;
               const hasChildren = Boolean(item.children?.length);
@@ -43,7 +43,7 @@ return (
               const isExpanded = expandedLabels.has(item.label) || isChildActive;
               const badge = getBadgeConfig(badges, item.label, item.badge);
 
-return (
+              return (
                 <div
                   key={item.label}
                   onMouseEnter={() => {
@@ -110,7 +110,7 @@ return (
                     )}
                   </button>
 
-{!collapsed && hasChildren && isExpanded && (
+                  {!collapsed && hasChildren && isExpanded && (
                     <div className="mt-0.5 space-y-0.5 pl-8">
                       {item.children.map((child) => {
                         const ChildIcon = child.icon;
@@ -169,7 +169,7 @@ export function SidebarBrand({ collapsed, onToggleCollapse }) {
         )}
       </div>
 
-<button
+      <button
         type="button"
         onClick={onToggleCollapse}
         className="hidden shrink-0 rounded-md p-1.5 text-slate-400 outline-none transition hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 xl:grid xl:place-items-center"

@@ -497,21 +497,20 @@ function Dashboard({ user, onLogout }) {
         const equipmentPromise = globalSearchEquipmentCacheRef.current
           ? Promise.resolve(globalSearchEquipmentCacheRef.current)
           : fetchEquipmentByCategory("", "All")
-              .then((data) => {
-                const list = Array.isArray(data) ? data : [];
-                globalSearchEquipmentCacheRef.current = list;
-                return list;
-              })
-              .catch(() => []);
+            .then((data) => {
+              const list = Array.isArray(data) ? data : [];
+              globalSearchEquipmentCacheRef.current = list;
+              return list;
+            })
+            .catch(() => []);
 
         jobs.push(
           equipmentPromise.then((list) => ({
             key: "equipment",
             items: list
               .filter((item) =>
-                `${item.computer_name || ""} ${item.equipment_code || ""} ${item.service_tag || ""} ${
-                  item.device_model || ""
-                } ${item.owner_name || ""}`
+                `${item.computer_name || ""} ${item.equipment_code || ""} ${item.service_tag || ""} ${item.device_model || ""
+                  } ${item.owner_name || ""}`
                   .toLowerCase()
                   .includes(lowerTerm)
               )
@@ -561,7 +560,7 @@ function Dashboard({ user, onLogout }) {
   const [equipmentCategories, setEquipmentCategories] = useState([]);
   const [equipmentCategory, setEquipmentCategory] = useState("All");
   const [equipmentTableColumns, setEquipmentTableColumns] = useState([]);
-  const [isEquipmentLoading, setIsEquipmentLoading] = useState(initialDashboardView === "Equipment");
+  const [isEquipmentLoading, setIsEquipmentLoading] = useState(initialDashboardView === "All Equipment");
   const [equipmentError, setEquipmentError] = useState(null);
   const [equipmentFetchToken, setEquipmentFetchToken] = useState(0);
   const [equipmentItems, setEquipmentItems] = useState([]);
@@ -1042,7 +1041,7 @@ function Dashboard({ user, onLogout }) {
     const openCategoryId =
       equipmentFormMode === "edit"
         ? equipmentFormTarget?.__category_id ??
-          resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
+        resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
         : resolveEquipmentCategoryId(equipmentFormValues.category);
 
     if (openCategoryId == null || openCategoryId !== categoryId) return;
@@ -1402,15 +1401,20 @@ function Dashboard({ user, onLogout }) {
         if (hasSearchedEmployees && term) runEmployeeSearch(term);
       })
       .catch((error) => {
-        const data = error.response?.data;
+        // NOTE: this assumes your HTTP layer attaches the parsed error body
+        // to `error.data` (fetch-style), matching every other catch block in
+        // this file, which reads `error.message` / `error.status` directly.
+        // If your service layer is axios-based instead, change this to
+        // `error.response?.data` — but then audit the rest of the file's
+        // catch blocks too, since they currently assume fetch-style errors.
+        const data = error.data;
         const ownedEquipment = data?.references?.owned_equipment || 0;
 
         setDeleteEmployeeBlocked(ownedEquipment > 0);
         setDeleteEmployeeError(
           ownedEquipment > 0
-            ? `This employee has ${ownedEquipment} assigned device${ownedEquipment === 1 ? "" : "s"}. Unassign ${
-                ownedEquipment === 1 ? "it" : "them"
-              } first.`
+            ? `This employee has ${ownedEquipment} assigned device${ownedEquipment === 1 ? "" : "s"}. Unassign ${ownedEquipment === 1 ? "it" : "them"
+            } first.`
             : data?.error || error.message || "Could not delete employee."
         );
       })
@@ -1676,7 +1680,7 @@ function Dashboard({ user, onLogout }) {
 
   useEffect(() => {
     if (!isEquipmentView) return;
-    handleViewEquipmentCategory(equipmentCategory);
+    fetchEquipmentForCategory(equipmentCategory);
   }, [isEquipmentView, equipmentFetchToken, equipmentCategory]);
 
   useEffect(() => {
@@ -2135,7 +2139,7 @@ function Dashboard({ user, onLogout }) {
             ...current,
           }));
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }
 
@@ -2169,7 +2173,7 @@ function Dashboard({ user, onLogout }) {
           setEquipmentFormFields(merged);
           setEquipmentFormValues(buildEquipmentFormValues(merged, item));
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }
 
@@ -2185,7 +2189,7 @@ function Dashboard({ user, onLogout }) {
     const categoryId =
       equipmentFormMode === "edit"
         ? equipmentFormTarget?.__category_id ??
-          resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
+        resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
         : resolveEquipmentCategoryId(equipmentFormValues.category);
 
     if (categoryId == null) return;
@@ -2211,7 +2215,7 @@ function Dashboard({ user, onLogout }) {
     const categoryId =
       equipmentFormMode === "edit"
         ? equipmentFormTarget?.__category_id ??
-          resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
+        resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
         : resolveEquipmentCategoryId(equipmentFormValues.category);
 
     if (categoryId == null) return Promise.reject(new Error("Choose a category first."));
@@ -2263,7 +2267,7 @@ function Dashboard({ user, onLogout }) {
     const categoryId =
       equipmentFormMode === "edit"
         ? equipmentFormTarget?.__category_id ??
-          resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
+        resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
         : resolveEquipmentCategoryId(equipmentFormValues.category);
 
     if (categoryId == null) return Promise.reject(new Error("Choose a category first."));
@@ -2300,7 +2304,7 @@ function Dashboard({ user, onLogout }) {
     const isEdit = equipmentFormMode === "edit";
     const view = isEdit
       ? equipmentFormTarget.__equipment_view ||
-        resolveEquipmentView(equipmentFormTarget.category || equipmentFormTarget.category_name)
+      resolveEquipmentView(equipmentFormTarget.category || equipmentFormTarget.category_name)
       : resolveEquipmentView(payload.category);
 
     // "category" is implied by the view/URL, not a real per-item field — the
@@ -2793,8 +2797,13 @@ function Dashboard({ user, onLogout }) {
       .finally(() => setIsBorrowing(false));
   }
 
-  function handleViewEquipmentCategory(category) {
-    setEquipmentCategory(category);
+  // Performs the actual fetch of equipment items for a given category slug.
+  // Split out from `handleViewEquipmentCategory` so the category-change
+  // useEffect (below) can call this directly instead of going through the
+  // state-setting wrapper, which previously caused every category switch to
+  // fire two requests (one from the click handler, one from the effect
+  // reacting to the state it had just set).
+  function fetchEquipmentForCategory(category) {
     setIsEquipmentItemsLoading(true);
     setEquipmentItemsError(null);
 
@@ -2803,37 +2812,37 @@ function Dashboard({ user, onLogout }) {
     const request =
       category === "All"
         ? Promise.allSettled(views.map((view) => fetchEquipmentByView(view.slug))).then((results) => {
-            setEquipmentTableColumns([]);
-            const merged = [];
-            let anyFulfilled = false;
-            results.forEach((result, index) => {
-              if (result.status !== "fulfilled") return;
-              anyFulfilled = true;
-              const view = views[index];
-              extractEquipmentItems(result.value).forEach((item) => {
-                merged.push({
-                  ...item,
-                  category: item.category || view.label,
-                  __equipment_view: view.slug,
-                  __category_id: view.categoryId ?? null,
-                });
+          setEquipmentTableColumns([]);
+          const merged = [];
+          let anyFulfilled = false;
+          results.forEach((result, index) => {
+            if (result.status !== "fulfilled") return;
+            anyFulfilled = true;
+            const view = views[index];
+            extractEquipmentItems(result.value).forEach((item) => {
+              merged.push({
+                ...item,
+                category: item.category || view.label,
+                __equipment_view: view.slug,
+                __category_id: view.categoryId ?? null,
               });
             });
-            if (!anyFulfilled && views.length > 0) {
-              throw new Error("Could not load any equipment categories.");
-            }
-            return merged;
-          })
-        : fetchEquipmentByView(category).then((data) => {
-            const view = views.find((item) => item.slug === category);
-            setEquipmentTableColumns(normalizeEquipmentTableColumns(data));
-            return extractEquipmentItems(data).map((item) => ({
-              ...item,
-              category: item.category || view?.label || category,
-              __equipment_view: category,
-              __category_id: view?.categoryId ?? null,
-            }));
           });
+          if (!anyFulfilled && views.length > 0) {
+            throw new Error("Could not load any equipment categories.");
+          }
+          return merged;
+        })
+        : fetchEquipmentByView(category).then((data) => {
+          const view = views.find((item) => item.slug === category);
+          setEquipmentTableColumns(normalizeEquipmentTableColumns(data));
+          return extractEquipmentItems(data).map((item) => ({
+            ...item,
+            category: item.category || view?.label || category,
+            __equipment_view: category,
+            __category_id: view?.categoryId ?? null,
+          }));
+        });
 
     request
       .then((items) => setEquipmentItems(items))
@@ -2841,8 +2850,20 @@ function Dashboard({ user, onLogout }) {
       .finally(() => setIsEquipmentItemsLoading(false));
   }
 
+  // Updates the selected category AND fetches its items in one call. Used by
+  // call sites that need an immediate refetch of a category that may not
+  // have actually changed (e.g. after creating/deleting/unassigning an item),
+  // where the category-change effect above won't retrigger on its own.
+  function handleViewEquipmentCategory(category) {
+    setEquipmentCategory(category);
+    fetchEquipmentForCategory(category);
+  }
+
   function handleSelectEquipmentCategory(category) {
-    handleViewEquipmentCategory(category);
+    // Only update state here — the useEffect watching `equipmentCategory`
+    // (see above) is solely responsible for fetching on a real category
+    // change, so we don't double-fetch.
+    setEquipmentCategory(category);
   }
 
   function handleFilterEquipmentStatus(status) {
@@ -3099,13 +3120,12 @@ function Dashboard({ user, onLogout }) {
                                 className="flex w-full gap-3 border-b border-slate-50 px-4 py-3 text-left outline-none transition last:border-b-0 hover:bg-slate-50 focus-visible:bg-slate-50"
                               >
                                 <span
-                                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                                    item.unread
-                                      ? item.tone === "danger"
-                                        ? "bg-rose-500"
-                                        : "bg-orange-500"
-                                      : "bg-transparent"
-                                  }`}
+                                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.unread
+                                    ? item.tone === "danger"
+                                      ? "bg-rose-500"
+                                      : "bg-orange-500"
+                                    : "bg-transparent"
+                                    }`}
                                 />
                                 <div className="min-w-0">
                                   <p className="text-[13px] font-semibold text-slate-950">{item.title}</p>
@@ -3717,9 +3737,8 @@ function Dashboard({ user, onLogout }) {
         title="Unassign this equipment?"
         message={
           equipmentToUnassign
-            ? `"${getEquipmentDisplayName(equipmentToUnassign)}" will be removed from ${
-                equipmentToUnassign.owner_name || "its current owner"
-              } and returned to stock available as Working - IT Stock.`
+            ? `"${getEquipmentDisplayName(equipmentToUnassign)}" will be removed from ${equipmentToUnassign.owner_name || "its current owner"
+            } and returned to stock available as Working - IT Stock.`
             : ""
         }
         confirmLabel="Unassign"
@@ -3765,9 +3784,8 @@ function Dashboard({ user, onLogout }) {
         title="Delete this category?"
         message={
           categoryToDelete
-            ? `"${
-                categoryToDelete.category_name || categoryToDelete.category || categoryToDelete.label
-              }" will be permanently removed. This cannot be undone.`
+            ? `"${categoryToDelete.category_name || categoryToDelete.category || categoryToDelete.label
+            }" will be permanently removed. This cannot be undone.`
             : ""
         }
         confirmLabel="Delete category"
