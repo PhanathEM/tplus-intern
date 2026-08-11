@@ -44,6 +44,11 @@ import { fetchSsdUpgrades } from "../../services/ssdUpgradeService";
 import { fetchSsdProcurement } from "../../services/ssdProcurementService";
 import { fetchAntivirusInstalls } from "../../services/antivirusService";
 import { createLicense, deleteLicense, fetchLicenses, updateLicense } from "../../services/licenseService";
+import {
+  assignEquipmentLicense,
+  fetchEquipmentLicense,
+  unassignEquipmentLicense,
+} from "../../services/equipmentLicenseService";
 import { fetchCloudRates } from "../../services/cloudRateService";
 import { fetchServerUsage } from "../../services/serverUsageService";
 import { fetchCloudUsage } from "../../services/cloudUsageService";
@@ -108,6 +113,7 @@ import {
   EquipmentFormModal,
   EquipmentView,
   ReturnEquipmentModal,
+  SoftwareLicensePickerModal,
 } from "./features/equipment/EquipmentViews";
 import {
   AntivirusView,
@@ -218,6 +224,7 @@ function toDateInputValue(value) {
 const LICENSE_FORM_INITIAL_VALUES = {
   product_name: "",
   product_type: "",
+  license_type: "Annual Subscription",
   date_start: "",
   date_expire: "",
   remark: "",
@@ -581,6 +588,13 @@ function Dashboard({ user, onLogout }) {
   const [equipmentToDelete, setEquipmentToDelete] = useState(null);
   const [isDeletingEquipment, setIsDeletingEquipment] = useState(false);
   const [deleteEquipmentError, setDeleteEquipmentError] = useState(null);
+  const [isSoftwareLicensePickerOpen, setIsSoftwareLicensePickerOpen] = useState(false);
+  const [softwareLicenseOptions, setSoftwareLicenseOptions] = useState([]);
+  const [isSoftwareLicenseOptionsLoading, setIsSoftwareLicenseOptionsLoading] = useState(false);
+  const [softwareLicenseOptionsError, setSoftwareLicenseOptionsError] = useState(null);
+  const [equipmentLicenseSelection, setEquipmentLicenseSelection] = useState(null);
+  const [equipmentLicenseInitialId, setEquipmentLicenseInitialId] = useState(null);
+  const [equipmentLicenseLabel, setEquipmentLicenseLabel] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(initialDashboardView === "Departments");
   const [departmentsError, setDepartmentsError] = useState(null);
@@ -2115,6 +2129,9 @@ function Dashboard({ user, onLogout }) {
     setEquipmentFormFields(fields);
     setEquipmentFormValues({ ...buildEquipmentFormValues(fields, {}), category: activeCategoryLabel });
     setEquipmentFormError(null);
+    setEquipmentLicenseSelection(null);
+    setEquipmentLicenseInitialId(null);
+    setEquipmentLicenseLabel(null);
     setIsEquipmentFormOpen(true);
 
     fetchDepartments()
@@ -2153,6 +2170,9 @@ function Dashboard({ user, onLogout }) {
     setEquipmentFormFields(fields);
     setEquipmentFormValues(buildEquipmentFormValues(fields, item));
     setEquipmentFormError(null);
+    setEquipmentLicenseSelection(null);
+    setEquipmentLicenseInitialId(null);
+    setEquipmentLicenseLabel(null);
     setIsEquipmentFormOpen(true);
 
     fetchDepartments()
@@ -2162,6 +2182,22 @@ function Dashboard({ user, onLogout }) {
     fetchEquipmentStatuses()
       .then((data) => setEquipmentStatuses(excludeBrokenStatuses(data)))
       .catch(() => setEquipmentStatuses([]));
+
+    if (item.equipment_id != null) {
+      fetchEquipmentLicense(item.equipment_id)
+        .then((data) => {
+          const record = (data && typeof data === "object" && (data.license || data)) || null;
+          const licenseId = record?.license_id ?? null;
+          setEquipmentLicenseSelection(licenseId);
+          setEquipmentLicenseInitialId(licenseId);
+          setEquipmentLicenseLabel(record?.product_name ?? null);
+        })
+        .catch(() => {
+          setEquipmentLicenseSelection(null);
+          setEquipmentLicenseInitialId(null);
+          setEquipmentLicenseLabel(null);
+        });
+    }
 
     if (item.__category_id != null) {
       fetchCustomFields(item.__category_id)
@@ -2183,6 +2219,30 @@ function Dashboard({ user, onLogout }) {
 
   function handleEquipmentFormFieldChange(key, value) {
     setEquipmentFormValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleOpenSoftwareLicensePicker() {
+    setIsSoftwareLicensePickerOpen(true);
+    setIsSoftwareLicenseOptionsLoading(true);
+    setSoftwareLicenseOptionsError(null);
+
+    fetchLicenses()
+      .then((data) => setSoftwareLicenseOptions(normalizeRecordList(data)))
+      .catch((error) => setSoftwareLicenseOptionsError(error.message || "Could not load licenses."))
+      .finally(() => setIsSoftwareLicenseOptionsLoading(false));
+  }
+
+  function handleCloseSoftwareLicensePicker() {
+    setIsSoftwareLicensePickerOpen(false);
+  }
+
+  function handleToggleSoftwareLicenseSelection(licenseId) {
+    setEquipmentLicenseSelection((current) => {
+      const next = String(current) === String(licenseId) ? null : licenseId;
+      const option = softwareLicenseOptions.find((license) => String(license.license_id) === String(next));
+      setEquipmentLicenseLabel(option?.product_name ?? null);
+      return next;
+    });
   }
 
   function handleOpenColumnsPickerFromForm() {
@@ -2319,19 +2379,33 @@ function Dashboard({ user, onLogout }) {
 
     request
       .then((data) => {
-        logActivity({
-          actor: user,
-          action: isEdit ? "update" : "create",
-          module: ACTIVITY_MODULES.EQUIPMENT,
-          entityId: isEdit ? equipmentFormTarget.equipment_id : data?.equipment_id,
-          entityLabel: getEquipmentDisplayName(isEdit ? equipmentFormTarget : payload),
-          before: isEdit ? equipmentFormTarget : null,
-          after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
+        const savedEquipmentId = isEdit ? equipmentFormTarget.equipment_id : data?.equipment_id;
+        const licenseChanged = String(equipmentLicenseSelection) !== String(equipmentLicenseInitialId);
+
+        const licenseSync =
+          savedEquipmentId != null && licenseChanged
+            ? equipmentLicenseSelection
+              ? assignEquipmentLicense(savedEquipmentId, { license_id: equipmentLicenseSelection })
+              : unassignEquipmentLicense(savedEquipmentId)
+            : Promise.resolve();
+
+        return licenseSync.catch((licenseError) => {
+          console.error("Could not update software license assignment:", licenseError);
+        }).then(() => {
+          logActivity({
+            actor: user,
+            action: isEdit ? "update" : "create",
+            module: ACTIVITY_MODULES.EQUIPMENT,
+            entityId: isEdit ? equipmentFormTarget.equipment_id : data?.equipment_id,
+            entityLabel: getEquipmentDisplayName(isEdit ? equipmentFormTarget : payload),
+            before: isEdit ? equipmentFormTarget : null,
+            after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
+          });
+          setIsEquipmentFormOpen(false);
+          handleRetryEquipment();
+          handleRetryNotifications();
+          handleViewEquipmentCategory(equipmentCategory);
         });
-        setIsEquipmentFormOpen(false);
-        handleRetryEquipment();
-        handleRetryNotifications();
-        handleViewEquipmentCategory(equipmentCategory);
       })
       .catch((error) => setEquipmentFormError(error.message || "Something went wrong."))
       .finally(() => setIsSavingEquipment(false));
@@ -2468,6 +2542,7 @@ function Dashboard({ user, onLogout }) {
     setLicenseFormValues({
       product_name: license.product_name || "",
       product_type: license.product_type || "",
+      license_type: license.license_type || "Annual Subscription",
       date_start: toDateInputValue(license.date_start),
       date_expire: toDateInputValue(license.date_expire),
       remark: license.remark || "",
@@ -2493,7 +2568,9 @@ function Dashboard({ user, onLogout }) {
       return;
     }
 
-    if (!licenseFormValues.date_expire.trim()) {
+    const requiresExpiry = licenseFormValues.license_type === "Annual Subscription";
+
+    if (requiresExpiry && !licenseFormValues.date_expire.trim()) {
       setLicenseFormError("Please choose the expiry date.");
       return;
     }
@@ -2501,8 +2578,12 @@ function Dashboard({ user, onLogout }) {
     setIsSavingLicense(true);
     setLicenseFormError(null);
 
+    const valuesToSave = requiresExpiry
+      ? licenseFormValues
+      : { ...licenseFormValues, date_start: "", date_expire: "" };
+
     const payload = Object.fromEntries(
-      Object.entries(licenseFormValues).filter(([, value]) => value.trim() !== "")
+      Object.entries(valuesToSave).filter(([, value]) => value.trim() !== "")
     );
 
     const isEdit = licenseFormMode === "edit";
@@ -3569,6 +3650,18 @@ function Dashboard({ user, onLogout }) {
         fields={equipmentFormFields}
         onRemoveField={handleRemoveEquipmentField}
         onOpenColumnsPicker={handleOpenColumnsPickerFromForm}
+        onOpenSoftwareLicense={handleOpenSoftwareLicensePicker}
+        softwareLicenseLabel={equipmentLicenseLabel}
+      />
+
+      <SoftwareLicensePickerModal
+        isOpen={isSoftwareLicensePickerOpen}
+        licenses={softwareLicenseOptions}
+        selectedId={equipmentLicenseSelection}
+        onToggle={handleToggleSoftwareLicenseSelection}
+        onClose={handleCloseSoftwareLicensePicker}
+        isLoading={isSoftwareLicenseOptionsLoading}
+        error={softwareLicenseOptionsError}
       />
 
       <ColumnsPickerModal

@@ -66,6 +66,7 @@ export function LicenseFormModal({
   if (!isOpen) return null;
 
   const isEdit = mode === "edit";
+  const requiresExpiry = values.license_type === "Annual Subscription";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -129,6 +130,22 @@ export function LicenseFormModal({
                 />
               </FormField>
 
+              <FormField label="License Type *" htmlFor="license-license-type">
+                <select
+                  id="license-license-type"
+                  required
+                  autoComplete="off"
+                  value={values.license_type}
+                  onChange={(e) => onChange("license_type", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                >
+                  <option value="Free">Free</option>
+                  <option value="Annual Subscription">Annual Subscription</option>
+                  <option value="Perpetual">Perpetual</option>
+                </select>
+              </FormField>
+
               <FormField label="Date Start" htmlFor="license-date-start">
                 <input
                   id="license-date-start"
@@ -136,21 +153,32 @@ export function LicenseFormModal({
                   value={values.date_start}
                   onChange={(e) => onChange("date_start", e.target.value)}
                   className={formInputClass}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !requiresExpiry}
                 />
               </FormField>
 
-              <FormField label="Date Expire *" htmlFor="license-date-expire">
+              <FormField
+                label={requiresExpiry ? "Date Expire *" : "Date Expire"}
+                htmlFor="license-date-expire"
+              >
                 <input
                   id="license-date-expire"
                   type="date"
-                  required
+                  required={requiresExpiry}
                   value={values.date_expire}
                   onChange={(e) => onChange("date_expire", e.target.value)}
                   className={formInputClass}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !requiresExpiry}
                 />
               </FormField>
+
+              {!requiresExpiry && (
+                <div className="sm:col-span-2 -mt-2 text-xs text-slate-500">
+                  {values.license_type === "Perpetual"
+                    ? "Perpetual licenses are bought once and never expire."
+                    : "Free licenses are always active and don't need dates."}
+                </div>
+              )}
 
               <div className="sm:col-span-2">
                 <FormField label="Remark" htmlFor="license-remark">

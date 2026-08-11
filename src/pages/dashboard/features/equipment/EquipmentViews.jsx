@@ -1,6 +1,7 @@
 export {
   EquipmentFormModal,
   ColumnsPickerModal,
+  SoftwareLicensePickerModal,
   AssignEquipmentModal,
   BorrowEquipmentModal,
   ReturnEquipmentModal,
