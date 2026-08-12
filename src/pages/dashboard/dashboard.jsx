@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import {
   FiBell as Bell,
   FiBox as Box,
@@ -11,104 +11,20 @@ import {
   FiUser as UserIcon,
   FiX as X,
 } from "react-icons/fi";
-import {
-  fetchEquipmentCategorySummary,
-  fetchEquipmentByCategory,
-  fetchEquipmentStatuses,
-  fetchEquipmentViews,
-  fetchEquipmentByView,
-  createEquipmentByView,
-  updateEquipmentByView,
-  deleteEquipmentItem,
-  fetchViewColumnsSummary,
-  fetchAvailableViewFields,
-  fetchViewColumns,
-  saveViewColumns,
-  fetchCustomFields,
-  fetchCustomFieldTypes,
-  createCustomField,
-  removeCustomFieldFromCategory,
-  fetchAvailableStock,
-  unassignEquipment,
-} from "../../services/equipmentService";
-import {
-  fetchEmployees,
-  searchEmployees,
-  createEmployee,
-  updateEmployee,
-  deleteEmployee,
-} from "../../services/employeeService";
-import { fetchReplacements } from "../../services/replacementService";
-import { fetchSsdUpgrades } from "../../services/ssdUpgradeService";
-import { fetchSsdProcurement } from "../../services/ssdProcurementService";
-import { fetchAntivirusInstalls } from "../../services/antivirusService";
-import { createLicense, deleteLicense, fetchLicenses, updateLicense } from "../../services/licenseService";
-import {
-  assignEquipmentLicenses,
-  fetchEquipmentLicenseOptions,
-  unassignEquipmentLicense,
-} from "../../services/equipmentLicenseService";
-import { fetchCloudRates } from "../../services/cloudRateService";
-import { fetchServerUsage } from "../../services/serverUsageService";
-import { fetchCloudUsage } from "../../services/cloudUsageService";
-import {
-  fetchDepartments,
-  createDepartment,
-  updateDepartment,
-  deleteDepartment,
-} from "../../services/departmentService";
-import { createCategory, updateCategory, deleteCategory } from "../../services/categoryService";
-import { fetchUsers, updateUser, resetUserPassword } from "../../services/userService";
-import { fetchStatuses, createStatus, updateStatus, deleteStatus } from "../../services/statusService";
-import {
-  fetchAssignFormData,
-  fetchAssignableEquipment,
-  fetchAssignEmployees,
-  submitAssign,
-} from "../../services/assignService";
-import {
-  createBorrow,
-  fetchCurrentBorrows,
-  returnBorrow,
-  fetchBorrowHistory,
-} from "../../services/borrowService";
-import {
-  BORROW_EQUIPMENT_INITIAL_VALUES,
-  BORROW_HISTORY_INITIAL_FILTERS,
-  EMPLOYEE_FORM_INITIAL_VALUES,
-  EMPLOYEES_PAGE_SIZE,
-  EQUIPMENT_VIEWS,
-  EQUIPMENT_FORM_FALLBACK_FIELDS,
-  RETURN_EQUIPMENT_INITIAL_VALUES,
-  navSections,
-  navItemsByLabel,
-} from "./dashboard.config";
-import {
-  getEmployeeDepartmentCode,
-  groupEmployeeSearchResults,
-  normalizeRecordList,
-  extractEquipmentItems,
-  normalizeEquipmentViews,
-  normalizeViewColumnsSummary,
-  normalizeAvailableFields,
-  normalizeViewColumns,
-  normalizeEquipmentTableColumns,
-  normalizeEquipmentLicenseOptions,
-  normalizeCustomFields,
-  normalizeCustomFieldTypes,
-  getEquipmentFormFields,
-  getEquipmentFormFieldsFromColumns,
-  buildEquipmentFormValues,
-  slugifyEquipmentView,
-} from "./dashboard.utils";
-import { buildDashboardNotifications, getLicenseExpiryAlerts } from "./dashboard.notifications";
-import {
-  DASHBOARD_DEFAULT_VIEW,
-  getDashboardTitle,
-  getDashboardViewFromPath,
-  getInitialDashboardView,
-  syncDashboardPath,
-} from "./dashboard.routes";
+import { useEmployees } from "./features/employees/useEmployees";
+import { useEquipment } from "./features/equipment/useEquipment";
+import { useAssign } from "./features/assign/useAssign";
+import { useCurrentBorrows } from "./features/borrow/useCurrentBorrows";
+import { useBorrowHistory } from "./features/borrow/useBorrowHistory";
+import { useGlobalSearch } from "./hooks/useGlobalSearch";
+import { useUsers } from "./features/users/useUsers";
+import { useDepartments } from "./features/departments/useDepartments";
+import { useStatuses } from "./features/statuses/useStatuses";
+import { useDashboardNotifications } from "./hooks/useDashboardNotifications";
+import { useDashboardRouting } from "./hooks/useDashboardRouting";
+import { useDashboardHome } from "./hooks/useDashboardHome";
+import { EMPLOYEES_PAGE_SIZE, navItemsByLabel } from "./dashboard.config";
+import { getEquipmentDisplayName } from "./dashboard.utils";
 import { ConfirmDialog, EmptyState } from "./components/SharedControls";
 import { SidebarBrand, SidebarNavigation } from "./components/Sidebar";
 import { GlobalSearch } from "./components/GlobalSearch";
@@ -131,6 +47,14 @@ import {
   SsdProcurementView,
   SsdUpgradesView,
 } from "./features/records/OperationalRecordViews";
+import { useReplacements } from "./features/records/useReplacements";
+import { useSsdUpgrades } from "./features/records/useSsdUpgrades";
+import { useSsdProcurement } from "./features/records/useSsdProcurement";
+import { useAntivirus } from "./features/records/useAntivirus";
+import { useCloudRates } from "./features/records/useCloudRates";
+import { useServerUsage } from "./features/records/useServerUsage";
+import { useCloudUsage } from "./features/records/useCloudUsage";
+import { useLicenses } from "./features/records/useLicenses";
 import {
   CategoryFormModal,
   DepartmentFormModal,
@@ -147,660 +71,66 @@ import { ResetPasswordModal, UserPermissionsModal, UsersView } from "./features/
 import { StatusesView, StatusFormModal } from "./features/statuses/StatusViews";
 import { AssignEquipmentView } from "./features/assign/AssignView";
 import { ActivityLogView, MyActivityView } from "./features/activity/ActivityViews";
-import {
-  canAccessDashboardView,
-  getAccessProfileLabel,
-  getAccessibleDashboardViews,
-  getVisibleNavSections,
-  hasPermission,
-  isAdmin,
-  mergeStoredPermissionsForUser,
-  normalizeUserPermissions,
-  PERMISSIONS,
-  permissionsToRole,
-  rememberUserPermissions,
-} from "../../lib/permissions";
-import {
-  ACTIVITY_ACTION_VALUES,
-  ACTIVITY_MODULE_VALUES,
-  ACTIVITY_MODULES,
-  getActivityLog,
-  logActivity,
-  subscribeActivityLog,
-} from "../../lib/activityLog";
+import { useActivityLog } from "./features/activity/useActivityLog";
+import { useMyActivity } from "./features/activity/useMyActivity";
+import { getAccessProfileLabel } from "../../lib/permissions";
+import { useDashboardPermissions } from "./hooks/useDashboardPermissions";
+import { ACTIVITY_ACTION_VALUES, ACTIVITY_MODULE_VALUES } from "../../lib/activityLog";
 import { RecycleBinView } from "./features/recycle-bin/RecycleBinViews";
-import {
-  deleteRecycleBinItem,
-  fetchRecycleBin,
-  purgeRecycleBin,
-  restoreRecycleBinItem,
-} from "../../services/recycleBinService";
+import { useRecycleBin } from "./features/recycle-bin/useRecycleBin";
 import { DashboardHomeView } from "./features/home/DashboardHomeView";
 
-function excludeBrokenStatuses(data) {
-  const list = Array.isArray(data) ? data : [];
-  return list.filter((status) => !/broken/i.test(status?.status_name || ""));
-}
-
-const HOME_STAT_FETCHERS = {
-  Employee: () => fetchEmployees().then((data) => (Array.isArray(data) ? data.length : 0)),
-  Departments: () => fetchDepartments().then((data) => (Array.isArray(data) ? data.length : 0)),
-  "All Equipment": () =>
-    fetchEquipmentCategorySummary().then((data) =>
-      Array.isArray(data) ? data.reduce((sum, category) => sum + (category.total_items || 0), 0) : 0
-    ),
-  "Borrow History": () =>
-    fetchBorrowHistory({}).then((data) => (Array.isArray(data?.history) ? data.history.length : 0)),
-  "Device Replacement": () => fetchReplacements().then((data) => normalizeRecordList(data).length),
-  "SSD Upgrade": () => fetchSsdUpgrades().then((data) => normalizeRecordList(data).length),
-  "SSD Procurement": () => fetchSsdProcurement().then((data) => normalizeRecordList(data).length),
-  "Antivirus Install": () => fetchAntivirusInstalls().then((data) => normalizeRecordList(data).length),
-  "Cloud Rate": () => fetchCloudRates().then((data) => normalizeRecordList(data).length),
-  "Cloud Usage": () => fetchCloudUsage().then((data) => normalizeRecordList(data).length),
-  "Service Usage": () => fetchServerUsage().then((data) => normalizeRecordList(data).length),
-  Users: () =>
-    fetchUsers().then((data) => {
-      const list = Array.isArray(data) ? data : data?.users;
-      return Array.isArray(list) ? list.length : 0;
-    }),
-  "Recycle Bin": () =>
-    fetchRecycleBin().then((data) =>
-      typeof data?.count === "number" ? data.count : Array.isArray(data?.items) ? data.items.length : 0
-    ),
-};
-
-function createEmptyGlobalSearchResults() {
-  return {
-    employees: [],
-    departments: [],
-    equipment: [],
-    users: [],
-  };
-}
-
-function toDateInputValue(value) {
-  if (typeof value !== "string") return "";
-  const isoMatch = value.match(/^\d{4}-\d{2}-\d{2}/);
-  return isoMatch ? isoMatch[0] : "";
-}
-
-const LICENSE_FORM_INITIAL_VALUES = {
-  product_name: "",
-  product_type: "",
-  license_type: "Annual Subscription",
-  date_start: "",
-  date_expire: "",
-  remark: "",
-};
-
-const STATUS_FORM_INITIAL_VALUES = {
-  status_name: "",
-  description: "",
-  sort_order: "",
-  has_owner: false,
-  is_assignable: false,
-  is_borrowable: false,
-  is_active: true,
-};
-
 function Dashboard({ user, onLogout }) {
-  const canCreateRecords = isAdmin(user);
-  const canManageEquipment = hasPermission(user, PERMISSIONS.EQUIPMENT);
-  const canManageDepartments = hasPermission(user, PERMISSIONS.DEPARTMENTS);
-  const canManageEmployees = hasPermission(user, PERMISSIONS.EMPLOYEE);
-  const canManageBorrows = hasPermission(user, PERMISSIONS.CURRENTLY_BORROWED);
-  const canManageActivityLog = hasPermission(user, PERMISSIONS.ACTIVITY_LOG);
-  const [activityEntries, setActivityEntries] = useState(() => getActivityLog());
-  const [activityLogFilters, setActivityLogFilters] = useState({
-    module: "All",
-    action: "All",
-    search: "",
+  const permissions = useDashboardPermissions({ user });
+  const {
+    canCreateRecords,
+    canManageEquipment,
+    canManageDepartments,
+    canManageEmployees,
+    canManageBorrows,
+    canManageActivityLog,
+    canManageRecycleBin,
+    accessibleDashboardViews,
+    firstAccessibleDashboardView,
+    canManageUsers,
+    canManageStatuses,
+    canManageAssign,
+    visibleHomeNavSections,
+  } = permissions;
+  const activityLog = useActivityLog();
+  const myActivity = useMyActivity({ entries: activityLog.entries, user });
+
+  const routing = useDashboardRouting({
+    user,
+    accessibleDashboardViews,
+    firstAccessibleDashboardView,
+    onSelectView: handleSelectView,
   });
-  useEffect(() => subscribeActivityLog(() => setActivityEntries(getActivityLog())), []);
-
-  const currentActorId = user?.user_id ?? user?.id ?? null;
-  const myActivityEntries = useMemo(
-    () => activityEntries.filter((entry) => String(entry.actorId) === String(currentActorId)),
-    [activityEntries, currentActorId]
-  );
-  const filteredActivityLogEntries = useMemo(() => {
-    const { module, action, search } = activityLogFilters;
-    const term = search.trim().toLowerCase();
-
-    return activityEntries.filter((entry) => {
-      if (module !== "All" && entry.module !== module) return false;
-      if (action !== "All" && entry.action !== action) return false;
-      if (term) {
-        const haystack = `${entry.actorName} ${entry.entityLabel}`.toLowerCase();
-        if (!haystack.includes(term)) return false;
-      }
-      return true;
-    });
-  }, [activityEntries, activityLogFilters]);
-
-  function handleActivityLogFilterChange(key, value) {
-    setActivityLogFilters((current) => ({ ...current, [key]: value }));
-  }
-
-  const canManageRecycleBin = hasPermission(user, PERMISSIONS.RECYCLE_BIN);
-  const [recycleBinEntries, setRecycleBinEntries] = useState([]);
-  const [isRecycleBinLoading, setIsRecycleBinLoading] = useState(false);
-  const [recycleBinError, setRecycleBinError] = useState(null);
-  const [recycleBinFetchToken, setRecycleBinFetchToken] = useState(0);
-  const [recycleBinTypeFilter, setRecycleBinTypeFilter] = useState("All");
-  const [restoringRecycleBinId, setRestoringRecycleBinId] = useState(null);
-  const [deletingRecycleBinId, setDeletingRecycleBinId] = useState(null);
-  const [isPurgingRecycleBin, setIsPurgingRecycleBin] = useState(false);
-  const [recycleBinActionError, setRecycleBinActionError] = useState(null);
-  const [recycleBinItemToDelete, setRecycleBinItemToDelete] = useState(null);
-  const [isPurgeRecycleBinOpen, setIsPurgeRecycleBinOpen] = useState(false);
-
-  const recycleBinTypeOptions = useMemo(() => {
-    const types = new Set(
-      recycleBinEntries.map((entry) => entry?.entity_type ?? entry?.entityType ?? entry?.type).filter(Boolean)
-    );
-    return [...types].sort();
-  }, [recycleBinEntries]);
-
-  function handleRetryRecycleBin() {
-    setIsRecycleBinLoading(true);
-    setRecycleBinError(null);
-    setRecycleBinFetchToken((value) => value + 1);
-  }
-
-  function handleRecycleBinFilterChange(value) {
-    setRecycleBinTypeFilter(value);
-    setIsRecycleBinLoading(true);
-    setRecycleBinError(null);
-  }
-
-  function refreshAfterRecycleBinChange() {
-    handleRetryRecycleBin();
-    handleRetryEmployees();
-    handleRetryDepartments();
-    handleRetryEquipment();
-  }
-
-  function handleRestoreRecycleBinItem(entry) {
-    const id = entry?.id ?? entry?.recycle_bin_id ?? entry?.bin_id;
-    if (id === undefined || id === null) return;
-
-    setRestoringRecycleBinId(id);
-    setRecycleBinActionError(null);
-
-    restoreRecycleBinItem(id)
-      .then(() => {
-        refreshAfterRecycleBinChange();
-      })
-      .catch((error) => setRecycleBinActionError(error.message || "Could not restore this item."))
-      .finally(() => setRestoringRecycleBinId(null));
-  }
-
-  function handleOpenDeleteRecycleBinItem(entry) {
-    setRecycleBinItemToDelete(entry);
-    setRecycleBinActionError(null);
-  }
-
-  function handleCloseDeleteRecycleBinItem() {
-    setRecycleBinItemToDelete(null);
-  }
-
-  function handleConfirmDeleteRecycleBinItem() {
-    const id = recycleBinItemToDelete?.id ?? recycleBinItemToDelete?.recycle_bin_id ?? recycleBinItemToDelete?.bin_id;
-    if (id === undefined || id === null) return;
-
-    setDeletingRecycleBinId(id);
-    setRecycleBinActionError(null);
-
-    deleteRecycleBinItem(id)
-      .then(() => {
-        setRecycleBinItemToDelete(null);
-        handleRetryRecycleBin();
-      })
-      .catch((error) => setRecycleBinActionError(error.message || "Could not permanently delete this item."))
-      .finally(() => setDeletingRecycleBinId(null));
-  }
-
-  function handleOpenPurgeRecycleBin() {
-    setIsPurgeRecycleBinOpen(true);
-    setRecycleBinActionError(null);
-  }
-
-  function handleClosePurgeRecycleBin() {
-    setIsPurgeRecycleBinOpen(false);
-  }
-
-  function handleConfirmPurgeRecycleBin() {
-    setIsPurgingRecycleBin(true);
-    setRecycleBinActionError(null);
-
-    purgeRecycleBin()
-      .then(() => {
-        setIsPurgeRecycleBinOpen(false);
-        handleRetryRecycleBin();
-      })
-      .catch((error) => setRecycleBinActionError(error.message || "Could not purge the recycle bin."))
-      .finally(() => setIsPurgingRecycleBin(false));
-  }
-
-  const accessibleDashboardViews = useMemo(
-    () => getAccessibleDashboardViews(user, navSections),
-    [user]
-  );
-  const firstAccessibleDashboardView = accessibleDashboardViews[0] || null;
-  const canManageUsers = canAccessDashboardView(user, "Users", navItemsByLabel);
-  const canManageStatuses = canAccessDashboardView(user, "Status", navItemsByLabel);
-  const canManageAssign = canAccessDashboardView(user, "Assign", navItemsByLabel);
-  const initialDashboardView = getInitialDashboardView();
+  const { activeView, hasActiveViewAccess } = routing;
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [activeView, setActiveView] = useState(initialDashboardView);
-  const hasActiveViewAccess = accessibleDashboardViews.includes(activeView);
+  const notifications = useDashboardNotifications({ user, onSelectView: handleSelectView });
   const isDashboardHomeView = activeView === "Dashboard" && hasActiveViewAccess;
-  const [homeStats, setHomeStats] = useState({});
-  const [isHomeStatsLoading, setIsHomeStatsLoading] = useState(initialDashboardView === "Dashboard");
-  const visibleHomeNavSections = useMemo(
-    () =>
-      getVisibleNavSections(user, navSections).filter((section) => section.label !== "Overview"),
-    [user]
-  );
+  const home = useDashboardHome({ isActive: isDashboardHomeView, accessibleDashboardViews });
 
-  useEffect(() => {
-    if (!isDashboardHomeView) return;
-
-    let ignore = false;
-
-    const labels = Object.keys(HOME_STAT_FETCHERS).filter((label) => accessibleDashboardViews.includes(label));
-
-    Promise.allSettled(labels.map((label) => HOME_STAT_FETCHERS[label]()))
-      .then((results) => {
-        if (ignore) return;
-        const next = {};
-        results.forEach((result, index) => {
-          next[labels[index]] = result.status === "fulfilled" ? result.value : null;
-        });
-        setHomeStats((current) => ({ ...current, ...next }));
-      })
-      .finally(() => {
-        if (!ignore) setIsHomeStatsLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isDashboardHomeView, accessibleDashboardViews]);
-
-  const [readNotificationIds, setReadNotificationIds] = useState(() => new Set());
-  const [notificationData, setNotificationData] = useState({
-    currentBorrows: [],
-    availableStock: [],
-    licenses: [],
-  });
-  const [isNotificationsLoading, setIsNotificationsLoading] = useState(true);
-  const [notificationsError, setNotificationsError] = useState(null);
-  const [notificationsFetchToken, setNotificationsFetchToken] = useState(0);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuCloseTimeout = useRef(null);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const [globalSearchQuery, setGlobalSearchQuery] = useState("");
-  const [globalSearchResults, setGlobalSearchResults] = useState(createEmptyGlobalSearchResults);
-  const [isGlobalSearchLoading, setIsGlobalSearchLoading] = useState(false);
-  const globalSearchEquipmentCacheRef = useRef(null);
-
-  function handleGlobalSearchQueryChange(nextQuery) {
-    setGlobalSearchQuery(nextQuery);
-    if (nextQuery.trim().length < 2) {
-      setGlobalSearchResults(createEmptyGlobalSearchResults());
-      setIsGlobalSearchLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    const term = globalSearchQuery.trim();
-    if (term.length < 2) return;
-
-    let ignore = false;
-    const lowerTerm = term.toLowerCase();
-
-    const timeoutId = window.setTimeout(() => {
-      setIsGlobalSearchLoading(true);
-
-      const jobs = [];
-
-      if (hasPermission(user, PERMISSIONS.EMPLOYEE)) {
-        jobs.push(
-          searchEmployees(term)
-            .then((data) => ({
-              key: "employees",
-              items: groupEmployeeSearchResults(Array.isArray(data) ? data : []).slice(0, 5),
-            }))
-            .catch(() => ({ key: "employees", items: [] }))
-        );
-      }
-
-      if (hasPermission(user, PERMISSIONS.DEPARTMENTS)) {
-        jobs.push(
-          fetchDepartments()
-            .then((data) => ({
-              key: "departments",
-              items: (Array.isArray(data) ? data : [])
-                .filter((department) =>
-                  `${department.department_name || ""} ${department.department_code || ""}`
-                    .toLowerCase()
-                    .includes(lowerTerm)
-                )
-                .slice(0, 5),
-            }))
-            .catch(() => ({ key: "departments", items: [] }))
-        );
-      }
-
-      if (hasPermission(user, PERMISSIONS.USERS)) {
-        jobs.push(
-          fetchUsers()
-            .then((data) => {
-              const list = Array.isArray(data) ? data : data?.users;
-              return {
-                key: "users",
-                items: (Array.isArray(list) ? list : [])
-                  .filter((candidate) =>
-                    `${candidate.full_name || ""} ${candidate.username || ""}`.toLowerCase().includes(lowerTerm)
-                  )
-                  .slice(0, 5),
-              };
-            })
-            .catch(() => ({ key: "users", items: [] }))
-        );
-      }
-
-      if (hasPermission(user, PERMISSIONS.EQUIPMENT)) {
-        const equipmentPromise = globalSearchEquipmentCacheRef.current
-          ? Promise.resolve(globalSearchEquipmentCacheRef.current)
-          : fetchEquipmentByCategory("", "All")
-            .then((data) => {
-              const list = Array.isArray(data) ? data : [];
-              globalSearchEquipmentCacheRef.current = list;
-              return list;
-            })
-            .catch(() => []);
-
-        jobs.push(
-          equipmentPromise.then((list) => ({
-            key: "equipment",
-            items: list
-              .filter((item) =>
-                `${item.computer_name || ""} ${item.asset_code || item.equipment_code || ""} ${item.service_tag || ""} ${item.device_model || ""
-                  } ${item.owner_name || ""}`
-                  .toLowerCase()
-                  .includes(lowerTerm)
-              )
-              .slice(0, 5),
-          }))
-        );
-      }
-
-      Promise.all(jobs)
-        .then((jobResults) => {
-          if (ignore) return;
-          const next = createEmptyGlobalSearchResults();
-          jobResults.forEach(({ key, items }) => {
-            next[key] = items;
-          });
-          setGlobalSearchResults(next);
-        })
-        .finally(() => {
-          if (!ignore) setIsGlobalSearchLoading(false);
-        });
-    }, 350);
-
-    return () => {
-      ignore = true;
-      window.clearTimeout(timeoutId);
-    };
-  }, [globalSearchQuery, user]);
+  const globalSearch = useGlobalSearch({
+    user,
+    onSelectView: handleSelectView,
+    onSelectEmployee: (item) => employees.handleViewSearchDetail(item),
+    onSelectEquipmentCategory: (category) =>
+      equipment.handleViewCategory(equipment.resolveView(category) || "All"),
+  });
 
   function handleSelectGlobalSearchResult(type, item) {
-    setGlobalSearchQuery("");
-    setGlobalSearchResults(createEmptyGlobalSearchResults());
-    setIsGlobalSearchLoading(false);
+    globalSearch.handleSelectResult(type, item);
     setIsMobileSearchOpen(false);
-
-    if (type === "employees") {
-      handleSelectView("Employee");
-      handleViewEmployeeSearchDetail(item);
-    } else if (type === "departments") {
-      handleSelectView("Departments");
-    } else if (type === "equipment") {
-      handleSelectView("All Equipment");
-      handleViewEquipmentCategory(resolveEquipmentView(item.category || item.category_name) || "All");
-    } else if (type === "users") {
-      handleSelectView("Users");
-    }
   }
-  const [equipmentCategories, setEquipmentCategories] = useState([]);
-  const [equipmentCategory, setEquipmentCategory] = useState("All");
-  const [equipmentTableColumns, setEquipmentTableColumns] = useState([]);
-  const [isEquipmentLoading, setIsEquipmentLoading] = useState(initialDashboardView === "All Equipment");
-  const [equipmentError, setEquipmentError] = useState(null);
-  const [equipmentFetchToken, setEquipmentFetchToken] = useState(0);
-  const [equipmentItems, setEquipmentItems] = useState([]);
-  const [isEquipmentItemsLoading, setIsEquipmentItemsLoading] = useState(false);
-  const [equipmentItemsError, setEquipmentItemsError] = useState(null);
-  const [equipmentStatuses, setEquipmentStatuses] = useState([]);
-  const [equipmentStatusFilter, setEquipmentStatusFilter] = useState("All");
-  const [isEquipmentFormOpen, setIsEquipmentFormOpen] = useState(false);
-  const [equipmentFormMode, setEquipmentFormMode] = useState("add");
-  const [equipmentFormTarget, setEquipmentFormTarget] = useState(null);
-  const [equipmentFormFields, setEquipmentFormFields] = useState(EQUIPMENT_FORM_FALLBACK_FIELDS);
-  const [equipmentFormValues, setEquipmentFormValues] = useState({});
-  const [isSavingEquipment, setIsSavingEquipment] = useState(false);
-  const [equipmentFormError, setEquipmentFormError] = useState(null);
-  const [equipmentToUnassign, setEquipmentToUnassign] = useState(null);
-  const [isUnassigningEquipment, setIsUnassigningEquipment] = useState(false);
-  const [unassignEquipmentError, setUnassignEquipmentError] = useState(null);
-  const [equipmentToDelete, setEquipmentToDelete] = useState(null);
-  const [isDeletingEquipment, setIsDeletingEquipment] = useState(false);
-  const [deleteEquipmentError, setDeleteEquipmentError] = useState(null);
-  const [isSoftwareLicensePickerOpen, setIsSoftwareLicensePickerOpen] = useState(false);
-  const [softwareLicenseOptions, setSoftwareLicenseOptions] = useState([]);
-  const [isSoftwareLicenseOptionsLoading, setIsSoftwareLicenseOptionsLoading] = useState(false);
-  const [softwareLicenseOptionsError, setSoftwareLicenseOptionsError] = useState(null);
-  const [equipmentLicenseSelectedIds, setEquipmentLicenseSelectedIds] = useState([]);
-  const [equipmentLicenseInitialIds, setEquipmentLicenseInitialIds] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [isDepartmentsLoading, setIsDepartmentsLoading] = useState(initialDashboardView === "Departments");
-  const [departmentsError, setDepartmentsError] = useState(null);
-  const [departmentsFetchToken, setDepartmentsFetchToken] = useState(0);
-  const [users, setUsers] = useState([]);
-  const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
-  const [isUsersLoading, setIsUsersLoading] = useState(initialDashboardView === "Users");
-  const [usersError, setUsersError] = useState(null);
-  const [usersFetchToken, setUsersFetchToken] = useState(0);
-  const [statuses, setStatuses] = useState([]);
-  const [isStatusesLoading, setIsStatusesLoading] = useState(initialDashboardView === "Status");
-  const [statusesError, setStatusesError] = useState(null);
-  const [statusesFetchToken, setStatusesFetchToken] = useState(0);
-  const [showInactiveStatuses, setShowInactiveStatuses] = useState(false);
-  const [isStatusFormOpen, setIsStatusFormOpen] = useState(false);
-  const [statusFormMode, setStatusFormMode] = useState("add");
-  const [statusFormTarget, setStatusFormTarget] = useState(null);
-  const [statusFormValues, setStatusFormValues] = useState(STATUS_FORM_INITIAL_VALUES);
-  const [isSavingStatus, setIsSavingStatus] = useState(false);
-  const [statusFormError, setStatusFormError] = useState(null);
-  const [statusToDelete, setStatusToDelete] = useState(null);
-  const [isDeletingStatus, setIsDeletingStatus] = useState(false);
-  const [deleteStatusError, setDeleteStatusError] = useState(null);
-  const [deleteStatusBlocked, setDeleteStatusBlocked] = useState(false);
-  const [replacements, setReplacements] = useState([]);
-  const [isReplacementsLoading, setIsReplacementsLoading] = useState(
-    initialDashboardView === "Device Replacement"
-  );
-  const [replacementsError, setReplacementsError] = useState(null);
-  const [replacementsFetchToken, setReplacementsFetchToken] = useState(0);
-  const [ssdUpgrades, setSsdUpgrades] = useState([]);
-  const [isSsdUpgradesLoading, setIsSsdUpgradesLoading] = useState(initialDashboardView === "SSD Upgrade");
-  const [ssdUpgradesError, setSsdUpgradesError] = useState(null);
-  const [ssdUpgradesFetchToken, setSsdUpgradesFetchToken] = useState(0);
-  const [ssdProcurements, setSsdProcurements] = useState([]);
-  const [isSsdProcurementLoading, setIsSsdProcurementLoading] = useState(
-    initialDashboardView === "SSD Procurement"
-  );
-  const [ssdProcurementError, setSsdProcurementError] = useState(null);
-  const [ssdProcurementFetchToken, setSsdProcurementFetchToken] = useState(0);
-  const [antivirusInstalls, setAntivirusInstalls] = useState([]);
-  const [isAntivirusLoading, setIsAntivirusLoading] = useState(initialDashboardView === "Antivirus Install");
-  const [antivirusError, setAntivirusError] = useState(null);
-  const [antivirusFetchToken, setAntivirusFetchToken] = useState(0);
-  const [licenses, setLicenses] = useState([]);
-  const [isLicensesLoading, setIsLicensesLoading] = useState(initialDashboardView === "Software License");
-  const [licensesError, setLicensesError] = useState(null);
-  const [licensesFetchToken, setLicensesFetchToken] = useState(0);
-  const [isLicenseFormOpen, setIsLicenseFormOpen] = useState(false);
-  const [licenseFormMode, setLicenseFormMode] = useState("add");
-  const [licenseFormTarget, setLicenseFormTarget] = useState(null);
-  const [licenseFormValues, setLicenseFormValues] = useState(LICENSE_FORM_INITIAL_VALUES);
-  const [isSavingLicense, setIsSavingLicense] = useState(false);
-  const [licenseFormError, setLicenseFormError] = useState(null);
-  const [licenseToDelete, setLicenseToDelete] = useState(null);
-  const [isDeletingLicense, setIsDeletingLicense] = useState(false);
-  const [deleteLicenseError, setDeleteLicenseError] = useState(null);
-  const [cloudRates, setCloudRates] = useState([]);
-  const [isCloudRatesLoading, setIsCloudRatesLoading] = useState(initialDashboardView === "Cloud Rate");
-  const [cloudRatesError, setCloudRatesError] = useState(null);
-  const [cloudRatesFetchToken, setCloudRatesFetchToken] = useState(0);
-  const [serverUsage, setServerUsage] = useState([]);
-  const [isServerUsageLoading, setIsServerUsageLoading] = useState(initialDashboardView === "Service Usage");
-  const [serverUsageError, setServerUsageError] = useState(null);
-  const [serverUsageFetchToken, setServerUsageFetchToken] = useState(0);
-  const [cloudUsage, setCloudUsage] = useState([]);
-  const [isCloudUsageLoading, setIsCloudUsageLoading] = useState(initialDashboardView === "Cloud Usage");
-  const [cloudUsageError, setCloudUsageError] = useState(null);
-  const [cloudUsageFetchToken, setCloudUsageFetchToken] = useState(0);
-  const [assignEmployeeOptions, setAssignEmployeeOptions] = useState([]);
-  const [assignFormData, setAssignFormData] = useState({
-    positions: [],
-    statuses: [],
-    categories: [],
-    locations: [],
-  });
-  const [isAssignFormDataLoading, setIsAssignFormDataLoading] = useState(initialDashboardView === "Assign");
-  const [assignFormDataError, setAssignFormDataError] = useState(null);
-  const [assignFormDataFetchToken, setAssignFormDataFetchToken] = useState(0);
-  const [assignDeviceQuery, setAssignDeviceQuery] = useState("");
-  const [assignDeviceCategory, setAssignDeviceCategory] = useState("All");
-  const [assignDeviceOptions, setAssignDeviceOptions] = useState([]);
-  const [isAssignDeviceLoading, setIsAssignDeviceLoading] = useState(false);
-  const [assignDeviceError, setAssignDeviceError] = useState(null);
-  const [assignSelectedDevice, setAssignSelectedDevice] = useState(null);
-  const [assignPosition, setAssignPosition] = useState("");
-  const [assignEmployeeQuery, setAssignEmployeeQuery] = useState("");
-  const [assignEmployeeSearchOptions, setAssignEmployeeSearchOptions] = useState([]);
-  const [isAssignEmployeeSearchLoading, setIsAssignEmployeeSearchLoading] = useState(false);
-  const [assignEmployeeSearchError, setAssignEmployeeSearchError] = useState(null);
-  const [assignSelectedEmployee, setAssignSelectedEmployee] = useState(null);
-  const [assignStatus, setAssignStatus] = useState("Working/Using");
-  const [assignDate, setAssignDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [isSubmittingAssign, setIsSubmittingAssign] = useState(false);
-  const [assignSubmitError, setAssignSubmitError] = useState(null);
-  const [assignSubmitSuccess, setAssignSubmitSuccess] = useState(null);
-  const [assignConflict, setAssignConflict] = useState(null);
-  const [isResolvingAssignConflict, setIsResolvingAssignConflict] = useState(false);
-  const [isBorrowModalOpen, setIsBorrowModalOpen] = useState(false);
-  const [borrowTarget, setBorrowTarget] = useState(null);
-  const [borrowValues, setBorrowValues] = useState(BORROW_EQUIPMENT_INITIAL_VALUES);
-  const [isBorrowing, setIsBorrowing] = useState(false);
-  const [borrowError, setBorrowError] = useState(null);
-  const [currentBorrows, setCurrentBorrows] = useState([]);
-  const [isCurrentBorrowsLoading, setIsCurrentBorrowsLoading] = useState(
-    initialDashboardView === "Currently Borrowed"
-  );
-  const [currentBorrowsError, setCurrentBorrowsError] = useState(null);
-  const [currentBorrowsFetchToken, setCurrentBorrowsFetchToken] = useState(0);
-  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
-  const [returnTarget, setReturnTarget] = useState(null);
-  const [returnValues, setReturnValues] = useState(RETURN_EQUIPMENT_INITIAL_VALUES);
-  const [isReturning, setIsReturning] = useState(false);
-  const [returnError, setReturnError] = useState(null);
-  const [borrowHistory, setBorrowHistory] = useState([]);
-  const [isBorrowHistoryLoading, setIsBorrowHistoryLoading] = useState(
-    initialDashboardView === "Borrow History"
-  );
-  const [borrowHistoryError, setBorrowHistoryError] = useState(null);
-  const [borrowHistoryFetchToken, setBorrowHistoryFetchToken] = useState(0);
-  const [borrowHistoryFilters, setBorrowHistoryFilters] = useState(BORROW_HISTORY_INITIAL_FILTERS);
-  const [employeeSearchTerm, setEmployeeSearchTerm] = useState("");
-  const [employeeSearchResults, setEmployeeSearchResults] = useState([]);
-  const [isEmployeeSearchLoading, setIsEmployeeSearchLoading] = useState(false);
-  const [employeeSearchError, setEmployeeSearchError] = useState(null);
-  const [hasSearchedEmployees, setHasSearchedEmployees] = useState(false);
-  const [employees, setEmployees] = useState([]);
-  const [isEmployeesLoading, setIsEmployeesLoading] = useState(initialDashboardView === "Employee");
-  const [employeesError, setEmployeesError] = useState(null);
-  const [employeesFetchToken, setEmployeesFetchToken] = useState(0);
-  const [employeeSort, setEmployeeSort] = useState({ key: null, direction: "asc" });
-  const [employeePage, setEmployeePage] = useState(1);
-  const [employeeDetailTarget, setEmployeeDetailTarget] = useState(null);
-  const [employeeDetailDevices, setEmployeeDetailDevices] = useState([]);
-  const [isEmployeeDetailLoading, setIsEmployeeDetailLoading] = useState(false);
-  const [employeeDetailError, setEmployeeDetailError] = useState(null);
-  const [isEmployeeFormOpen, setIsEmployeeFormOpen] = useState(false);
-  const [employeeFormMode, setEmployeeFormMode] = useState("add");
-  const [employeeFormTarget, setEmployeeFormTarget] = useState(null);
-  const [employeeFormValues, setEmployeeFormValues] = useState(EMPLOYEE_FORM_INITIAL_VALUES);
-  const [isSavingEmployee, setIsSavingEmployee] = useState(false);
-  const [employeeFormError, setEmployeeFormError] = useState(null);
-  const [employeeToDelete, setEmployeeToDelete] = useState(null);
-  const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
-  const [deleteEmployeeError, setDeleteEmployeeError] = useState(null);
-  const [deleteEmployeeBlocked, setDeleteEmployeeBlocked] = useState(false);
-
-  const [isDepartmentFormOpen, setIsDepartmentFormOpen] = useState(false);
-  const [departmentFormMode, setDepartmentFormMode] = useState("add");
-  const [departmentFormTarget, setDepartmentFormTarget] = useState(null);
-  const [departmentFormValues, setDepartmentFormValues] = useState({ department_code: "", department_name: "" });
-  const [isSavingDepartment, setIsSavingDepartment] = useState(false);
-  const [departmentFormError, setDepartmentFormError] = useState(null);
-  const [departmentToDelete, setDepartmentToDelete] = useState(null);
-  const [isDeletingDepartment, setIsDeletingDepartment] = useState(false);
-  const [deleteDepartmentError, setDeleteDepartmentError] = useState(null);
-
-  const [userPermissionsTarget, setUserPermissionsTarget] = useState(null);
-  const [userPermissionValues, setUserPermissionValues] = useState({ full_name: "", permissions: [] });
-  const [isSavingUserPermissions, setIsSavingUserPermissions] = useState(false);
-  const [userPermissionsError, setUserPermissionsError] = useState(null);
-  const [resetPasswordTarget, setResetPasswordTarget] = useState(null);
-  const [resetPassword, setResetPassword] = useState("");
-  const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
-  const [resetPasswordError, setResetPasswordError] = useState(null);
-
-  const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
-  const [categoryFormMode, setCategoryFormMode] = useState("add");
-  const [categoryFormTarget, setCategoryFormTarget] = useState(null);
-  const [categoryFormValues, setCategoryFormValues] = useState({ category_name: "", description: "" });
-  const [isSavingCategory, setIsSavingCategory] = useState(false);
-  const [categoryFormError, setCategoryFormError] = useState(null);
-  const [categoryToDelete, setCategoryToDelete] = useState(null);
-  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
-  const [deleteCategoryError, setDeleteCategoryError] = useState(null);
-
-  const [isColumnsPickerOpen, setIsColumnsPickerOpen] = useState(false);
-  const [columnsPickerCategoryId, setColumnsPickerCategoryId] = useState(null);
-  const [columnsPickerCategoryLabel, setColumnsPickerCategoryLabel] = useState("");
-  const [availableViewFields, setAvailableViewFields] = useState([]);
-  const [customFieldTypes, setCustomFieldTypes] = useState([]);
-  const [isColumnsPickerLoading, setIsColumnsPickerLoading] = useState(false);
-  const [columnsPickerSelectedKeys, setColumnsPickerSelectedKeys] = useState([]);
-  const [columnsPickerCustomFields, setColumnsPickerCustomFields] = useState([]);
-  const [reusableCustomFields, setReusableCustomFields] = useState([]);
-  const [isSavingColumns, setIsSavingColumns] = useState(false);
-  const [columnsPickerError, setColumnsPickerError] = useState(null);
-  const [columnsPickerReopenEquipmentForm, setColumnsPickerReopenEquipmentForm] = useState(false);
 
   const notificationsRef = useRef(null);
   const profileMenuRef = useRef(null);
-  const selectViewRef = useRef(null);
   const displayName = user?.name || "Admin User";
   const initials = displayName
     .split(" ")
@@ -808,799 +138,39 @@ function Dashboard({ user, onLogout }) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-  const notifications = useMemo(
-    () =>
-      buildDashboardNotifications({
-        ...notificationData,
-        error: notificationsError,
-      }).map((item) => ({
-        ...item,
-        unread: !readNotificationIds.has(item.id),
-      })),
-    [notificationData, notificationsError, readNotificationIds]
-  );
-  const visibleNotifications = useMemo(
-    () =>
-      notifications.filter(
-        (item) => !item.targetView || canAccessDashboardView(user, item.targetView, navItemsByLabel)
-      ),
-    [notifications, user]
-  );
-  const licenseExpiryAlerts = useMemo(
-    () => getLicenseExpiryAlerts(notificationData.licenses),
-    [notificationData.licenses]
-  );
-  const sidebarBadges = useMemo(
-    () =>
-      licenseExpiryAlerts.length > 0
-        ? { "Software License": { value: licenseExpiryAlerts.length, tone: "danger" } }
-        : {},
-    [licenseExpiryAlerts.length]
-  );
-  const unreadNotificationCount = visibleNotifications.filter((item) => item.unread).length;
-  const hasUnreadNotifications = unreadNotificationCount > 0;
 
-  const equipmentFormCategoryOptions = useMemo(() => {
-    const names = new Set(EQUIPMENT_VIEWS.map((view) => view.label));
-    equipmentCategories.forEach((item) => names.add(item.label));
-    if (equipmentFormTarget?.category_name) names.add(equipmentFormTarget.category_name);
-    if (equipmentFormTarget?.category) names.add(equipmentFormTarget.category);
-    return [...names].sort();
-  }, [equipmentCategories, equipmentFormTarget]);
-
-  const equipmentCategoryByLabel = useMemo(() => {
-    const map = new Map();
-    EQUIPMENT_VIEWS.forEach((view) => map.set(view.label, { slug: view.slug, categoryId: null }));
-    equipmentCategories.forEach((item) => map.set(item.label, { slug: item.slug, categoryId: item.categoryId }));
-    return map;
-  }, [equipmentCategories]);
-
-  const equipmentCategoryBySlug = useMemo(() => {
-    const map = new Map();
-    equipmentCategories.forEach((item) => map.set(item.slug, item));
-    return map;
-  }, [equipmentCategories]);
-
-  function resolveEquipmentView(label) {
-    return equipmentCategoryByLabel.get(label)?.slug || slugifyEquipmentView(label);
-  }
-
-  function resolveEquipmentCategoryId(label) {
-    return equipmentCategoryByLabel.get(label)?.categoryId ?? null;
-  }
-
-  const sortedEmployees = useMemo(() => {
-    if (!employeeSort.key) return employees;
-    const sorted = [...employees].sort((a, b) =>
-      String(a[employeeSort.key] ?? "").localeCompare(String(b[employeeSort.key] ?? ""))
-    );
-    return employeeSort.direction === "asc" ? sorted : sorted.reverse();
-  }, [employees, employeeSort]);
-
-  const employeePageCount = Math.max(1, Math.ceil(sortedEmployees.length / EMPLOYEES_PAGE_SIZE));
-  const paginatedEmployees = sortedEmployees.slice(
-    (employeePage - 1) * EMPLOYEES_PAGE_SIZE,
-    employeePage * EMPLOYEES_PAGE_SIZE
-  );
-
-  function handleEmployeeSort(key) {
-    setEmployeeSort((current) =>
-      current.key === key
-        ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
-        : { key, direction: "asc" }
-    );
-    setEmployeePage(1);
-  }
-
-  function handleRetryEmployees() {
-    setIsEmployeesLoading(true);
-    setEmployeesError(null);
-    setEmployeesFetchToken((value) => value + 1);
-  }
-
-  function handleRetryDepartments() {
-    setIsDepartmentsLoading(true);
-    setDepartmentsError(null);
-    setDepartmentsFetchToken((value) => value + 1);
-  }
-
-  function handleRetryUsers() {
-    setIsUsersLoading(true);
-    setUsersError(null);
-    setUsersFetchToken((value) => value + 1);
-  }
-
-  function handleOpenAddEmployee() {
-    setEmployeeFormMode("add");
-    setEmployeeFormTarget(null);
-    setEmployeeFormValues(EMPLOYEE_FORM_INITIAL_VALUES);
-    setEmployeeFormError(null);
-    setIsEmployeeFormOpen(true);
-
-    fetchDepartments()
-      .then((data) => setDepartments(Array.isArray(data) ? data : []))
-      .catch(() => setDepartments([]));
-  }
-
-  function handleOpenAddDepartment() {
-    setDepartmentFormMode("add");
-    setDepartmentFormTarget(null);
-    setDepartmentFormValues({ department_code: "", department_name: "" });
-    setDepartmentFormError(null);
-    setIsDepartmentFormOpen(true);
-  }
-
-  function handleOpenEditDepartment(department) {
-    setDepartmentFormMode("edit");
-    setDepartmentFormTarget(department);
-    setDepartmentFormValues({
-      department_code: department.department_code || "",
-      department_name: department.department_name || "",
-    });
-    setDepartmentFormError(null);
-    setIsDepartmentFormOpen(true);
-  }
-
-  function handleOpenAddCategory() {
-    setCategoryFormMode("add");
-    setCategoryFormTarget(null);
-    setCategoryFormValues({ category_name: "", description: "" });
-    setCategoryFormError(null);
-    setIsCategoryFormOpen(true);
-  }
-
-  function handleOpenEditCategory(category) {
-    setCategoryFormMode("edit");
-    setCategoryFormTarget(category);
-    setCategoryFormValues({
-      category_name: category.category_name || category.category || category.label || "",
-      description: category.description || "",
-    });
-    setCategoryFormError(null);
-    setIsCategoryFormOpen(true);
-  }
-
-  function handleCloseCategoryForm() {
-    setIsCategoryFormOpen(false);
-  }
-
-  function handleCategoryFormFieldChange(key, value) {
-    setCategoryFormValues((current) => ({ ...current, [key]: value }));
-  }
-
-  function handleSubmitCategoryForm(event) {
-    event.preventDefault();
-
-    if (!categoryFormValues.category_name.trim()) {
-      setCategoryFormError("Please enter a category name.");
-      return;
-    }
-
-    setIsSavingCategory(true);
-    setCategoryFormError(null);
-
-    const payload = {
-      category_name: categoryFormValues.category_name.trim(),
-      description: categoryFormValues.description?.trim() || "",
+  function handleSelectView(label, options) {
+    // Every feature hook exposes `resetForEntry()` so switching into its view
+    // flips the loading spinner instantly, without this composition root
+    // reaching into any hook's internal state directly.
+    const resetMap = {
+      "All Equipment": equipment.resetForEntry,
+      "Device Replacement": replacements.resetForEntry,
+      "SSD Upgrade": ssdUpgrades.resetForEntry,
+      "SSD Procurement": ssdProcurement.resetForEntry,
+      "Antivirus Install": antivirus.resetForEntry,
+      "Software License": licenses.resetForEntry,
+      "Cloud Rate": cloudRates.resetForEntry,
+      "Service Usage": serverUsage.resetForEntry,
+      "Cloud Usage": cloudUsage.resetForEntry,
+      "Currently Borrowed": currentBorrows.resetForEntry,
+      "Borrow History": borrowHistory.resetForEntry,
+      Employee: employees.resetForEntry,
+      Departments: departments.resetForEntry,
     };
 
-    const id = categoryFormTarget?.id ?? categoryFormTarget?.category_id ?? categoryFormTarget?.categoryId ?? null;
-    const isEdit = categoryFormMode === "edit" && id;
-
-    const req = isEdit ? updateCategory(id, payload) : createCategory(payload);
-
-    req
-      .then((data) => {
-        const newId = id ?? data?.category_id ?? data?.id ?? data?.categoryId;
-        logActivity({
-          actor: user,
-          action: isEdit ? "update" : "create",
-          module: ACTIVITY_MODULES.CATEGORY,
-          entityId: newId,
-          entityLabel: payload.category_name,
-          before: isEdit ? categoryFormTarget : null,
-          after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
-        });
-        setIsCategoryFormOpen(false);
-        handleRetryEquipment();
-      })
-      .catch((error) => setCategoryFormError(error.message || "Something went wrong."))
-      .finally(() => setIsSavingCategory(false));
-  }
-
-  function handleOpenColumnsPicker(categoryId, categoryLabel) {
-    if (!categoryId) return;
-
-    setColumnsPickerCategoryId(categoryId);
-    setColumnsPickerCategoryLabel(categoryLabel || "");
-    setColumnsPickerError(null);
-    setIsColumnsPickerOpen(true);
-    setIsColumnsPickerLoading(true);
-
-    const fieldsRequest =
-      availableViewFields.length > 0
-        ? Promise.resolve(availableViewFields)
-        : fetchAvailableViewFields().then(normalizeAvailableFields);
-
-    const typesRequest =
-      customFieldTypes.length > 0
-        ? Promise.resolve(customFieldTypes)
-        : fetchCustomFieldTypes().then(normalizeCustomFieldTypes).catch(() => []);
-
-    Promise.all([
-      fieldsRequest,
-      fetchViewColumns(categoryId).then(normalizeViewColumns).catch(() => []),
-      fetchCustomFields(categoryId).catch(() => null),
-      typesRequest,
-    ])
-      .then(([fields, currentColumns, customFieldsData, types]) => {
-        setAvailableViewFields(fields);
-        let selectedKeys = currentColumns.map((column) => column.key);
-        // The backend requires at least one standard column per category —
-        // custom fields alone don't satisfy it. Pre-tick a sensible default
-        // for a brand-new category so the picker is savable right away
-        // instead of blocking on a rule the user has no reason to expect.
-        if (selectedKeys.length === 0) {
-          const fallback = fields.find((f) => f.key === "status") || fields.find((f) => f.key === "remark") || fields[0];
-          if (fallback) selectedKeys = [fallback.key];
-        }
-        setColumnsPickerSelectedKeys(selectedKeys);
-        setColumnsPickerCustomFields(normalizeCustomFields(customFieldsData));
-        setReusableCustomFields(normalizeCustomFields(customFieldsData?.available_to_add));
-        if (types.length > 0) setCustomFieldTypes(types);
-      })
-      .catch((error) => setColumnsPickerError(error.message || "Could not load fields."))
-      .finally(() => setIsColumnsPickerLoading(false));
-  }
-
-  function handleToggleColumnField(key) {
-    setColumnsPickerSelectedKeys((current) =>
-      current.includes(key) ? current.filter((item) => item !== key) : [...current, key]
-    );
-  }
-
-  function handleReopenEquipmentFormIfNeeded() {
-    if (!columnsPickerReopenEquipmentForm) return;
-    setColumnsPickerReopenEquipmentForm(false);
-    setIsEquipmentFormOpen(true);
-  }
-
-  function handleCloseColumnsPicker() {
-    setIsColumnsPickerOpen(false);
-    setColumnsPickerCategoryId(null);
-    setColumnsPickerError(null);
-    handleReopenEquipmentFormIfNeeded();
-  }
-
-  function handleSaveColumnsPicker() {
-    if (!columnsPickerCategoryId) return;
-
-    setIsSavingColumns(true);
-    setColumnsPickerError(null);
-
-    const payload = columnsPickerSelectedKeys.map((key, index) => {
-      const field = availableViewFields.find((item) => item.key === key);
-      return { field: key, header: field?.label || key, sort_order: index + 1 };
-    });
-
-    saveViewColumns(columnsPickerCategoryId, payload)
-      .then(() => {
-        setIsColumnsPickerOpen(false);
-        handleRetryEquipment();
-        refreshOpenEquipmentFormFields(columnsPickerCategoryId);
-        handleReopenEquipmentFormIfNeeded();
-      })
-      .catch((error) => setColumnsPickerError(error.message || "Could not save columns."))
-      .finally(() => setIsSavingColumns(false));
-  }
-
-  function refreshOpenEquipmentFormFields(categoryId) {
-    if (!isEquipmentFormOpen && !columnsPickerReopenEquipmentForm) return;
-
-    const openCategoryId =
-      equipmentFormMode === "edit"
-        ? equipmentFormTarget?.__category_id ??
-        resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
-        : resolveEquipmentCategoryId(equipmentFormValues.category);
-
-    if (openCategoryId == null || openCategoryId !== categoryId) return;
-
-    Promise.all([
-      fetchViewColumns(categoryId).then(normalizeViewColumns).catch(() => []),
-      fetchCustomFields(categoryId).then(normalizeCustomFields).catch(() => []),
-    ]).then(([standardColumns, customFields]) => {
-      const standardFields = getEquipmentFormFieldsFromColumns(standardColumns) || [];
-      const extraCustomFields = customFields.filter(
-        (field) => !standardFields.some((item) => item.key === field.key)
-      );
-      const mergedFields = [...standardFields, ...extraCustomFields];
-
-      setEquipmentFormFields(mergedFields);
-      setEquipmentFormValues((current) => {
-        const next = buildEquipmentFormValues(mergedFields, {});
-        mergedFields.forEach(({ key }) => {
-          if (current[key] !== undefined) next[key] = current[key];
-        });
-        next.category = current.category;
-        next.status = current.status;
-        next.remark = current.remark;
-        return next;
-      });
-    });
-  }
-
-  function handleOpenDeleteCategory(category) {
-    setCategoryToDelete(category);
-    setDeleteCategoryError(null);
-  }
-
-  function handleCloseDeleteCategory() {
-    setCategoryToDelete(null);
-  }
-
-  function handleConfirmDeleteCategory() {
-    if (!categoryToDelete) return;
-
-    setIsDeletingCategory(true);
-    setDeleteCategoryError(null);
-
-    const id = categoryToDelete?.id ?? categoryToDelete?.category_id ?? categoryToDelete?.categoryId ?? null;
-
-    deleteCategory(id)
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "delete",
-          module: ACTIVITY_MODULES.CATEGORY,
-          entityId: id,
-          entityLabel:
-            categoryToDelete?.category_name || categoryToDelete?.category || categoryToDelete?.label || `Category ${id}`,
-          before: categoryToDelete,
-        });
-        setCategoryToDelete(null);
-        handleRetryEquipment();
-      })
-      .catch((error) => setDeleteCategoryError(error.message || "Something went wrong."))
-      .finally(() => setIsDeletingCategory(false));
-  }
-
-  function handleCloseDepartmentForm() {
-    setIsDepartmentFormOpen(false);
-  }
-
-  function handleDepartmentFormFieldChange(key, value) {
-    setDepartmentFormValues((current) => ({ ...current, [key]: value }));
-  }
-
-  function handleSubmitDepartmentForm(event) {
-    event.preventDefault();
-
-    if (!departmentFormValues.department_code.trim() || !departmentFormValues.department_name.trim()) {
-      setDepartmentFormError("Please enter both department code and name.");
-      return;
+    if (label !== activeView) {
+      resetMap[label]?.();
     }
 
-    setIsSavingDepartment(true);
-    setDepartmentFormError(null);
-
-    const payload = {
-      department_code: departmentFormValues.department_code.trim(),
-      department_name: departmentFormValues.department_name.trim(),
-    };
-
-    const isEdit = departmentFormMode === "edit";
-    const request = isEdit
-      ? updateDepartment(departmentFormTarget.department_id, payload)
-      : createDepartment(payload);
-
-    request
-      .then((data) => {
-        logActivity({
-          actor: user,
-          action: isEdit ? "update" : "create",
-          module: ACTIVITY_MODULES.DEPARTMENT,
-          entityId: isEdit ? departmentFormTarget.department_id : data?.department_id,
-          entityLabel: payload.department_name,
-          before: isEdit ? departmentFormTarget : null,
-          after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
-        });
-        setIsDepartmentFormOpen(false);
-        handleRetryDepartments();
-      })
-      .catch((error) => setDepartmentFormError(error.message || "Something went wrong."))
-      .finally(() => setIsSavingDepartment(false));
-  }
-
-  function handleOpenDeleteDepartment(department) {
-    setDepartmentToDelete(department);
-    setDeleteDepartmentError(null);
-  }
-
-  function handleCloseDeleteDepartment() {
-    setDepartmentToDelete(null);
-  }
-
-  function handleConfirmDeleteDepartment() {
-    if (!departmentToDelete) return;
-
-    setIsDeletingDepartment(true);
-    setDeleteDepartmentError(null);
-
-    deleteDepartment(departmentToDelete.department_id)
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "delete",
-          module: ACTIVITY_MODULES.DEPARTMENT,
-          entityId: departmentToDelete.department_id,
-          entityLabel: departmentToDelete.department_name,
-          before: departmentToDelete,
-        });
-        setDepartmentToDelete(null);
-        handleRetryDepartments();
-      })
-      .catch((error) => setDeleteDepartmentError(error.message || "Something went wrong."))
-      .finally(() => setIsDeletingDepartment(false));
-  }
-
-  function handleApproveUser(targetUser) {
-    updateUser(targetUser.user_id, { is_active: true })
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "approve",
-          module: ACTIVITY_MODULES.USER,
-          entityId: targetUser.user_id,
-          entityLabel: targetUser.full_name || targetUser.username,
-          before: targetUser,
-          after: { ...targetUser, is_active: true },
-        });
-        handleRetryUsers();
-      })
-      .catch((error) => setUsersError(error.message || "Something went wrong."));
-  }
-
-  function handleOpenEditUserPermissions(user) {
-    setUserPermissionsTarget(user);
-    setUserPermissionValues({
-      full_name: user.full_name || "",
-      permissions: normalizeUserPermissions(user),
-    });
-    setUserPermissionsError(null);
-  }
-
-  function handleCloseEditUserPermissions() {
-    setUserPermissionsTarget(null);
-  }
-
-  function handleUserPermissionFieldChange(key, value) {
-    setUserPermissionValues((current) => ({ ...current, [key]: value }));
-  }
-
-  function handleSubmitEditUserPermissions(event) {
-    event.preventDefault();
-
-    const permissions = normalizeUserPermissions({ permissions: userPermissionValues.permissions });
-    const payload = {
-      full_name: userPermissionValues.full_name.trim(),
-      permissions,
-      role: permissionsToRole(permissions),
-    };
-    const legacyPayload = {
-      full_name: payload.full_name,
-      role: payload.role,
-    };
-
-    setIsSavingUserPermissions(true);
-    setUserPermissionsError(null);
-
-    updateUser(userPermissionsTarget.user_id, payload)
-      .catch((error) => {
-        if (![400, 422].includes(error.status)) throw error;
-        return updateUser(userPermissionsTarget.user_id, legacyPayload);
-      })
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "update",
-          module: ACTIVITY_MODULES.USER,
-          entityId: userPermissionsTarget.user_id,
-          entityLabel: userPermissionsTarget.username || payload.full_name,
-          before: userPermissionsTarget,
-          after: { ...userPermissionsTarget, ...payload },
-        });
-        rememberUserPermissions(userPermissionsTarget, permissions);
-        setUserPermissionsTarget(null);
-        handleRetryUsers();
-      })
-      .catch((error) => setUserPermissionsError(error.message || "Something went wrong."))
-      .finally(() => setIsSavingUserPermissions(false));
-  }
-
-  function handleOpenResetPassword(user) {
-    setResetPasswordTarget(user);
-    setResetPassword("");
-    setResetPasswordConfirm("");
-    setResetPasswordError(null);
-  }
-
-  function handleCloseResetPassword() {
-    setResetPasswordTarget(null);
-  }
-
-  function handleSubmitResetPassword(event) {
-    event.preventDefault();
-
-    if (resetPassword !== resetPasswordConfirm) {
-      setResetPasswordError("Passwords do not match.");
-      return;
-    }
-
-    setIsResettingPassword(true);
-    setResetPasswordError(null);
-
-    resetUserPassword(resetPasswordTarget.user_id, resetPassword)
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "reset_password",
-          module: ACTIVITY_MODULES.USER,
-          entityId: resetPasswordTarget.user_id,
-          entityLabel: resetPasswordTarget.username || resetPasswordTarget.full_name,
-        });
-        setResetPasswordTarget(null);
-      })
-      .catch((error) => setResetPasswordError(error.message || "Something went wrong."))
-      .finally(() => setIsResettingPassword(false));
-  }
-
-  function handleOpenEditEmployee(employee) {
-    setEmployeeFormMode("edit");
-    setEmployeeFormTarget(employee);
-    setEmployeeFormValues({
-      full_name: employee.full_name || "",
-      position: employee.position || "",
-      department: getEmployeeDepartmentCode(employee) || "",
-      location: employee.location || "",
-      staff_code: employee.staff_code || "",
-      phone: employee.phone || "",
-      sex: employee.sex || "",
-    });
-    setEmployeeFormError(null);
-    setIsEmployeeFormOpen(true);
-
-    fetchDepartments()
-      .then((data) => setDepartments(Array.isArray(data) ? data : []))
-      .catch(() => setDepartments([]));
-  }
-
-  function handleCloseEmployeeForm() {
-    setIsEmployeeFormOpen(false);
-  }
-
-  function handleEmployeeFormFieldChange(key, value) {
-    setEmployeeFormValues((current) => ({ ...current, [key]: value }));
-  }
-
-  function handleSubmitEmployeeForm(event) {
-    event.preventDefault();
-
-    if (!employeeFormValues.full_name.trim()) {
-      setEmployeeFormError("Please enter a full name.");
-      return;
-    }
-
-    setIsSavingEmployee(true);
-    setEmployeeFormError(null);
-
-    const payload = Object.fromEntries(
-      Object.entries(employeeFormValues).filter(([, value]) => value.trim() !== "")
-    );
-
-    const isEdit = employeeFormMode === "edit";
-    const request = isEdit ? updateEmployee(employeeFormTarget.employee_id, payload) : createEmployee(payload);
-
-    request
-      .then((data) => {
-        logActivity({
-          actor: user,
-          action: isEdit ? "update" : "create",
-          module: ACTIVITY_MODULES.EMPLOYEE,
-          entityId: isEdit ? employeeFormTarget.employee_id : data?.employee_id,
-          entityLabel: payload.full_name || employeeFormTarget?.full_name,
-          before: isEdit ? employeeFormTarget : null,
-          after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
-        });
-        setIsEmployeeFormOpen(false);
-        handleRetryEmployees();
-      })
-      .catch((error) => setEmployeeFormError(error.message || "Something went wrong."))
-      .finally(() => setIsSavingEmployee(false));
-  }
-
-  function handleOpenDeleteEmployee(employee) {
-    setEmployeeToDelete(employee);
-    setDeleteEmployeeError(null);
-    setDeleteEmployeeBlocked(false);
-  }
-
-  function handleCloseDeleteEmployee() {
-    setEmployeeToDelete(null);
-    setDeleteEmployeeError(null);
-    setDeleteEmployeeBlocked(false);
-  }
-
-  function handleViewAssignedDevicesFromDelete() {
-    if (!employeeToDelete) return;
-    const employee = employeeToDelete;
-    handleCloseDeleteEmployee();
-    handleViewEmployeeDetail(employee);
-  }
-
-  function handleConfirmDeleteEmployee() {
-    if (!employeeToDelete) return;
-
-    setIsDeletingEmployee(true);
-    setDeleteEmployeeError(null);
-    setDeleteEmployeeBlocked(false);
-
-    deleteEmployee(employeeToDelete.employee_id)
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "delete",
-          module: ACTIVITY_MODULES.EMPLOYEE,
-          entityId: employeeToDelete.employee_id,
-          entityLabel: employeeToDelete.full_name,
-          before: employeeToDelete,
-        });
-        setEmployeeToDelete(null);
-        handleRetryEmployees();
-        const term = employeeSearchTerm.trim();
-        if (hasSearchedEmployees && term) runEmployeeSearch(term);
-      })
-      .catch((error) => {
-        // NOTE: this assumes your HTTP layer attaches the parsed error body
-        // to `error.data` (fetch-style), matching every other catch block in
-        // this file, which reads `error.message` / `error.status` directly.
-        // If your service layer is axios-based instead, change this to
-        // `error.response?.data` — but then audit the rest of the file's
-        // catch blocks too, since they currently assume fetch-style errors.
-        const data = error.data;
-        const ownedEquipment = data?.references?.owned_equipment || 0;
-
-        setDeleteEmployeeBlocked(ownedEquipment > 0);
-        setDeleteEmployeeError(
-          ownedEquipment > 0
-            ? `This employee has ${ownedEquipment} assigned device${ownedEquipment === 1 ? "" : "s"}. Unassign ${ownedEquipment === 1 ? "it" : "them"
-            } first.`
-            : data?.error || error.message || "Could not delete employee."
-        );
-      })
-      .finally(() => setIsDeletingEmployee(false));
-  }
-
-  function handleViewEmployeeDetail(employee) {
-    setEmployeeDetailTarget(employee);
-    setIsEmployeeDetailLoading(true);
-    setEmployeeDetailError(null);
-    setEmployeeDetailDevices([]);
-
-    searchEmployees(employee.full_name)
-      .then((data) => {
-        const rows = Array.isArray(data) ? data : [];
-        setEmployeeDetailDevices(rows.filter((row) => row.employee_id === employee.employee_id));
-      })
-      .catch((error) => setEmployeeDetailError(error.message || "Something went wrong."))
-      .finally(() => setIsEmployeeDetailLoading(false));
-  }
-
-  function handleRetryEmployeeDetail() {
-    if (employeeDetailTarget) handleViewEmployeeDetail(employeeDetailTarget);
-  }
-
-  function handleCloseEmployeeDetail() {
-    setEmployeeDetailTarget(null);
-  }
-
-  function handleSelectView(label, { updateUrl = true } = {}) {
-    if (!navItemsByLabel[label]) return;
-    if (!canAccessDashboardView(user, label, navItemsByLabel)) return;
-
-    if (label === "All Equipment" && label !== activeView) {
-      setIsEquipmentLoading(true);
-      setEquipmentError(null);
-    }
-    if (label === "Device Replacement" && label !== activeView) {
-      setIsReplacementsLoading(true);
-      setReplacementsError(null);
-    }
-    if (label === "SSD Upgrade" && label !== activeView) {
-      setIsSsdUpgradesLoading(true);
-      setSsdUpgradesError(null);
-    }
-    if (label === "SSD Procurement" && label !== activeView) {
-      setIsSsdProcurementLoading(true);
-      setSsdProcurementError(null);
-    }
-    if (label === "Antivirus Install" && label !== activeView) {
-      setIsAntivirusLoading(true);
-      setAntivirusError(null);
-    }
-    if (label === "Software License" && label !== activeView) {
-      setIsLicensesLoading(true);
-      setLicensesError(null);
-    }
-    if (label === "Cloud Rate" && label !== activeView) {
-      setIsCloudRatesLoading(true);
-      setCloudRatesError(null);
-    }
-    if (label === "Service Usage" && label !== activeView) {
-      setIsServerUsageLoading(true);
-      setServerUsageError(null);
-    }
-    if (label === "Cloud Usage" && label !== activeView) {
-      setIsCloudUsageLoading(true);
-      setCloudUsageError(null);
-    }
-    if (label === "Currently Borrowed" && label !== activeView) {
-      setIsCurrentBorrowsLoading(true);
-      setCurrentBorrowsError(null);
-    }
-    if (label === "Borrow History" && label !== activeView) {
-      setIsBorrowHistoryLoading(true);
-      setBorrowHistoryError(null);
-    }
-    if (label === "Employee" && label !== activeView) {
-      setIsEmployeesLoading(true);
-      setEmployeesError(null);
-    }
-    if (label === "Departments" && label !== activeView) {
-      setIsDepartmentsLoading(true);
-      setDepartmentsError(null);
-    }
-    if (updateUrl) {
-      syncDashboardPath(label);
-    }
-    setActiveView(label);
-    setIsMobileSidebarOpen(false);
-  }
-
-  useEffect(() => {
-    selectViewRef.current = handleSelectView;
-  });
-
-  useEffect(() => {
-    if (hasActiveViewAccess || !firstAccessibleDashboardView) return;
-    selectViewRef.current?.(firstAccessibleDashboardView);
-  }, [firstAccessibleDashboardView, hasActiveViewAccess]);
-
-  function handleMarkAllNotificationsRead() {
-    setReadNotificationIds((current) => {
-      const next = new Set(current);
-      visibleNotifications.forEach((item) => next.add(item.id));
-      return next;
-    });
-  }
-
-  function handleRetryNotifications() {
-    setIsNotificationsLoading(true);
-    setNotificationsError(null);
-    setNotificationsFetchToken((value) => value + 1);
-  }
-
-  function handleOpenNotification(notification) {
-    setReadNotificationIds((current) => new Set(current).add(notification.id));
-    if (notification.targetView) {
-      handleSelectView(notification.targetView);
-    }
-    setIsNotificationsOpen(false);
+    const changed = routing.setActiveView(label, options);
+    if (changed) setIsMobileSidebarOpen(false);
   }
 
   useEffect(() => {
     function handlePointerDown(event) {
       if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
-        setIsNotificationsOpen(false);
+        notifications.setIsOpen(false);
       }
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
         setIsProfileMenuOpen(false);
@@ -1609,7 +179,7 @@ function Dashboard({ user, onLogout }) {
 
     function handleKeyDown(event) {
       if (event.key === "Escape") {
-        setIsNotificationsOpen(false);
+        notifications.setIsOpen(false);
         setIsProfileMenuOpen(false);
       }
     }
@@ -1624,58 +194,6 @@ function Dashboard({ user, onLogout }) {
       }
     };
   }, []);
-
-  useEffect(() => {
-    document.title = getDashboardTitle(activeView);
-    syncDashboardPath(activeView, "replace");
-  }, [activeView]);
-
-  useEffect(() => {
-    function handlePopState() {
-      const view = getDashboardViewFromPath(window.location.pathname) || DASHBOARD_DEFAULT_VIEW;
-      selectViewRef.current?.(view, { updateUrl: false });
-    }
-
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
-  useEffect(() => {
-    let ignore = false;
-
-    Promise.allSettled([fetchCurrentBorrows(), fetchAvailableStock(), fetchLicenses()])
-      .then(([borrowsResult, stockResult, licensesResult]) => {
-        if (ignore) return;
-
-        const failures = [];
-        if (borrowsResult.status === "rejected") failures.push("current borrows");
-        if (stockResult.status === "rejected") failures.push("available stock");
-        if (licensesResult.status === "rejected") failures.push("licenses");
-
-        setNotificationData({
-          currentBorrows:
-            borrowsResult.status === "fulfilled" && Array.isArray(borrowsResult.value?.borrowed)
-              ? borrowsResult.value.borrowed
-              : [],
-          availableStock:
-            stockResult.status === "fulfilled" && Array.isArray(stockResult.value?.equipment)
-              ? stockResult.value.equipment
-              : [],
-          licenses:
-            licensesResult.status === "fulfilled" ? normalizeRecordList(licensesResult.value) : [],
-        });
-        setNotificationsError(
-          failures.length ? `Could not refresh ${failures.join(", ")} notifications.` : null
-        );
-      })
-      .finally(() => {
-        if (!ignore) setIsNotificationsLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [notificationsFetchToken]);
 
   const activeNavItem = navItemsByLabel[activeView];
   const isEmployeeView = activeView === "Employee" && hasActiveViewAccess;
@@ -1698,1659 +216,68 @@ function Dashboard({ user, onLogout }) {
   const isActivityLogView = activeView === "Activity Log" && hasActiveViewAccess;
   const isRecycleBinView = activeView === "Recycle Bin" && hasActiveViewAccess;
 
-  useEffect(() => {
-    if (!isEquipmentView) return;
-
-    let ignore = false;
-
-    fetchViewColumnsSummary()
-      .then((data) => {
-        if (ignore) return;
-        const normalized = normalizeViewColumnsSummary(data);
-        if (normalized.length > 0) {
-          setEquipmentCategories(normalized);
-          setEquipmentError(null);
-          return;
-        }
-        return fetchEquipmentViews().then((legacyData) => {
-          if (ignore) return;
-          const legacyNormalized = normalizeEquipmentViews(legacyData);
-          setEquipmentCategories(legacyNormalized.length > 0 ? legacyNormalized : EQUIPMENT_VIEWS);
-          setEquipmentError(null);
-        });
-      })
-      .catch((error) => {
-        if (!ignore) {
-          setEquipmentCategories(EQUIPMENT_VIEWS);
-          setEquipmentError(error.message || "Something went wrong.");
-        }
-      })
-      .finally(() => {
-        if (!ignore) setIsEquipmentLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isEquipmentView, equipmentFetchToken]);
-
-  useEffect(() => {
-    if (!isEquipmentView) return;
-    fetchEquipmentForCategory(equipmentCategory);
-  }, [isEquipmentView, equipmentFetchToken, equipmentCategory]);
-
-  useEffect(() => {
-    if (!isEquipmentView) return;
-
-    let ignore = false;
-
-    fetchEquipmentStatuses()
-      .then((data) => {
-        if (!ignore) setEquipmentStatuses(excludeBrokenStatuses(data));
-      })
-      .catch(() => {
-        if (!ignore) setEquipmentStatuses([]);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isEquipmentView]);
-
-  useEffect(() => {
-    if (!isEmployeeView) return;
-
-    let ignore = false;
-
-    fetchEmployees()
-      .then((data) => {
-        if (!ignore) {
-          setEmployees(Array.isArray(data) ? data : []);
-          setEmployeesError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setEmployeesError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsEmployeesLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isEmployeeView, employeesFetchToken]);
-
-  useEffect(() => {
-    if (!isReplacementView) return;
-
-    let ignore = false;
-
-    fetchReplacements()
-      .then((data) => {
-        if (!ignore) {
-          setReplacements(normalizeRecordList(data));
-          setReplacementsError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setReplacementsError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsReplacementsLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isReplacementView, replacementsFetchToken]);
-
-  useEffect(() => {
-    if (!isSsdUpgradeView) return;
-
-    let ignore = false;
-
-    fetchSsdUpgrades()
-      .then((data) => {
-        if (!ignore) {
-          setSsdUpgrades(normalizeRecordList(data));
-          setSsdUpgradesError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setSsdUpgradesError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsSsdUpgradesLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isSsdUpgradeView, ssdUpgradesFetchToken]);
-
-  useEffect(() => {
-    if (!isSsdProcurementView) return;
-
-    let ignore = false;
-
-    fetchSsdProcurement()
-      .then((data) => {
-        if (!ignore) {
-          setSsdProcurements(normalizeRecordList(data));
-          setSsdProcurementError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setSsdProcurementError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsSsdProcurementLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isSsdProcurementView, ssdProcurementFetchToken]);
-
-  useEffect(() => {
-    if (!isAntivirusView) return;
-
-    let ignore = false;
-
-    fetchAntivirusInstalls()
-      .then((data) => {
-        if (!ignore) {
-          setAntivirusInstalls(normalizeRecordList(data));
-          setAntivirusError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setAntivirusError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsAntivirusLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isAntivirusView, antivirusFetchToken]);
-
-  useEffect(() => {
-    if (!isLicenseView) return;
-
-    let ignore = false;
-
-    fetchLicenses()
-      .then((data) => {
-        const records = normalizeRecordList(data);
-        if (!ignore) {
-          setLicenses(records);
-          setNotificationData((current) => ({ ...current, licenses: records }));
-          setLicensesError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setLicensesError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsLicensesLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isLicenseView, licensesFetchToken]);
-
-  useEffect(() => {
-    if (!isDepartmentsView) return;
-
-    let ignore = false;
-
-    fetchDepartments()
-      .then((data) => {
-        if (!ignore) {
-          setDepartments(Array.isArray(data) ? data : []);
-          setDepartmentsError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setDepartmentsError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsDepartmentsLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isDepartmentsView, departmentsFetchToken]);
-
-  useEffect(() => {
-    if (!isUsersView) return;
-
-    let ignore = false;
-
-    fetchUsers()
-      .then((data) => {
-        if (ignore) return;
-        const list = Array.isArray(data) ? data : data?.users;
-        setUsers(Array.isArray(list) ? list.map(mergeStoredPermissionsForUser) : []);
-        setPendingApprovalCount(
-          data?.pending_approval ?? (Array.isArray(list) ? list.filter((u) => !u.is_active).length : 0)
-        );
-        setUsersError(null);
-      })
-      .catch((error) => {
-        if (!ignore) setUsersError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsUsersLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isUsersView, usersFetchToken]);
-
-  useEffect(() => {
-    if (!isStatusView) return;
-
-    let ignore = false;
-
-    fetchStatuses(showInactiveStatuses)
-      .then((data) => {
-        if (ignore) return;
-        const list = Array.isArray(data) ? data : data?.statuses;
-        setStatuses(Array.isArray(list) ? list : []);
-        setStatusesError(null);
-      })
-      .catch((error) => {
-        if (!ignore) setStatusesError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsStatusesLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isStatusView, statusesFetchToken, showInactiveStatuses]);
-
-  useEffect(() => {
-    if (!isAssignView) return;
-
-    let ignore = false;
-
-    fetchAssignFormData()
-      .then((data) => {
-        if (ignore) return;
-        setAssignFormData({
-          positions: Array.isArray(data?.positions) ? data.positions : [],
-          statuses: Array.isArray(data?.statuses) ? data.statuses : [],
-          categories: Array.isArray(data?.categories) ? data.categories : [],
-          locations: Array.isArray(data?.locations) ? data.locations : [],
-        });
-        setAssignFormDataError(null);
-      })
-      .catch((error) => {
-        if (!ignore) setAssignFormDataError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsAssignFormDataLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isAssignView, assignFormDataFetchToken]);
-
-  useEffect(() => {
-    if (!isAssignView || assignSelectedDevice) return;
-
-    let ignore = false;
-    const timer = setTimeout(() => {
-      setIsAssignDeviceLoading(true);
-      fetchAssignableEquipment({ q: assignDeviceQuery.trim(), category: assignDeviceCategory })
-        .then((data) => {
-          if (ignore) return;
-          setAssignDeviceOptions(Array.isArray(data?.equipment) ? data.equipment : []);
-          setAssignDeviceError(null);
-        })
-        .catch((error) => {
-          if (!ignore) setAssignDeviceError(error.message || "Something went wrong.");
-        })
-        .finally(() => {
-          if (!ignore) setIsAssignDeviceLoading(false);
-        });
-    }, 300);
-
-    return () => {
-      ignore = true;
-      clearTimeout(timer);
-    };
-  }, [isAssignView, assignSelectedDevice, assignDeviceQuery, assignDeviceCategory]);
-
-  useEffect(() => {
-    if (!isAssignView || !assignPosition || assignSelectedEmployee) return;
-
-    let ignore = false;
-    const timer = setTimeout(() => {
-      setIsAssignEmployeeSearchLoading(true);
-      fetchAssignEmployees({ position: assignPosition, q: assignEmployeeQuery.trim() })
-        .then((data) => {
-          if (ignore) return;
-          setAssignEmployeeSearchOptions(Array.isArray(data?.employees) ? data.employees : []);
-          setAssignEmployeeSearchError(null);
-        })
-        .catch((error) => {
-          if (!ignore) setAssignEmployeeSearchError(error.message || "Something went wrong.");
-        })
-        .finally(() => {
-          if (!ignore) setIsAssignEmployeeSearchLoading(false);
-        });
-    }, 300);
-
-    return () => {
-      ignore = true;
-      clearTimeout(timer);
-    };
-  }, [isAssignView, assignPosition, assignSelectedEmployee, assignEmployeeQuery]);
-
-  useEffect(() => {
-    if (!isRecycleBinView) return;
-
-    let ignore = false;
-
-    fetchRecycleBin(recycleBinTypeFilter === "All" ? undefined : recycleBinTypeFilter)
-      .then((data) => {
-        if (ignore) return;
-        const list = Array.isArray(data) ? data : data?.items ?? data?.data;
-        setRecycleBinEntries(Array.isArray(list) ? list : []);
-        setRecycleBinError(null);
-      })
-      .catch((error) => {
-        if (!ignore) setRecycleBinError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsRecycleBinLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isRecycleBinView, recycleBinFetchToken, recycleBinTypeFilter]);
-
-  useEffect(() => {
-    if (!isCloudRateView) return;
-
-    let ignore = false;
-
-    fetchCloudRates()
-      .then((data) => {
-        if (!ignore) {
-          setCloudRates(normalizeRecordList(data));
-          setCloudRatesError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setCloudRatesError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsCloudRatesLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isCloudRateView, cloudRatesFetchToken]);
-
-  useEffect(() => {
-    if (!isServerUsageView) return;
-
-    let ignore = false;
-
-    fetchServerUsage()
-      .then((data) => {
-        if (!ignore) {
-          setServerUsage(normalizeRecordList(data));
-          setServerUsageError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setServerUsageError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsServerUsageLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isServerUsageView, serverUsageFetchToken]);
-
-  useEffect(() => {
-    if (!isCloudUsageView) return;
-
-    let ignore = false;
-
-    fetchCloudUsage()
-      .then((data) => {
-        if (!ignore) {
-          setCloudUsage(normalizeRecordList(data));
-          setCloudUsageError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setCloudUsageError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsCloudUsageLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isCloudUsageView, cloudUsageFetchToken]);
-
-  useEffect(() => {
-    if (!isCurrentBorrowsView) return;
-
-    let ignore = false;
-
-    fetchCurrentBorrows()
-      .then((data) => {
-        const records = Array.isArray(data?.borrowed) ? data.borrowed : [];
-        if (!ignore) {
-          setCurrentBorrows(records);
-          setNotificationData((current) => ({ ...current, currentBorrows: records }));
-          setCurrentBorrowsError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setCurrentBorrowsError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsCurrentBorrowsLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isCurrentBorrowsView, currentBorrowsFetchToken]);
-
-  useEffect(() => {
-    if (!isBorrowHistoryView) return;
-
-    let ignore = false;
-
-    fetchEmployees()
-      .then((data) => {
-        if (!ignore) setAssignEmployeeOptions(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        if (!ignore) setAssignEmployeeOptions([]);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isBorrowHistoryView]);
-
-  useEffect(() => {
-    if (!isBorrowHistoryView) return;
-
-    let ignore = false;
-
-    fetchBorrowHistory(borrowHistoryFilters)
-      .then((data) => {
-        if (!ignore) {
-          setBorrowHistory(Array.isArray(data?.history) ? data.history : []);
-          setBorrowHistoryError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setBorrowHistoryError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsBorrowHistoryLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isBorrowHistoryView, borrowHistoryFetchToken, borrowHistoryFilters]);
-
-  function handleRetryEquipment() {
-    setIsEquipmentLoading(true);
-    setEquipmentError(null);
-    setEquipmentFetchToken((value) => value + 1);
-  }
-
-  function handleOpenAddEquipmentItem() {
-    const activeEntry = equipmentCategoryBySlug.get(equipmentCategory);
-    if (activeEntry && activeEntry.columnCount === 0) {
-      handleOpenColumnsPicker(activeEntry.categoryId, activeEntry.label);
-      return;
-    }
-
-    setEquipmentFormMode("add");
-    setEquipmentFormTarget(null);
-    const activeCategoryLabel =
-      equipmentCategory === "All"
-        ? ""
-        : equipmentCategories.find((item) => item.slug === equipmentCategory)?.label || "";
-    const sampleRecord = equipmentCategory === "All" ? null : equipmentItems[0] || null;
-    const fields =
-      (equipmentCategory !== "All" && getEquipmentFormFieldsFromColumns(equipmentTableColumns)) ||
-      getEquipmentFormFields(sampleRecord) ||
-      EQUIPMENT_FORM_FALLBACK_FIELDS;
-    setEquipmentFormFields(fields);
-    setEquipmentFormValues({ ...buildEquipmentFormValues(fields, {}), category: activeCategoryLabel });
-    setEquipmentFormError(null);
-    setEquipmentLicenseSelectedIds([]);
-    setEquipmentLicenseInitialIds([]);
-    setIsEquipmentFormOpen(true);
-
-    fetchDepartments()
-      .then((data) => setDepartments(Array.isArray(data) ? data : []))
-      .catch(() => setDepartments([]));
-
-    fetchEquipmentStatuses()
-      .then((data) => setEquipmentStatuses(excludeBrokenStatuses(data)))
-      .catch(() => setEquipmentStatuses([]));
-
-    const activeCategoryId = equipmentCategoryBySlug.get(equipmentCategory)?.categoryId;
-    if (activeCategoryId != null) {
-      fetchCustomFields(activeCategoryId)
-        .then((data) => {
-          const customFields = normalizeCustomFields(data);
-          const extraFields = customFields.filter((field) => !fields.some((f) => f.key === field.key));
-          if (extraFields.length === 0) return;
-          const merged = [...fields, ...extraFields];
-          setEquipmentFormFields(merged);
-          setEquipmentFormValues((current) => ({
-            ...buildEquipmentFormValues(merged, {}),
-            ...current,
-          }));
-        })
-        .catch(() => { });
-    }
-  }
-
-  function handleOpenEditEquipmentItem(item) {
-    setEquipmentFormMode("edit");
-    setEquipmentFormTarget(item);
-    const fields =
-      getEquipmentFormFieldsFromColumns(equipmentTableColumns) ||
-      getEquipmentFormFields(item) ||
-      EQUIPMENT_FORM_FALLBACK_FIELDS;
-    setEquipmentFormFields(fields);
-    setEquipmentFormValues(buildEquipmentFormValues(fields, item));
-    setEquipmentFormError(null);
-    // Equipment list rows already carry their assigned licenses (software_licenses),
-    // so the picker's initial selection can be read straight off item — no extra fetch.
-    const currentLicenseIds = Array.isArray(item.software_licenses)
-      ? item.software_licenses.map((license) => license.license_id).filter((id) => id != null)
-      : [];
-    setEquipmentLicenseSelectedIds(currentLicenseIds);
-    setEquipmentLicenseInitialIds(currentLicenseIds);
-    setIsEquipmentFormOpen(true);
-
-    fetchDepartments()
-      .then((data) => setDepartments(Array.isArray(data) ? data : []))
-      .catch(() => setDepartments([]));
-
-    fetchEquipmentStatuses()
-      .then((data) => setEquipmentStatuses(excludeBrokenStatuses(data)))
-      .catch(() => setEquipmentStatuses([]));
-
-    if (item.__category_id != null) {
-      fetchCustomFields(item.__category_id)
-        .then((data) => {
-          const customFields = normalizeCustomFields(data);
-          const extraFields = customFields.filter((field) => !fields.some((f) => f.key === field.key));
-          if (extraFields.length === 0) return;
-          const merged = [...fields, ...extraFields];
-          setEquipmentFormFields(merged);
-          setEquipmentFormValues(buildEquipmentFormValues(merged, item));
-        })
-        .catch(() => { });
-    }
-  }
-
-  function handleCloseEquipmentForm() {
-    setIsEquipmentFormOpen(false);
-  }
-
-  function handleEquipmentFormFieldChange(key, value) {
-    setEquipmentFormValues((current) => ({ ...current, [key]: value }));
-  }
-
-  function handleOpenSoftwareLicensePicker() {
-    setIsSoftwareLicensePickerOpen(true);
-    setIsSoftwareLicenseOptionsLoading(true);
-    setSoftwareLicenseOptionsError(null);
-
-    fetchEquipmentLicenseOptions()
-      .then((data) => setSoftwareLicenseOptions(normalizeEquipmentLicenseOptions(data)))
-      .catch((error) => setSoftwareLicenseOptionsError(error.message || "Could not load licenses."))
-      .finally(() => setIsSoftwareLicenseOptionsLoading(false));
-  }
-
-  function handleCloseSoftwareLicensePicker() {
-    setIsSoftwareLicensePickerOpen(false);
-  }
-
-  function handleToggleSoftwareLicenseSelection(licenseId) {
-    setEquipmentLicenseSelectedIds((current) =>
-      current.some((id) => String(id) === String(licenseId))
-        ? current.filter((id) => String(id) !== String(licenseId))
-        : [...current, licenseId]
-    );
-  }
-
-  function handleOpenColumnsPickerFromForm() {
-    const categoryId =
-      equipmentFormMode === "edit"
-        ? equipmentFormTarget?.__category_id ??
-        resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
-        : resolveEquipmentCategoryId(equipmentFormValues.category);
-
-    if (categoryId == null) return;
-
-    setColumnsPickerReopenEquipmentForm(true);
-    setIsEquipmentFormOpen(false);
-    handleOpenColumnsPicker(categoryId, equipmentFormValues.category);
-  }
-
-  function removeCustomFieldWithConfirm(categoryId, field) {
-    return removeCustomFieldFromCategory(categoryId, field.id).catch((error) => {
-      if (error.status === 409) {
-        const confirmed = window.confirm(
-          `"${field.label}" already has data saved on some items. Remove it and that data anyway?`
-        );
-        if (confirmed) return removeCustomFieldFromCategory(categoryId, field.id, true);
-      }
-      throw error;
-    });
-  }
-
-  function handleRemoveCustomField(field) {
-    const categoryId =
-      equipmentFormMode === "edit"
-        ? equipmentFormTarget?.__category_id ??
-        resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
-        : resolveEquipmentCategoryId(equipmentFormValues.category);
-
-    if (categoryId == null) return Promise.reject(new Error("Choose a category first."));
-
-    return removeCustomFieldWithConfirm(categoryId, field).then(() => {
-      setEquipmentFormFields((current) => current.filter((item) => item.key !== field.key));
-      setEquipmentFormValues((current) => {
-        const next = { ...current };
-        delete next[field.key];
-        return next;
-      });
-    });
-  }
-
-  function handleAddCustomFieldFromPicker(label, type) {
-    if (!columnsPickerCategoryId) return Promise.reject(new Error("Choose a category first."));
-
-    return createCustomField(columnsPickerCategoryId, { field_label: label, field_type: type }).then((data) => {
-      const [normalized] = normalizeCustomFields([data?.field || data]);
-      const field = normalized || {
-        id: null,
-        key: slugifyEquipmentView(label).replace(/-/g, "_"),
-        label,
-        type,
-      };
-      setColumnsPickerCustomFields((current) => [...current, field]);
-      setReusableCustomFields((current) => current.filter((item) => item.key !== field.key));
-      handleRetryEquipment();
-      refreshOpenEquipmentFormFields(columnsPickerCategoryId);
-    });
-  }
-
-  function handleReuseCustomFieldFromPicker(field) {
-    return handleAddCustomFieldFromPicker(field.label, field.rawType);
-  }
-
-  function handleRemoveCustomFieldFromPicker(field) {
-    return removeCustomFieldWithConfirm(columnsPickerCategoryId, field).then(() => {
-      setColumnsPickerCustomFields((current) => current.filter((item) => item.key !== field.key));
-      setReusableCustomFields((current) =>
-        current.some((item) => item.key === field.key) ? current : [...current, field]
-      );
-      handleRetryEquipment();
-      refreshOpenEquipmentFormFields(columnsPickerCategoryId);
-    });
-  }
-
-  function handleRemoveStandardField(field) {
-    const categoryId =
-      equipmentFormMode === "edit"
-        ? equipmentFormTarget?.__category_id ??
-        resolveEquipmentCategoryId(equipmentFormTarget?.category || equipmentFormTarget?.category_name)
-        : resolveEquipmentCategoryId(equipmentFormValues.category);
-
-    if (categoryId == null) return Promise.reject(new Error("Choose a category first."));
-
-    const remainingFields = equipmentFormFields.filter((item) => item.key !== field.key);
-    const payload = remainingFields
-      .filter((item) => item.id == null)
-      .map((item, index) => ({ field: item.key, header: item.label, sort_order: index + 1 }));
-
-    return saveViewColumns(categoryId, payload).then(() => {
-      setEquipmentFormFields(remainingFields);
-      setEquipmentFormValues((current) => {
-        const next = { ...current };
-        delete next[field.key];
-        return next;
-      });
-      handleRetryEquipment();
-    });
-  }
-
-  function handleRemoveEquipmentField(field) {
-    return field.id != null ? handleRemoveCustomField(field) : handleRemoveStandardField(field);
-  }
-
-  function handleSubmitEquipmentForm(event) {
-    event.preventDefault();
-    setIsSavingEquipment(true);
-    setEquipmentFormError(null);
-
-    const payload = Object.fromEntries(
-      Object.entries(equipmentFormValues).filter(([, value]) => value.trim() !== "")
-    );
-
-    const isEdit = equipmentFormMode === "edit";
-    const view = isEdit
-      ? equipmentFormTarget.__equipment_view ||
-      resolveEquipmentView(equipmentFormTarget.category || equipmentFormTarget.category_name)
-      : resolveEquipmentView(payload.category);
-
-    // "category" is implied by the view/URL, not a real per-item field — the
-    // backend rejects it as an unknown column if it's included in the body.
-    const requestPayload = Object.fromEntries(
-      Object.entries(payload).filter(([key]) => key !== "category")
-    );
-
-    const request = isEdit
-      ? updateEquipmentByView(view, equipmentFormTarget.equipment_id, requestPayload)
-      : createEquipmentByView(view, requestPayload);
-
-    request
-      .then((data) => {
-        const savedEquipmentId = isEdit ? equipmentFormTarget.equipment_id : data?.equipment_id;
-
-        const licenseIdsToAdd = equipmentLicenseSelectedIds.filter(
-          (id) => !equipmentLicenseInitialIds.some((initialId) => String(initialId) === String(id))
-        );
-        const licenseIdsToRemove = equipmentLicenseInitialIds.filter(
-          (id) => !equipmentLicenseSelectedIds.some((selectedId) => String(selectedId) === String(id))
-        );
-
-        const licenseSync =
-          savedEquipmentId != null
-            ? Promise.all([
-                licenseIdsToAdd.length > 0
-                  ? assignEquipmentLicenses(savedEquipmentId, licenseIdsToAdd)
-                  : Promise.resolve(),
-                ...licenseIdsToRemove.map((license_id) =>
-                  unassignEquipmentLicense(savedEquipmentId, license_id)
-                ),
-              ])
-            : Promise.resolve();
-
-        return licenseSync.catch((licenseError) => {
-          console.error("Could not update software license assignments:", licenseError);
-        }).then(() => {
-          logActivity({
-            actor: user,
-            action: isEdit ? "update" : "create",
-            module: ACTIVITY_MODULES.EQUIPMENT,
-            entityId: isEdit ? equipmentFormTarget.equipment_id : data?.equipment_id,
-            entityLabel: getEquipmentDisplayName(isEdit ? equipmentFormTarget : payload),
-            before: isEdit ? equipmentFormTarget : null,
-            after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
-          });
-          setIsEquipmentFormOpen(false);
-          handleRetryEquipment();
-          handleRetryNotifications();
-          handleViewEquipmentCategory(equipmentCategory);
-        });
-      })
-      .catch((error) => setEquipmentFormError(error.message || "Something went wrong."))
-      .finally(() => setIsSavingEquipment(false));
-  }
-
-  function getEquipmentDisplayName(item) {
-    return (
-      item?.device_name ||
-      item?.name ||
-      item?.computer_name ||
-      [item?.device_type, item?.device_model].filter(Boolean).join(" - ") ||
-      item?.asset_code ||
-      item?.equipment_code ||
-      item?.service_tag ||
-      item?.serial_no ||
-      `${item?.category || item?.category_name || "Equipment"} #${item?.equipment_id || ""}`.trim()
-    );
-  }
-
-  function handleOpenUnassignEquipment(item) {
-    setEquipmentToUnassign(item);
-    setUnassignEquipmentError(null);
-  }
-
-  function handleCloseUnassignEquipment() {
-    setEquipmentToUnassign(null);
-    setUnassignEquipmentError(null);
-  }
-
-  function handleConfirmUnassignEquipment() {
-    if (!equipmentToUnassign?.equipment_id) return;
-
-    setIsUnassigningEquipment(true);
-    setUnassignEquipmentError(null);
-
-    unassignEquipment(equipmentToUnassign.equipment_id)
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "unassign",
-          module: ACTIVITY_MODULES.EQUIPMENT,
-          entityId: equipmentToUnassign.equipment_id,
-          entityLabel: getEquipmentDisplayName(equipmentToUnassign),
-          before: equipmentToUnassign,
-        });
-        setEquipmentToUnassign(null);
-        handleRetryEquipment();
-        handleRetryNotifications();
-        handleViewEquipmentCategory(equipmentCategory);
-        const term = employeeSearchTerm.trim();
-        if (hasSearchedEmployees && term) runEmployeeSearch(term);
-        if (employeeDetailTarget) handleRetryEmployeeDetail();
-      })
-      .catch((error) => setUnassignEquipmentError(error.message || "Something went wrong."))
-      .finally(() => setIsUnassigningEquipment(false));
-  }
-
-  function handleOpenDeleteEquipment(item) {
-    setEquipmentToDelete(item);
-    setDeleteEquipmentError(null);
-  }
-
-  function handleCloseDeleteEquipment() {
-    setEquipmentToDelete(null);
-    setDeleteEquipmentError(null);
-  }
-
-  function handleConfirmDeleteEquipment() {
-    if (!equipmentToDelete?.equipment_id) return;
-
-    setIsDeletingEquipment(true);
-    setDeleteEquipmentError(null);
-
-    deleteEquipmentItem(equipmentToDelete.equipment_id)
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "delete",
-          module: ACTIVITY_MODULES.EQUIPMENT,
-          entityId: equipmentToDelete.equipment_id,
-          entityLabel: getEquipmentDisplayName(equipmentToDelete),
-          before: equipmentToDelete,
-        });
-        setEquipmentToDelete(null);
-        handleRetryEquipment();
-        handleRetryNotifications();
-        handleViewEquipmentCategory(equipmentCategory);
-      })
-      .catch((error) => setDeleteEquipmentError(error.message || "Something went wrong."))
-      .finally(() => setIsDeletingEquipment(false));
-  }
-
-  function handleRetryReplacements() {
-    setIsReplacementsLoading(true);
-    setReplacementsError(null);
-    setReplacementsFetchToken((value) => value + 1);
-  }
-
-  function handleRetrySsdUpgrades() {
-    setIsSsdUpgradesLoading(true);
-    setSsdUpgradesError(null);
-    setSsdUpgradesFetchToken((value) => value + 1);
-  }
-
-  function handleRetrySsdProcurement() {
-    setIsSsdProcurementLoading(true);
-    setSsdProcurementError(null);
-    setSsdProcurementFetchToken((value) => value + 1);
-  }
-
-  function handleRetryAntivirus() {
-    setIsAntivirusLoading(true);
-    setAntivirusError(null);
-    setAntivirusFetchToken((value) => value + 1);
-  }
-
-  function handleRetryLicenses() {
-    setIsLicensesLoading(true);
-    setLicensesError(null);
-    setLicensesFetchToken((value) => value + 1);
-  }
-
-  function handleOpenAddLicense() {
-    setLicenseFormMode("add");
-    setLicenseFormTarget(null);
-    setLicenseFormValues(LICENSE_FORM_INITIAL_VALUES);
-    setLicenseFormError(null);
-    setIsLicenseFormOpen(true);
-  }
-
-  function handleOpenEditLicense(license) {
-    setLicenseFormMode("edit");
-    setLicenseFormTarget(license);
-    setLicenseFormValues({
-      product_name: license.product_name || "",
-      product_type: license.product_type || "",
-      license_type: license.license_type || "Annual Subscription",
-      date_start: toDateInputValue(license.date_start),
-      date_expire: toDateInputValue(license.date_expire),
-      remark: license.remark || "",
-    });
-    setLicenseFormError(null);
-    setIsLicenseFormOpen(true);
-  }
-
-  function handleCloseLicenseForm() {
-    setIsLicenseFormOpen(false);
-    setLicenseFormError(null);
-  }
-
-  function handleLicenseFormFieldChange(key, value) {
-    setLicenseFormValues((current) => ({ ...current, [key]: value }));
-  }
-
-  function handleSubmitLicenseForm(event) {
-    event.preventDefault();
-
-    if (!licenseFormValues.product_name.trim()) {
-      setLicenseFormError("Please enter a product name.");
-      return;
-    }
-
-    const requiresExpiry = licenseFormValues.license_type === "Annual Subscription";
-
-    if (requiresExpiry && !licenseFormValues.date_expire.trim()) {
-      setLicenseFormError("Please choose the expiry date.");
-      return;
-    }
-
-    setIsSavingLicense(true);
-    setLicenseFormError(null);
-
-    const valuesToSave = requiresExpiry
-      ? licenseFormValues
-      : { ...licenseFormValues, date_expire: "" };
-
-    const payload = Object.fromEntries(
-      Object.entries(valuesToSave).filter(([, value]) => value.trim() !== "")
-    );
-
-    const isEdit = licenseFormMode === "edit";
-    const request = isEdit
-      ? updateLicense(licenseFormTarget.license_id, payload)
-      : createLicense(payload);
-
-    request
-      .then((data) => {
-        logActivity({
-          actor: user,
-          action: isEdit ? "update" : "create",
-          module: ACTIVITY_MODULES.LICENSE,
-          entityId: isEdit ? licenseFormTarget.license_id : data?.license_id,
-          entityLabel: payload.product_name,
-          before: isEdit ? licenseFormTarget : null,
-          after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
-        });
-        setIsLicenseFormOpen(false);
-        setLicenseFormValues(LICENSE_FORM_INITIAL_VALUES);
-        handleRetryLicenses();
-      })
-      .catch((error) => setLicenseFormError(error.message || "Could not save license."))
-      .finally(() => setIsSavingLicense(false));
-  }
-
-  function handleOpenDeleteLicense(license) {
-    setLicenseToDelete(license);
-    setDeleteLicenseError(null);
-  }
-
-  function handleCloseDeleteLicense() {
-    setLicenseToDelete(null);
-  }
-
-  function handleConfirmDeleteLicense() {
-    if (!licenseToDelete) return;
-
-    setIsDeletingLicense(true);
-    setDeleteLicenseError(null);
-
-    deleteLicense(licenseToDelete.license_id)
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "delete",
-          module: ACTIVITY_MODULES.LICENSE,
-          entityId: licenseToDelete.license_id,
-          entityLabel: licenseToDelete.product_name,
-          before: licenseToDelete,
-        });
-        setLicenseToDelete(null);
-        handleRetryLicenses();
-      })
-      .catch((error) => setDeleteLicenseError(error.message || "Something went wrong."))
-      .finally(() => setIsDeletingLicense(false));
-  }
-
-  function handleRetryStatuses() {
-    setIsStatusesLoading(true);
-    setStatusesError(null);
-    setStatusesFetchToken((value) => value + 1);
-  }
-
-  function handleToggleShowInactiveStatuses(checked) {
-    setIsStatusesLoading(true);
-    setShowInactiveStatuses(checked);
-  }
-
-  function handleOpenAddStatus() {
-    setStatusFormMode("add");
-    setStatusFormTarget(null);
-    setStatusFormValues(STATUS_FORM_INITIAL_VALUES);
-    setStatusFormError(null);
-    setIsStatusFormOpen(true);
-  }
-
-  function handleOpenEditStatus(status) {
-    setStatusFormMode("edit");
-    setStatusFormTarget(status);
-    setStatusFormValues({
-      status_name: status.status_name || "",
-      description: status.description || "",
-      sort_order: status.sort_order != null ? String(status.sort_order) : "",
-      has_owner: Boolean(status.has_owner),
-      is_assignable: Boolean(status.is_assignable),
-      is_borrowable: Boolean(status.is_borrowable),
-      is_active: status.is_active !== false,
-    });
-    setStatusFormError(null);
-    setIsStatusFormOpen(true);
-  }
-
-  function handleCloseStatusForm() {
-    setIsStatusFormOpen(false);
-    setStatusFormError(null);
-  }
-
-  function handleStatusFormFieldChange(key, value) {
-    setStatusFormValues((current) => ({ ...current, [key]: value }));
-  }
-
-  function handleSubmitStatusForm(event) {
-    event.preventDefault();
-
-    if (!statusFormValues.status_name.trim()) {
-      setStatusFormError("Please enter a status name.");
-      return;
-    }
-
-    setIsSavingStatus(true);
-    setStatusFormError(null);
-
-    const payload = {
-      status_name: statusFormValues.status_name.trim(),
-      has_owner: statusFormValues.has_owner,
-      is_assignable: statusFormValues.is_assignable,
-      is_borrowable: statusFormValues.is_borrowable,
-      is_active: statusFormValues.is_active,
-    };
-    if (statusFormValues.description.trim()) payload.description = statusFormValues.description.trim();
-    if (statusFormValues.sort_order !== "") payload.sort_order = Number(statusFormValues.sort_order);
-
-    const isEdit = statusFormMode === "edit";
-    const request = isEdit
-      ? updateStatus(statusFormTarget.status_id, payload)
-      : createStatus(payload);
-
-    request
-      .then((data) => {
-        logActivity({
-          actor: user,
-          action: isEdit ? "update" : "create",
-          module: ACTIVITY_MODULES.STATUS,
-          entityId: isEdit ? statusFormTarget.status_id : data?.status_id,
-          entityLabel: payload.status_name,
-          before: isEdit ? statusFormTarget : null,
-          after: { ...payload, ...(data && typeof data === "object" ? data : {}) },
-        });
-        setIsStatusFormOpen(false);
-        setStatusFormValues(STATUS_FORM_INITIAL_VALUES);
-        handleRetryStatuses();
-      })
-      .catch((error) => setStatusFormError(error.response?.data?.error || error.message || "Could not save status."))
-      .finally(() => setIsSavingStatus(false));
-  }
-
-  function handleOpenDeleteStatus(status) {
-    setStatusToDelete(status);
-    setDeleteStatusError(null);
-    setDeleteStatusBlocked(false);
-  }
-
-  function handleCloseDeleteStatus() {
-    setStatusToDelete(null);
-    setDeleteStatusError(null);
-    setDeleteStatusBlocked(false);
-  }
-
-  function handleHideStatusInstead() {
-    if (!statusToDelete) return;
-
-    setIsDeletingStatus(true);
-    setDeleteStatusError(null);
-
-    updateStatus(statusToDelete.status_id, { is_active: false })
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "update",
-          module: ACTIVITY_MODULES.STATUS,
-          entityId: statusToDelete.status_id,
-          entityLabel: statusToDelete.status_name,
-          before: statusToDelete,
-          after: { ...statusToDelete, is_active: false },
-        });
-        setStatusToDelete(null);
-        setDeleteStatusBlocked(false);
-        handleRetryStatuses();
-      })
-      .catch((error) => setDeleteStatusError(error.message || "Could not hide status."))
-      .finally(() => setIsDeletingStatus(false));
-  }
-
-  function handleConfirmDeleteStatus() {
-    if (!statusToDelete) return;
-
-    setIsDeletingStatus(true);
-    setDeleteStatusError(null);
-    setDeleteStatusBlocked(false);
-
-    deleteStatus(statusToDelete.status_id)
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "delete",
-          module: ACTIVITY_MODULES.STATUS,
-          entityId: statusToDelete.status_id,
-          entityLabel: statusToDelete.status_name,
-          before: statusToDelete,
-        });
-        setStatusToDelete(null);
-        handleRetryStatuses();
-      })
-      .catch((error) => {
-        const data = error.response?.data;
-        const equipmentCount = data?.equipment_count ?? 0;
-        setDeleteStatusBlocked(equipmentCount > 0);
-        setDeleteStatusError(
-          equipmentCount > 0
-            ? `${data?.error || `Cannot delete "${statusToDelete.status_name}"`} Hide it instead to keep it out of dropdowns without breaking existing records.`
-            : data?.error || error.message || "Could not delete status."
-        );
-      })
-      .finally(() => setIsDeletingStatus(false));
-  }
-
-  function handleRetryAssignFormData() {
-    setIsAssignFormDataLoading(true);
-    setAssignFormDataError(null);
-    setAssignFormDataFetchToken((value) => value + 1);
-  }
-
-  function handleAssignDeviceQueryChange(value) {
-    setAssignDeviceQuery(value);
-  }
-
-  function handleAssignDeviceCategoryChange(value) {
-    setAssignDeviceCategory(value);
-  }
-
-  function handleSelectAssignDevice(device) {
-    setAssignSelectedDevice(device);
-    setAssignConflict(null);
-    setAssignSubmitError(null);
-  }
-
-  function handleClearAssignDevice() {
-    setAssignSelectedDevice(null);
-    setAssignConflict(null);
-    setAssignSubmitError(null);
-  }
-
-  function handleAssignPositionChange(value) {
-    setAssignPosition(value);
-    setAssignSelectedEmployee(null);
-    setAssignEmployeeQuery("");
-    setAssignEmployeeSearchOptions([]);
-  }
-
-  function handleAssignEmployeeQueryChange(value) {
-    setAssignEmployeeQuery(value);
-  }
-
-  function handleSelectAssignEmployee(employee) {
-    setAssignSelectedEmployee(employee);
-  }
-
-  function handleClearAssignEmployee() {
-    setAssignSelectedEmployee(null);
-  }
-
-  function handleAssignStatusChange(value) {
-    setAssignStatus(value);
-  }
-
-  function handleAssignDateChange(value) {
-    setAssignDate(value);
-  }
-
-  function performAssignSubmit() {
-    if (!assignSelectedDevice || !assignSelectedEmployee) return;
-
-    setIsSubmittingAssign(true);
-    setAssignSubmitError(null);
-    setAssignSubmitSuccess(null);
-    setAssignConflict(null);
-
-    const payload = {
-      equipment_id: assignSelectedDevice.equipment_id,
-      employee_id: assignSelectedEmployee.employee_id,
-      status: assignStatus,
-      assigned_date: assignDate,
-    };
-
-    submitAssign(payload)
-      .then((data) => {
-        logActivity({
-          actor: user,
-          action: "assign",
-          module: ACTIVITY_MODULES.EQUIPMENT,
-          entityId: assignSelectedDevice.equipment_id,
-          entityLabel: assignSelectedDevice.display_name,
-          after: payload,
-        });
-        setAssignSubmitSuccess(data?.message || `Assigned to ${assignSelectedEmployee.full_name}.`);
-        setAssignSelectedDevice(null);
-        setAssignDeviceQuery("");
-        setAssignSelectedEmployee(null);
-        setAssignEmployeeQuery("");
-        handleRetryEquipment();
-        handleRetryNotifications();
-      })
-      .catch((error) => {
-        const data = error.response?.data;
-        if (error.status === 409) {
-          setAssignConflict({ current_owner: data?.current_owner || null });
-          setAssignSubmitError(data?.error || "That device already belongs to someone.");
-        } else {
-          setAssignSubmitError(data?.error || error.message || "Could not assign equipment.");
-        }
-      })
-      .finally(() => setIsSubmittingAssign(false));
-  }
-
-  function handleSubmitAssignPage(event) {
-    event.preventDefault();
-    performAssignSubmit();
-  }
-
-  function handleResolveAssignConflict() {
-    if (!assignSelectedDevice) return;
-
-    setIsResolvingAssignConflict(true);
-
-    unassignEquipment(assignSelectedDevice.equipment_id)
-      .then(() => {
-        setAssignConflict(null);
-        setAssignSubmitError(null);
-        performAssignSubmit();
-      })
-      .catch((error) => setAssignSubmitError(error.message || "Could not unassign the device."))
-      .finally(() => setIsResolvingAssignConflict(false));
-  }
-
-  function handleRetryCloudRates() {
-    setIsCloudRatesLoading(true);
-    setCloudRatesError(null);
-    setCloudRatesFetchToken((value) => value + 1);
-  }
-
-  function handleRetryServerUsage() {
-    setIsServerUsageLoading(true);
-    setServerUsageError(null);
-    setServerUsageFetchToken((value) => value + 1);
-  }
-
-  function handleRetryCloudUsage() {
-    setIsCloudUsageLoading(true);
-    setCloudUsageError(null);
-    setCloudUsageFetchToken((value) => value + 1);
-  }
-
-
-  function handleRetryCurrentBorrows() {
-    setIsCurrentBorrowsLoading(true);
-    setCurrentBorrowsError(null);
-    setCurrentBorrowsFetchToken((value) => value + 1);
-  }
-
-  function handleRetryBorrowHistory() {
-    setIsBorrowHistoryLoading(true);
-    setBorrowHistoryError(null);
-    setBorrowHistoryFetchToken((value) => value + 1);
-  }
-
-  function handleBorrowHistoryFilterChange(key, value) {
-    setIsBorrowHistoryLoading(true);
-    setBorrowHistoryError(null);
-    setBorrowHistoryFilters((current) => ({ ...current, [key]: value }));
-  }
-
-  function handleClearBorrowHistoryFilters() {
-    setIsBorrowHistoryLoading(true);
-    setBorrowHistoryError(null);
-    setBorrowHistoryFilters(BORROW_HISTORY_INITIAL_FILTERS);
-  }
-
-  function handleOpenReturnEquipment(loan) {
-    setReturnTarget(loan);
-    setReturnValues(RETURN_EQUIPMENT_INITIAL_VALUES);
-    setReturnError(null);
-    setIsReturnModalOpen(true);
-  }
-
-  function handleCloseReturnEquipment() {
-    setIsReturnModalOpen(false);
-  }
-
-  function handleReturnFieldChange(key, value) {
-    setReturnValues((current) => ({ ...current, [key]: value }));
-  }
-
-  function handleSubmitReturnEquipment(event) {
-    event.preventDefault();
-    if (!returnTarget) return;
-
-    if (!returnValues.return_date) {
-      setReturnError("Please set a return date.");
-      return;
-    }
-
-    setIsReturning(true);
-    setReturnError(null);
-
-    const payload = { return_date: returnValues.return_date };
-    if (returnValues.condition_on_return.trim()) {
-      payload.condition_on_return = returnValues.condition_on_return;
-    }
-
-    returnBorrow(returnTarget.borrow_id, payload)
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "return",
-          module: ACTIVITY_MODULES.BORROW,
-          entityId: returnTarget.borrow_id,
-          entityLabel:
-            returnTarget.computer_name ||
-            returnTarget.asset_code ||
-            returnTarget.equipment_code ||
-            `Borrow ${returnTarget.borrow_id}`,
-          before: returnTarget,
-          after: payload,
-        });
-        setIsReturnModalOpen(false);
-        handleRetryCurrentBorrows();
-        handleRetryNotifications();
-      })
-      .catch((error) => setReturnError(error.message || "Something went wrong."))
-      .finally(() => setIsReturning(false));
-  }
-
-  function handleOpenBorrowEquipment(item) {
-    setBorrowTarget(item);
-    setBorrowValues(BORROW_EQUIPMENT_INITIAL_VALUES);
-    setBorrowError(null);
-    setIsBorrowModalOpen(true);
-
-    fetchEmployees()
-      .then((data) => setAssignEmployeeOptions(Array.isArray(data) ? data : []))
-      .catch(() => setAssignEmployeeOptions([]));
-  }
-
-  function handleCloseBorrowEquipment() {
-    setIsBorrowModalOpen(false);
-  }
-
-  function handleBorrowFieldChange(key, value) {
-    setBorrowValues((current) => ({ ...current, [key]: value }));
-  }
-
-  function handleBorrowEmployeeSelect(employee) {
-    setBorrowValues((current) => ({ ...current, employee_id: String(employee.employee_id) }));
-  }
-
-  function handleSubmitBorrowEquipment(event) {
-    event.preventDefault();
-    if (!borrowTarget) return;
-
-    if (!borrowValues.employee_id) {
-      setBorrowError("Please select an employee.");
-      return;
-    }
-    if (!borrowValues.expected_return_date) {
-      setBorrowError("Please set an expected return date.");
-      return;
-    }
-
-    setIsBorrowing(true);
-    setBorrowError(null);
-
-    const payload = {
-      equipment_id: borrowTarget.equipment_id,
-      borrower_id: Number(borrowValues.employee_id),
-      expected_return_date: borrowValues.expected_return_date,
-    };
-    if (borrowValues.purpose.trim()) payload.purpose = borrowValues.purpose;
-    if (borrowValues.condition_on_borrow.trim()) payload.condition_on_borrow = borrowValues.condition_on_borrow;
-    if (borrowValues.remark.trim()) payload.remark = borrowValues.remark;
-
-    createBorrow(payload)
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "borrow",
-          module: ACTIVITY_MODULES.BORROW,
-          entityId: borrowTarget.equipment_id,
-          entityLabel: getEquipmentDisplayName(borrowTarget),
-          after: payload,
-        });
-        setIsBorrowModalOpen(false);
-        handleRetryEquipment();
-        handleRetryNotifications();
-      })
-      .catch((error) => setBorrowError(error.message || "Something went wrong."))
-      .finally(() => setIsBorrowing(false));
-  }
-
-  // Performs the actual fetch of equipment items for a given category slug.
-  // Split out from `handleViewEquipmentCategory` so the category-change
-  // useEffect (below) can call this directly instead of going through the
-  // state-setting wrapper, which previously caused every category switch to
-  // fire two requests (one from the click handler, one from the effect
-  // reacting to the state it had just set).
-  function fetchEquipmentForCategory(category) {
-    setIsEquipmentItemsLoading(true);
-    setEquipmentItemsError(null);
-
-    const views = equipmentCategories.length > 0 ? equipmentCategories : EQUIPMENT_VIEWS;
-
-    const request =
-      category === "All"
-        ? Promise.allSettled(views.map((view) => fetchEquipmentByView(view.slug))).then((results) => {
-          setEquipmentTableColumns([]);
-          const merged = [];
-          let anyFulfilled = false;
-          results.forEach((result, index) => {
-            if (result.status !== "fulfilled") return;
-            anyFulfilled = true;
-            const view = views[index];
-            extractEquipmentItems(result.value).forEach((item) => {
-              merged.push({
-                ...item,
-                category: item.category || view.label,
-                __equipment_view: view.slug,
-                __category_id: view.categoryId ?? null,
-              });
-            });
-          });
-          if (!anyFulfilled && views.length > 0) {
-            throw new Error("Could not load any equipment categories.");
-          }
-          return merged;
-        })
-        : fetchEquipmentByView(category).then((data) => {
-          const view = views.find((item) => item.slug === category);
-          setEquipmentTableColumns(normalizeEquipmentTableColumns(data));
-          return extractEquipmentItems(data).map((item) => ({
-            ...item,
-            category: item.category || view?.label || category,
-            __equipment_view: category,
-            __category_id: view?.categoryId ?? null,
-          }));
-        });
-
-    request
-      .then((items) => setEquipmentItems(items))
-      .catch((error) => setEquipmentItemsError(error.message || "Something went wrong."))
-      .finally(() => setIsEquipmentItemsLoading(false));
-  }
-
-  // Updates the selected category AND fetches its items in one call. Used by
-  // call sites that need an immediate refetch of a category that may not
-  // have actually changed (e.g. after creating/deleting/unassigning an item),
-  // where the category-change effect above won't retrigger on its own.
-  function handleViewEquipmentCategory(category) {
-    setEquipmentCategory(category);
-    fetchEquipmentForCategory(category);
-  }
-
-  function handleSelectEquipmentCategory(category) {
-    // Only update state here — the useEffect watching `equipmentCategory`
-    // (see above) is solely responsible for fetching on a real category
-    // change, so we don't double-fetch.
-    setEquipmentCategory(category);
-  }
-
-  function handleFilterEquipmentStatus(status) {
-    setEquipmentStatusFilter(status);
-  }
-
-  function runEmployeeSearch(term) {
-    setIsEmployeeSearchLoading(true);
-    setEmployeeSearchError(null);
-    setHasSearchedEmployees(true);
-
-    searchEmployees(term)
-      .then((data) => setEmployeeSearchResults(Array.isArray(data) ? data : []))
-      .catch((error) => setEmployeeSearchError(error.message || "Something went wrong."))
-      .finally(() => setIsEmployeeSearchLoading(false));
-  }
-
-  function handleEmployeeSearchSubmit(event) {
-    event.preventDefault();
-    const term = employeeSearchTerm.trim();
-    if (term) runEmployeeSearch(term);
-  }
-
-  function handleEmployeeSearchTermChange(value) {
-    setEmployeeSearchTerm(value);
-    if (!value.trim()) {
-      setHasSearchedEmployees(false);
-      setEmployeeSearchResults([]);
-      setEmployeeSearchError(null);
-    }
-  }
-
-  function handleViewEmployeeSearchDetail(group) {
-    setEmployeeDetailTarget({
-      employee_id: group.employee_id,
-      full_name: group.owner_name,
-      position: group.employee_position,
-      department: group.employee_department,
-      location: group.employee_location,
-    });
-    setEmployeeDetailDevices(group.devices);
-    setIsEmployeeDetailLoading(false);
-    setEmployeeDetailError(null);
-  }
-
-  function getEmployeeRecordFromSearchGroup(group) {
-    const firstDevice = group.devices?.[0] || {};
-    const employeeId = group.employee_id ?? firstDevice.employee_id;
-    const fullName = group.owner_name ?? firstDevice.owner_name ?? firstDevice.full_name ?? "";
-    const directoryRecord = employees.find(
-      (employee) =>
-        (employeeId !== undefined && String(employee.employee_id) === String(employeeId)) ||
-        (fullName && employee.full_name === fullName)
-    );
-
-    if (directoryRecord) return directoryRecord;
-
-    return {
-      employee_id: employeeId,
-      full_name: fullName,
-      position: group.employee_position ?? firstDevice.employee_position ?? firstDevice.position ?? "",
-      department:
-        group.employee_department ??
-        firstDevice.employee_department ??
-        firstDevice.department ??
-        firstDevice.department_code ??
-        "",
-      department_code:
-        group.employee_department ?? firstDevice.department_code ?? firstDevice.department ?? "",
-      location: group.employee_location ?? firstDevice.employee_location ?? firstDevice.location ?? "",
-      staff_code: firstDevice.staff_code ?? "",
-      phone: firstDevice.phone ?? "",
-      sex: firstDevice.sex ?? "",
-    };
-  }
-
-  useEffect(() => {
-    if (!isEmployeeView) return;
-    const term = employeeSearchTerm.trim();
-    if (!term) return;
-
-    const timeoutId = window.setTimeout(() => runEmployeeSearch(term), 400);
-    return () => window.clearTimeout(timeoutId);
-  }, [employeeSearchTerm, isEmployeeView]);
+  const departments = useDepartments({
+    isActive: isDepartmentsView,
+    user,
+  });
+
+  const employees = useEmployees({
+    isActive: isEmployeeView,
+    user,
+    loadDepartments: departments.loadDepartments,
+  });
+
+  const replacements = useReplacements({ isActive: isReplacementView });
+  const ssdUpgrades = useSsdUpgrades({ isActive: isSsdUpgradeView });
+  const ssdProcurement = useSsdProcurement({ isActive: isSsdProcurementView });
+  const antivirus = useAntivirus({ isActive: isAntivirusView });
+  const cloudRates = useCloudRates({ isActive: isCloudRateView });
+  const serverUsage = useServerUsage({ isActive: isServerUsageView });
+  const cloudUsage = useCloudUsage({ isActive: isCloudUsageView });
+  const licenses = useLicenses({
+    isActive: isLicenseView,
+    user,
+    onLicensesLoaded: notifications.onLicensesLoaded,
+  });
+  const statuses = useStatuses({ isActive: isStatusView, user });
+  const users = useUsers({ isActive: isUsersView, user });
+
+  const equipment = useEquipment({
+    isActive: isEquipmentView,
+    user,
+    loadDepartments: departments.loadDepartments,
+    onEquipmentMutated: notifications.handleRetry,
+    onEquipmentUnassigned: employees.refreshAfterExternalEquipmentChange,
+  });
+
+  const recycleBin = useRecycleBin({
+    isActive: isRecycleBinView,
+    onRestore: () => {
+      employees.handleRetry();
+      departments.handleRetry();
+      equipment.handleRetry();
+    },
+  });
+
+  const assign = useAssign({
+    isActive: isAssignView,
+    user,
+    onAssigned: () => {
+      equipment.handleRetry();
+      notifications.handleRetry();
+    },
+  });
+  const currentBorrows = useCurrentBorrows({
+    isActive: isCurrentBorrowsView,
+    user,
+    onBorrowsLoaded: notifications.onBorrowsLoaded,
+    onBorrowed: () => {
+      equipment.handleRetry();
+      notifications.handleRetry();
+    },
+    onReturned: notifications.handleRetry,
+  });
+  const borrowHistory = useBorrowHistory({ isActive: isBorrowHistoryView });
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-950 antialiased">
@@ -3376,7 +303,7 @@ function Dashboard({ user, onLogout }) {
                   <X />
                 </button>
               </div>
-              <SidebarNavigation activeView={activeView} onSelect={handleSelectView} user={user} badges={sidebarBadges} />
+              <SidebarNavigation activeView={activeView} onSelect={handleSelectView} user={user} badges={notifications.sidebarBadges} />
             </aside>
           </div>
         )}
@@ -3395,7 +322,7 @@ function Dashboard({ user, onLogout }) {
             activeView={activeView}
             onSelect={handleSelectView}
             user={user}
-            badges={sidebarBadges}
+            badges={notifications.sidebarBadges}
           />
         </aside>
 
@@ -3409,10 +336,10 @@ function Dashboard({ user, onLogout }) {
                   <GlobalSearch
                     autoFocus
                     className="flex-1"
-                    value={globalSearchQuery}
-                    onChange={handleGlobalSearchQueryChange}
-                    results={globalSearchResults}
-                    isLoading={isGlobalSearchLoading}
+                    value={globalSearch.query}
+                    onChange={globalSearch.handleQueryChange}
+                    results={globalSearch.results}
+                    isLoading={globalSearch.isLoading}
                     onSelect={handleSelectGlobalSearchResult}
                   />
                   <button
@@ -3441,10 +368,10 @@ function Dashboard({ user, onLogout }) {
 
                   <GlobalSearch
                     className="hidden w-72 shrink-0 lg:block"
-                    value={globalSearchQuery}
-                    onChange={handleGlobalSearchQueryChange}
-                    results={globalSearchResults}
-                    isLoading={isGlobalSearchLoading}
+                    value={globalSearch.query}
+                    onChange={globalSearch.handleQueryChange}
+                    results={globalSearch.results}
+                    isLoading={globalSearch.isLoading}
                     onSelect={handleSelectGlobalSearchResult}
                   />
 
@@ -3461,46 +388,46 @@ function Dashboard({ user, onLogout }) {
                     <button
                       type="button"
                       onClick={() => {
-                        setIsNotificationsOpen((value) => !value);
+                        notifications.setIsOpen((value) => !value);
                         setIsProfileMenuOpen(false);
                       }}
                       className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                       aria-label="Notifications"
                       aria-haspopup="true"
-                      aria-expanded={isNotificationsOpen}
+                      aria-expanded={notifications.isOpen}
                     >
                       <Bell size={18} />
-                      {hasUnreadNotifications && (
+                      {notifications.hasUnread && (
                         <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
-                          {unreadNotificationCount > 9 ? "9+" : unreadNotificationCount}
+                          {notifications.unreadCount > 9 ? "9+" : notifications.unreadCount}
                         </span>
                       )}
                     </button>
 
-                    {isNotificationsOpen && (
+                    {notifications.isOpen && (
                       <div className="absolute right-0 top-full z-30 mt-2 w-80 rounded-xl border border-slate-200 bg-white shadow-lg">
                         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                           <div>
                             <p className="text-sm font-semibold text-slate-950">Notifications</p>
                             <p className="mt-0.5 text-[11px] text-slate-400">
-                              {unreadNotificationCount} unread
+                              {notifications.unreadCount} unread
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              onClick={handleRetryNotifications}
-                              disabled={isNotificationsLoading}
+                              onClick={notifications.handleRetry}
+                              disabled={notifications.isLoading}
                               className="grid h-7 w-7 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
                               aria-label="Refresh notifications"
                               title="Refresh notifications"
                             >
-                              <RefreshCw size={13} className={isNotificationsLoading ? "animate-spin" : ""} />
+                              <RefreshCw size={13} className={notifications.isLoading ? "animate-spin" : ""} />
                             </button>
                             <button
                               type="button"
-                              onClick={handleMarkAllNotificationsRead}
-                              disabled={visibleNotifications.length === 0}
+                              onClick={notifications.handleMarkAllRead}
+                              disabled={notifications.visibleNotifications.length === 0}
                               className="rounded text-xs font-semibold text-orange-600 outline-none transition hover:text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:text-slate-300"
                             >
                               Mark all as read
@@ -3508,18 +435,18 @@ function Dashboard({ user, onLogout }) {
                           </div>
                         </div>
                         <div className="max-h-80 overflow-y-auto">
-                          {isNotificationsLoading && visibleNotifications.length === 0 ? (
+                          {notifications.isLoading && notifications.visibleNotifications.length === 0 ? (
                             <div className="px-4 py-8 text-center text-[13px] text-slate-500">
                               Loading notifications...
                             </div>
-                          ) : visibleNotifications.length === 0 ? (
+                          ) : notifications.visibleNotifications.length === 0 ? (
                             <EmptyState icon={Bell} title="No notifications" description="You're all caught up." />
                           ) : (
-                            visibleNotifications.map((item) => (
+                            notifications.visibleNotifications.map((item) => (
                               <button
                                 key={item.id}
                                 type="button"
-                                onClick={() => handleOpenNotification(item)}
+                                onClick={() => notifications.handleOpen(item)}
                                 className="flex w-full gap-3 border-b border-slate-50 px-4 py-3 text-left outline-none transition last:border-b-0 hover:bg-slate-50 focus-visible:bg-slate-50"
                               >
                                 <span
@@ -3551,7 +478,7 @@ function Dashboard({ user, onLogout }) {
                         clearTimeout(profileMenuCloseTimeout.current);
                       }
                       setIsProfileMenuOpen(true);
-                      setIsNotificationsOpen(false);
+                      notifications.setIsOpen(false);
                     }}
                     onMouseLeave={() => {
                       profileMenuCloseTimeout.current = window.setTimeout(() => {
@@ -3563,7 +490,7 @@ function Dashboard({ user, onLogout }) {
                       type="button"
                       onClick={() => {
                         setIsProfileMenuOpen((value) => !value);
-                        setIsNotificationsOpen(false);
+                        notifications.setIsOpen(false);
                       }}
                       className="flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-2 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                       aria-haspopup="true"
@@ -3619,17 +546,17 @@ function Dashboard({ user, onLogout }) {
             <DashboardHomeView
               navSections={visibleHomeNavSections}
               stats={{
-                ...homeStats,
-                "Currently Borrowed": notificationData.currentBorrows.length,
-                "Software License": notificationData.licenses.length,
-                "My Activity": myActivityEntries.length,
-                "Activity Log": activityEntries.length,
+                ...home.stats,
+                "Currently Borrowed": notifications.data.currentBorrows.length,
+                "Software License": notifications.data.licenses.length,
+                "My Activity": myActivity.entries.length,
+                "Activity Log": activityLog.entries.length,
               }}
-              isStatsLoading={isHomeStatsLoading}
+              isStatsLoading={home.isLoading}
               onSelectView={handleSelectView}
-              notifications={visibleNotifications}
-              onOpenNotification={handleOpenNotification}
-              recentActivity={myActivityEntries}
+              notifications={notifications.visibleNotifications}
+              onOpenNotification={notifications.handleOpen}
+              recentActivity={myActivity.entries}
             />
           )}
 
@@ -3637,75 +564,75 @@ function Dashboard({ user, onLogout }) {
             <EquipmentView
               canManage={canManageEquipment}
               canCreate={canCreateRecords}
-              categories={equipmentCategories}
-              isLoading={isEquipmentLoading}
-              error={equipmentError}
-              onRetry={handleRetryEquipment}
-              selectedCategory={equipmentCategory}
-              onSelectCategory={handleSelectEquipmentCategory}
-              items={equipmentItems}
-              columns={equipmentTableColumns}
-              isItemsLoading={isEquipmentItemsLoading}
-              itemsError={equipmentItemsError}
-              onAddNew={handleOpenAddEquipmentItem}
-              onEdit={handleOpenEditEquipmentItem}
-              onUnassign={handleOpenUnassignEquipment}
-              onDelete={handleOpenDeleteEquipment}
-              onBorrow={handleOpenBorrowEquipment}
-              onAddCategory={handleOpenAddCategory}
-              onEditCategory={handleOpenEditCategory}
-              onDeleteCategory={handleOpenDeleteCategory}
-              statuses={equipmentStatuses}
-              statusFilter={equipmentStatusFilter}
-              onFilterStatus={handleFilterEquipmentStatus}
+              categories={equipment.categories}
+              isLoading={equipment.isLoading}
+              error={equipment.error}
+              onRetry={equipment.handleRetry}
+              selectedCategory={equipment.category}
+              onSelectCategory={equipment.handleSelectCategory}
+              items={equipment.items}
+              columns={equipment.tableColumns}
+              isItemsLoading={equipment.isItemsLoading}
+              itemsError={equipment.itemsError}
+              onAddNew={equipment.handleOpenAddItem}
+              onEdit={equipment.handleOpenEditItem}
+              onUnassign={equipment.handleOpenUnassign}
+              onDelete={equipment.handleOpenDelete}
+              onBorrow={currentBorrows.handleOpenBorrow}
+              onAddCategory={equipment.handleOpenAddCategory}
+              onEditCategory={equipment.handleOpenEditCategory}
+              onDeleteCategory={equipment.handleOpenDeleteCategory}
+              statuses={equipment.statuses}
+              statusFilter={equipment.statusFilter}
+              onFilterStatus={equipment.handleFilterStatus}
             />
           )}
 
           {isReplacementView && (
             <ReplacementsView
-              replacements={replacements}
-              isLoading={isReplacementsLoading}
-              error={replacementsError}
-              onRetry={handleRetryReplacements}
+              replacements={replacements.replacements}
+              isLoading={replacements.isLoading}
+              error={replacements.error}
+              onRetry={replacements.handleRetry}
             />
           )}
 
           {isSsdUpgradeView && (
             <SsdUpgradesView
-              upgrades={ssdUpgrades}
-              isLoading={isSsdUpgradesLoading}
-              error={ssdUpgradesError}
-              onRetry={handleRetrySsdUpgrades}
+              upgrades={ssdUpgrades.ssdUpgrades}
+              isLoading={ssdUpgrades.isLoading}
+              error={ssdUpgrades.error}
+              onRetry={ssdUpgrades.handleRetry}
             />
           )}
 
           {isSsdProcurementView && (
             <SsdProcurementView
-              procurements={ssdProcurements}
-              isLoading={isSsdProcurementLoading}
-              error={ssdProcurementError}
-              onRetry={handleRetrySsdProcurement}
+              procurements={ssdProcurement.ssdProcurements}
+              isLoading={ssdProcurement.isLoading}
+              error={ssdProcurement.error}
+              onRetry={ssdProcurement.handleRetry}
             />
           )}
 
           {isAntivirusView && (
             <AntivirusView
-              installs={antivirusInstalls}
-              isLoading={isAntivirusLoading}
-              error={antivirusError}
-              onRetry={handleRetryAntivirus}
+              installs={antivirus.antivirusInstalls}
+              isLoading={antivirus.isLoading}
+              error={antivirus.error}
+              onRetry={antivirus.handleRetry}
             />
           )}
 
           {isLicenseView && (
             <LicensesView
-              licenses={licenses}
-              isLoading={isLicensesLoading}
-              error={licensesError}
-              onRetry={handleRetryLicenses}
-              onAddNew={handleOpenAddLicense}
-              onEdit={handleOpenEditLicense}
-              onDelete={handleOpenDeleteLicense}
+              licenses={licenses.licenses}
+              isLoading={licenses.isLoading}
+              error={licenses.error}
+              onRetry={licenses.handleRetry}
+              onAddNew={licenses.handleOpenAdd}
+              onEdit={licenses.handleOpenEdit}
+              onDelete={licenses.handleOpenDelete}
               canCreate={canCreateRecords}
               canManage={canCreateRecords}
             />
@@ -3715,64 +642,64 @@ function Dashboard({ user, onLogout }) {
             <DepartmentsView
               canManage={canManageDepartments}
               canCreate={canCreateRecords}
-              departments={departments}
-              isLoading={isDepartmentsLoading}
-              error={departmentsError}
-              onRetry={handleRetryDepartments}
-              onAddNew={handleOpenAddDepartment}
-              onEdit={handleOpenEditDepartment}
-              onDelete={handleOpenDeleteDepartment}
+              departments={departments.departments}
+              isLoading={departments.isLoading}
+              error={departments.error}
+              onRetry={departments.handleRetry}
+              onAddNew={departments.handleOpenAdd}
+              onEdit={departments.handleOpenEdit}
+              onDelete={departments.handleOpenDelete}
             />
           )}
 
           {isCloudRateView && (
             <CloudRatesView
-              rates={cloudRates}
-              isLoading={isCloudRatesLoading}
-              error={cloudRatesError}
-              onRetry={handleRetryCloudRates}
+              rates={cloudRates.cloudRates}
+              isLoading={cloudRates.isLoading}
+              error={cloudRates.error}
+              onRetry={cloudRates.handleRetry}
             />
           )}
 
           {isServerUsageView && (
             <ServerUsageView
-              usage={serverUsage}
-              isLoading={isServerUsageLoading}
-              error={serverUsageError}
-              onRetry={handleRetryServerUsage}
+              usage={serverUsage.serverUsage}
+              isLoading={serverUsage.isLoading}
+              error={serverUsage.error}
+              onRetry={serverUsage.handleRetry}
             />
           )}
 
           {isCloudUsageView && (
             <CloudUsageView
-              usage={cloudUsage}
-              isLoading={isCloudUsageLoading}
-              error={cloudUsageError}
-              onRetry={handleRetryCloudUsage}
+              usage={cloudUsage.cloudUsage}
+              isLoading={cloudUsage.isLoading}
+              error={cloudUsage.error}
+              onRetry={cloudUsage.handleRetry}
             />
           )}
 
           {isCurrentBorrowsView && (
             <CurrentBorrowsView
               canManage={canManageBorrows}
-              loans={currentBorrows}
-              isLoading={isCurrentBorrowsLoading}
-              error={currentBorrowsError}
-              onRetry={handleRetryCurrentBorrows}
-              onReturn={handleOpenReturnEquipment}
+              loans={currentBorrows.loans}
+              isLoading={currentBorrows.isLoading}
+              error={currentBorrows.error}
+              onRetry={currentBorrows.handleRetry}
+              onReturn={currentBorrows.handleOpenReturn}
             />
           )}
 
           {isBorrowHistoryView && (
             <BorrowHistoryView
-              history={borrowHistory}
-              isLoading={isBorrowHistoryLoading}
-              error={borrowHistoryError}
-              onRetry={handleRetryBorrowHistory}
-              employees={assignEmployeeOptions}
-              filters={borrowHistoryFilters}
-              onFilterChange={handleBorrowHistoryFilterChange}
-              onClearFilters={handleClearBorrowHistoryFilters}
+              history={borrowHistory.history}
+              isLoading={borrowHistory.isLoading}
+              error={borrowHistory.error}
+              onRetry={borrowHistory.handleRetry}
+              employees={borrowHistory.employeeOptions}
+              filters={borrowHistory.filters}
+              onFilterChange={borrowHistory.handleFilterChange}
+              onClearFilters={borrowHistory.handleClearFilters}
             />
           )}
 
@@ -3824,16 +751,16 @@ function Dashboard({ user, onLogout }) {
             <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
               {/* Employee search */}
               <EmployeeSearchPanel
-                term={employeeSearchTerm}
-                onTermChange={handleEmployeeSearchTermChange}
-                onSubmit={handleEmployeeSearchSubmit}
-                results={employeeSearchResults}
-                isLoading={isEmployeeSearchLoading}
-                error={employeeSearchError}
-                hasSearched={hasSearchedEmployees}
-                onViewDetail={handleViewEmployeeSearchDetail}
-                onEdit={(group) => handleOpenEditEmployee(getEmployeeRecordFromSearchGroup(group))}
-                onDelete={(group) => handleOpenDeleteEmployee(getEmployeeRecordFromSearchGroup(group))}
+                term={employees.searchTerm}
+                onTermChange={employees.handleSearchTermChange}
+                onSubmit={employees.handleSearchSubmit}
+                results={employees.searchResults}
+                isLoading={employees.isSearchLoading}
+                error={employees.searchError}
+                hasSearched={employees.hasSearched}
+                onViewDetail={employees.handleViewSearchDetail}
+                onEdit={(group) => employees.handleOpenEdit(employees.getRecordFromSearchGroup(group))}
+                onDelete={(group) => employees.handleOpenDelete(employees.getRecordFromSearchGroup(group))}
                 canManage={canManageEmployees}
               />
 
@@ -3841,21 +768,21 @@ function Dashboard({ user, onLogout }) {
               <EmployeeDirectoryTable
                 canManage={canManageEmployees}
                 canCreate={canCreateRecords}
-                employees={paginatedEmployees}
-                totalCount={sortedEmployees.length}
-                sort={employeeSort}
-                onSort={handleEmployeeSort}
-                isLoading={isEmployeesLoading}
-                error={employeesError}
-                onRetry={handleRetryEmployees}
-                page={employeePage}
-                pageCount={employeePageCount}
-                onPageChange={setEmployeePage}
+                employees={employees.employees}
+                totalCount={employees.totalCount}
+                sort={employees.sort}
+                onSort={employees.handleSort}
+                isLoading={employees.isLoading}
+                error={employees.error}
+                onRetry={employees.handleRetry}
+                page={employees.page}
+                pageCount={employees.pageCount}
+                onPageChange={employees.setPage}
                 pageSize={EMPLOYEES_PAGE_SIZE}
-                onViewDetail={handleViewEmployeeDetail}
-                onAddNew={handleOpenAddEmployee}
-                onEdit={handleOpenEditEmployee}
-                onDelete={handleOpenDeleteEmployee}
+                onViewDetail={employees.handleViewDetail}
+                onAddNew={employees.handleOpenAdd}
+                onEdit={employees.handleOpenEdit}
+                onDelete={employees.handleOpenDelete}
               />
             </div>
           )}
@@ -3863,14 +790,14 @@ function Dashboard({ user, onLogout }) {
           {isUsersView &&
             (canManageUsers ? (
               <UsersView
-                users={users}
-                pendingCount={pendingApprovalCount}
-                isLoading={isUsersLoading}
-                error={usersError}
-                onRetry={handleRetryUsers}
-                onApprove={handleApproveUser}
-                onEditPermissions={handleOpenEditUserPermissions}
-                onResetPassword={handleOpenResetPassword}
+                users={users.users}
+                pendingCount={users.pendingApprovalCount}
+                isLoading={users.isLoading}
+                error={users.error}
+                onRetry={users.handleRetry}
+                onApprove={users.handleApprove}
+                onEditPermissions={users.handleOpenEditPermissions}
+                onResetPassword={users.handleOpenResetPassword}
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -3887,15 +814,15 @@ function Dashboard({ user, onLogout }) {
           {isStatusView &&
             (canManageStatuses ? (
               <StatusesView
-                statuses={statuses}
-                isLoading={isStatusesLoading}
-                error={statusesError}
-                onRetry={handleRetryStatuses}
-                showInactive={showInactiveStatuses}
-                onToggleShowInactive={handleToggleShowInactiveStatuses}
-                onAddNew={handleOpenAddStatus}
-                onEdit={handleOpenEditStatus}
-                onDelete={handleOpenDeleteStatus}
+                statuses={statuses.statuses}
+                isLoading={statuses.isLoading}
+                error={statuses.error}
+                onRetry={statuses.handleRetry}
+                showInactive={statuses.showInactive}
+                onToggleShowInactive={statuses.handleToggleShowInactive}
+                onAddNew={statuses.handleOpenAdd}
+                onEdit={statuses.handleOpenEdit}
+                onDelete={statuses.handleOpenDelete}
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -3912,43 +839,43 @@ function Dashboard({ user, onLogout }) {
           {isAssignView &&
             (canManageAssign ? (
               <AssignEquipmentView
-                isFormDataLoading={isAssignFormDataLoading}
-                formDataError={assignFormDataError}
-                onRetryFormData={handleRetryAssignFormData}
-                categories={assignFormData.categories}
-                positions={assignFormData.positions}
-                statuses={assignFormData.statuses}
-                deviceQuery={assignDeviceQuery}
-                onDeviceQueryChange={handleAssignDeviceQueryChange}
-                deviceCategory={assignDeviceCategory}
-                onDeviceCategoryChange={handleAssignDeviceCategoryChange}
-                deviceOptions={assignDeviceOptions}
-                isDeviceLoading={isAssignDeviceLoading}
-                deviceError={assignDeviceError}
-                selectedDevice={assignSelectedDevice}
-                onSelectDevice={handleSelectAssignDevice}
-                onClearDevice={handleClearAssignDevice}
-                position={assignPosition}
-                onPositionChange={handleAssignPositionChange}
-                employeeQuery={assignEmployeeQuery}
-                onEmployeeQueryChange={handleAssignEmployeeQueryChange}
-                employeeOptions={assignEmployeeSearchOptions}
-                isEmployeeLoading={isAssignEmployeeSearchLoading}
-                employeeError={assignEmployeeSearchError}
-                selectedEmployee={assignSelectedEmployee}
-                onSelectEmployee={handleSelectAssignEmployee}
-                onClearEmployee={handleClearAssignEmployee}
-                status={assignStatus}
-                onStatusChange={handleAssignStatusChange}
-                assignedDate={assignDate}
-                onAssignedDateChange={handleAssignDateChange}
-                onSubmit={handleSubmitAssignPage}
-                isSubmitting={isSubmittingAssign}
-                submitError={assignSubmitError}
-                submitSuccess={assignSubmitSuccess}
-                conflict={assignConflict}
-                onResolveConflict={handleResolveAssignConflict}
-                isResolvingConflict={isResolvingAssignConflict}
+                isFormDataLoading={assign.isFormDataLoading}
+                formDataError={assign.formDataError}
+                onRetryFormData={assign.handleRetryFormData}
+                categories={assign.formData.categories}
+                positions={assign.formData.positions}
+                statuses={assign.formData.statuses}
+                deviceQuery={assign.deviceQuery}
+                onDeviceQueryChange={assign.handleDeviceQueryChange}
+                deviceCategory={assign.deviceCategory}
+                onDeviceCategoryChange={assign.handleDeviceCategoryChange}
+                deviceOptions={assign.deviceOptions}
+                isDeviceLoading={assign.isDeviceLoading}
+                deviceError={assign.deviceError}
+                selectedDevice={assign.selectedDevice}
+                onSelectDevice={assign.handleSelectDevice}
+                onClearDevice={assign.handleClearDevice}
+                position={assign.position}
+                onPositionChange={assign.handlePositionChange}
+                employeeQuery={assign.employeeQuery}
+                onEmployeeQueryChange={assign.handleEmployeeQueryChange}
+                employeeOptions={assign.employeeOptions}
+                isEmployeeLoading={assign.isEmployeeLoading}
+                employeeError={assign.employeeError}
+                selectedEmployee={assign.selectedEmployee}
+                onSelectEmployee={assign.handleSelectEmployee}
+                onClearEmployee={assign.handleClearEmployee}
+                status={assign.status}
+                onStatusChange={assign.handleStatusChange}
+                assignedDate={assign.assignedDate}
+                onAssignedDateChange={assign.handleAssignedDateChange}
+                onSubmit={assign.handleSubmit}
+                isSubmitting={assign.isSubmitting}
+                submitError={assign.submitError}
+                submitSuccess={assign.submitSuccess}
+                conflict={assign.conflict}
+                onResolveConflict={assign.handleResolveConflict}
+                isResolvingConflict={assign.isResolvingConflict}
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -3958,15 +885,15 @@ function Dashboard({ user, onLogout }) {
               </div>
             ))}
 
-          {isMyActivityView && <MyActivityView entries={myActivityEntries} />}
+          {isMyActivityView && <MyActivityView entries={myActivity.entries} />}
 
           {isActivityLogView &&
             (canManageActivityLog ? (
               <ActivityLogView
-                entries={filteredActivityLogEntries}
-                totalCount={activityEntries.length}
-                filters={activityLogFilters}
-                onFilterChange={handleActivityLogFilterChange}
+                entries={activityLog.filteredEntries}
+                totalCount={activityLog.entries.length}
+                filters={activityLog.filters}
+                onFilterChange={activityLog.handleFilterChange}
                 moduleOptions={ACTIVITY_MODULE_VALUES}
                 actionOptions={ACTIVITY_ACTION_VALUES}
               />
@@ -3981,20 +908,20 @@ function Dashboard({ user, onLogout }) {
           {isRecycleBinView &&
             (canManageRecycleBin ? (
               <RecycleBinView
-                entries={recycleBinEntries}
-                isLoading={isRecycleBinLoading}
-                error={recycleBinError}
-                onRetry={handleRetryRecycleBin}
-                typeFilter={recycleBinTypeFilter}
-                onFilterChange={handleRecycleBinFilterChange}
-                typeOptions={recycleBinTypeOptions}
-                onRestore={handleRestoreRecycleBinItem}
-                onDeleteForever={handleOpenDeleteRecycleBinItem}
-                onPurgeAll={handleOpenPurgeRecycleBin}
-                restoringId={restoringRecycleBinId}
-                deletingId={deletingRecycleBinId}
-                isPurging={isPurgingRecycleBin}
-                actionError={recycleBinActionError}
+                entries={recycleBin.entries}
+                isLoading={recycleBin.isLoading}
+                error={recycleBin.error}
+                onRetry={recycleBin.handleRetry}
+                typeFilter={recycleBin.typeFilter}
+                onFilterChange={recycleBin.handleFilterChange}
+                typeOptions={recycleBin.typeOptions}
+                onRestore={recycleBin.handleRestore}
+                onDeleteForever={recycleBin.handleOpenDelete}
+                onPurgeAll={recycleBin.handleOpenPurge}
+                restoringId={recycleBin.restoringId}
+                deletingId={recycleBin.deletingId}
+                isPurging={recycleBin.isPurging}
+                actionError={recycleBin.actionError}
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -4006,307 +933,307 @@ function Dashboard({ user, onLogout }) {
         </main>
       </div>
 
-      {employeeDetailTarget && (
+      {employees.detailTarget && (
         <EmployeeDetailModal
-          employee={employeeDetailTarget}
-          devices={employeeDetailDevices}
-          isLoading={isEmployeeDetailLoading}
-          error={employeeDetailError}
-          onRetry={handleRetryEmployeeDetail}
-          onClose={handleCloseEmployeeDetail}
-          onUnassign={handleOpenUnassignEquipment}
+          employee={employees.detailTarget}
+          devices={employees.detailDevices}
+          isLoading={employees.isDetailLoading}
+          error={employees.detailError}
+          onRetry={employees.handleRetryDetail}
+          onClose={employees.handleCloseDetail}
+          onUnassign={equipment.handleOpenUnassign}
           canManage={canManageEmployees}
         />
       )}
 
       <EquipmentFormModal
-        isOpen={isEquipmentFormOpen}
-        mode={equipmentFormMode}
-        values={equipmentFormValues}
-        onChange={handleEquipmentFormFieldChange}
-        onSubmit={handleSubmitEquipmentForm}
-        onClose={handleCloseEquipmentForm}
-        isSubmitting={isSavingEquipment}
-        error={equipmentFormError}
-        departments={departments}
-        statuses={equipmentStatuses}
-        categoryOptions={equipmentFormCategoryOptions}
-        categoryLocked={equipmentFormMode === "edit" || equipmentCategory !== "All"}
-        fields={equipmentFormFields}
-        onRemoveField={handleRemoveEquipmentField}
-        onOpenColumnsPicker={handleOpenColumnsPickerFromForm}
-        onOpenSoftwareLicense={handleOpenSoftwareLicensePicker}
-        softwareLicenseCount={equipmentLicenseSelectedIds.length}
+        isOpen={equipment.isFormOpen}
+        mode={equipment.formMode}
+        values={equipment.formValues}
+        onChange={equipment.handleFormFieldChange}
+        onSubmit={equipment.handleSubmitForm}
+        onClose={equipment.handleCloseForm}
+        isSubmitting={equipment.isSaving}
+        error={equipment.formError}
+        departments={departments.departments}
+        statuses={equipment.statuses}
+        categoryOptions={equipment.formCategoryOptions}
+        categoryLocked={equipment.formMode === "edit" || equipment.category !== "All"}
+        fields={equipment.formFields}
+        onRemoveField={equipment.handleRemoveField}
+        onOpenColumnsPicker={equipment.handleOpenColumnsPickerFromForm}
+        onOpenSoftwareLicense={equipment.handleOpenSoftwareLicensePicker}
+        softwareLicenseCount={equipment.licenseSelectedIds.length}
       />
 
       <SoftwareLicensePickerModal
-        isOpen={isSoftwareLicensePickerOpen}
-        licenses={softwareLicenseOptions}
-        selectedIds={equipmentLicenseSelectedIds}
-        onToggle={handleToggleSoftwareLicenseSelection}
-        onClose={handleCloseSoftwareLicensePicker}
-        isLoading={isSoftwareLicenseOptionsLoading}
-        error={softwareLicenseOptionsError}
+        isOpen={equipment.isSoftwareLicensePickerOpen}
+        licenses={equipment.softwareLicenseOptions}
+        selectedIds={equipment.licenseSelectedIds}
+        onToggle={equipment.handleToggleSoftwareLicenseSelection}
+        onClose={equipment.handleCloseSoftwareLicensePicker}
+        isLoading={equipment.isSoftwareLicenseOptionsLoading}
+        error={equipment.softwareLicenseOptionsError}
       />
 
       <ColumnsPickerModal
-        isOpen={isColumnsPickerOpen}
-        categoryLabel={columnsPickerCategoryLabel}
-        fields={availableViewFields}
-        selectedKeys={columnsPickerSelectedKeys}
-        onToggle={handleToggleColumnField}
-        customFields={columnsPickerCustomFields}
-        reusableFields={reusableCustomFields}
-        fieldTypes={customFieldTypes}
-        onAddField={handleAddCustomFieldFromPicker}
-        onRemoveField={handleRemoveCustomFieldFromPicker}
-        onReuseField={handleReuseCustomFieldFromPicker}
-        onSave={handleSaveColumnsPicker}
-        onClose={handleCloseColumnsPicker}
-        isLoading={isColumnsPickerLoading}
-        isSaving={isSavingColumns}
-        error={columnsPickerError}
-        onError={setColumnsPickerError}
+        isOpen={equipment.isColumnsPickerOpen}
+        categoryLabel={equipment.columnsPickerCategoryLabel}
+        fields={equipment.availableViewFields}
+        selectedKeys={equipment.columnsPickerSelectedKeys}
+        onToggle={equipment.handleToggleColumnField}
+        customFields={equipment.columnsPickerCustomFields}
+        reusableFields={equipment.reusableCustomFields}
+        fieldTypes={equipment.customFieldTypes}
+        onAddField={equipment.handleAddCustomFieldFromPicker}
+        onRemoveField={equipment.handleRemoveCustomFieldFromPicker}
+        onReuseField={equipment.handleReuseCustomFieldFromPicker}
+        onSave={equipment.handleSaveColumnsPicker}
+        onClose={equipment.handleCloseColumnsPicker}
+        isLoading={equipment.isColumnsPickerLoading}
+        isSaving={equipment.isSavingColumns}
+        error={equipment.columnsPickerError}
+        onError={equipment.setColumnsPickerError}
       />
 
       <BorrowEquipmentModal
-        isOpen={isBorrowModalOpen}
-        equipment={borrowTarget}
-        values={borrowValues}
-        onChange={handleBorrowFieldChange}
-        onSelectEmployee={handleBorrowEmployeeSelect}
-        onSubmit={handleSubmitBorrowEquipment}
-        onClose={handleCloseBorrowEquipment}
-        isSubmitting={isBorrowing}
-        error={borrowError}
-        employees={assignEmployeeOptions}
+        isOpen={currentBorrows.isBorrowModalOpen}
+        equipment={currentBorrows.borrowTarget}
+        values={currentBorrows.borrowValues}
+        onChange={currentBorrows.handleBorrowFieldChange}
+        onSelectEmployee={currentBorrows.handleBorrowEmployeeSelect}
+        onSubmit={currentBorrows.handleSubmitBorrow}
+        onClose={currentBorrows.handleCloseBorrow}
+        isSubmitting={currentBorrows.isBorrowing}
+        error={currentBorrows.borrowError}
+        employees={currentBorrows.employeeOptions}
       />
 
       <ReturnEquipmentModal
-        isOpen={isReturnModalOpen}
-        loan={returnTarget}
-        values={returnValues}
-        onChange={handleReturnFieldChange}
-        onSubmit={handleSubmitReturnEquipment}
-        onClose={handleCloseReturnEquipment}
-        isSubmitting={isReturning}
-        error={returnError}
+        isOpen={currentBorrows.isReturnModalOpen}
+        loan={currentBorrows.returnTarget}
+        values={currentBorrows.returnValues}
+        onChange={currentBorrows.handleReturnFieldChange}
+        onSubmit={currentBorrows.handleSubmitReturn}
+        onClose={currentBorrows.handleCloseReturn}
+        isSubmitting={currentBorrows.isReturning}
+        error={currentBorrows.returnError}
       />
 
       <EmployeeFormModal
-        isOpen={isEmployeeFormOpen}
-        mode={employeeFormMode}
-        values={employeeFormValues}
-        onChange={handleEmployeeFormFieldChange}
-        onSubmit={handleSubmitEmployeeForm}
-        onClose={handleCloseEmployeeForm}
-        isSubmitting={isSavingEmployee}
-        error={employeeFormError}
-        departments={departments}
+        isOpen={employees.isFormOpen}
+        mode={employees.formMode}
+        values={employees.formValues}
+        onChange={employees.handleFormFieldChange}
+        onSubmit={employees.handleSubmitForm}
+        onClose={employees.handleCloseForm}
+        isSubmitting={employees.isSaving}
+        error={employees.formError}
+        departments={departments.departments}
       />
 
       <DepartmentFormModal
-        isOpen={isDepartmentFormOpen}
-        mode={departmentFormMode}
-        values={departmentFormValues}
-        onChange={handleDepartmentFormFieldChange}
-        onSubmit={handleSubmitDepartmentForm}
-        onClose={handleCloseDepartmentForm}
-        isSubmitting={isSavingDepartment}
-        error={departmentFormError}
+        isOpen={departments.isFormOpen}
+        mode={departments.formMode}
+        values={departments.formValues}
+        onChange={departments.handleFormFieldChange}
+        onSubmit={departments.handleSubmitForm}
+        onClose={departments.handleCloseForm}
+        isSubmitting={departments.isSaving}
+        error={departments.formError}
       />
 
       <UserPermissionsModal
-        isOpen={Boolean(userPermissionsTarget)}
-        user={userPermissionsTarget}
-        values={userPermissionValues}
-        onChange={handleUserPermissionFieldChange}
-        onSubmit={handleSubmitEditUserPermissions}
-        onClose={handleCloseEditUserPermissions}
-        isSubmitting={isSavingUserPermissions}
-        error={userPermissionsError}
+        isOpen={Boolean(users.permissionsTarget)}
+        user={users.permissionsTarget}
+        values={users.permissionValues}
+        onChange={users.handlePermissionFieldChange}
+        onSubmit={users.handleSubmitEditPermissions}
+        onClose={users.handleCloseEditPermissions}
+        isSubmitting={users.isSavingPermissions}
+        error={users.permissionsError}
       />
 
       <ResetPasswordModal
-        isOpen={Boolean(resetPasswordTarget)}
-        user={resetPasswordTarget}
-        password={resetPassword}
-        confirmPassword={resetPasswordConfirm}
-        onChangePassword={setResetPassword}
-        onChangeConfirmPassword={setResetPasswordConfirm}
-        onSubmit={handleSubmitResetPassword}
-        onClose={handleCloseResetPassword}
-        isSubmitting={isResettingPassword}
-        error={resetPasswordError}
+        isOpen={Boolean(users.resetPasswordTarget)}
+        user={users.resetPasswordTarget}
+        password={users.resetPassword}
+        confirmPassword={users.resetPasswordConfirm}
+        onChangePassword={users.setResetPassword}
+        onChangeConfirmPassword={users.setResetPasswordConfirm}
+        onSubmit={users.handleSubmitResetPassword}
+        onClose={users.handleCloseResetPassword}
+        isSubmitting={users.isResettingPassword}
+        error={users.resetPasswordError}
       />
 
       <CategoryFormModal
-        isOpen={isCategoryFormOpen}
-        mode={categoryFormMode}
-        values={categoryFormValues}
-        onChange={handleCategoryFormFieldChange}
-        onSubmit={handleSubmitCategoryForm}
-        onClose={handleCloseCategoryForm}
-        isSubmitting={isSavingCategory}
-        error={categoryFormError}
+        isOpen={equipment.isCategoryFormOpen}
+        mode={equipment.categoryFormMode}
+        values={equipment.categoryFormValues}
+        onChange={equipment.handleCategoryFormFieldChange}
+        onSubmit={equipment.handleSubmitCategoryForm}
+        onClose={equipment.handleCloseCategoryForm}
+        isSubmitting={equipment.isSavingCategory}
+        error={equipment.categoryFormError}
       />
 
       <LicenseFormModal
-        isOpen={isLicenseFormOpen}
-        mode={licenseFormMode}
-        values={licenseFormValues}
-        onChange={handleLicenseFormFieldChange}
-        onSubmit={handleSubmitLicenseForm}
-        onClose={handleCloseLicenseForm}
-        isSubmitting={isSavingLicense}
-        error={licenseFormError}
+        isOpen={licenses.isFormOpen}
+        mode={licenses.formMode}
+        values={licenses.formValues}
+        onChange={licenses.handleFormFieldChange}
+        onSubmit={licenses.handleSubmitForm}
+        onClose={licenses.handleCloseForm}
+        isSubmitting={licenses.isSaving}
+        error={licenses.formError}
       />
 
       <ConfirmDialog
-        isOpen={Boolean(licenseToDelete)}
+        isOpen={Boolean(licenses.licenseToDelete)}
         title="Delete this software license?"
         message={
-          licenseToDelete
-            ? `"${licenseToDelete.product_name}" will be permanently removed. This cannot be undone.`
+          licenses.licenseToDelete
+            ? `"${licenses.licenseToDelete.product_name}" will be permanently removed. This cannot be undone.`
             : ""
         }
         confirmLabel="Delete software license"
-        onConfirm={handleConfirmDeleteLicense}
-        onCancel={handleCloseDeleteLicense}
-        isConfirming={isDeletingLicense}
-        error={deleteLicenseError}
+        onConfirm={licenses.handleConfirmDelete}
+        onCancel={licenses.handleCloseDelete}
+        isConfirming={licenses.isDeleting}
+        error={licenses.deleteError}
       />
 
       <StatusFormModal
-        isOpen={isStatusFormOpen}
-        mode={statusFormMode}
-        values={statusFormValues}
-        onChange={handleStatusFormFieldChange}
-        onSubmit={handleSubmitStatusForm}
-        onClose={handleCloseStatusForm}
-        isSubmitting={isSavingStatus}
-        error={statusFormError}
+        isOpen={statuses.isFormOpen}
+        mode={statuses.formMode}
+        values={statuses.formValues}
+        onChange={statuses.handleFormFieldChange}
+        onSubmit={statuses.handleSubmitForm}
+        onClose={statuses.handleCloseForm}
+        isSubmitting={statuses.isSaving}
+        error={statuses.formError}
       />
 
       <ConfirmDialog
-        isOpen={Boolean(statusToDelete)}
+        isOpen={Boolean(statuses.statusToDelete)}
         title="Delete this status?"
         message={
-          statusToDelete
-            ? `"${statusToDelete.status_name}" will be permanently removed. This cannot be undone.`
+          statuses.statusToDelete
+            ? `"${statuses.statusToDelete.status_name}" will be permanently removed. This cannot be undone.`
             : ""
         }
         confirmLabel="Delete status"
-        onConfirm={handleConfirmDeleteStatus}
-        onCancel={handleCloseDeleteStatus}
-        isConfirming={isDeletingStatus}
-        error={deleteStatusError}
-        blocked={deleteStatusBlocked}
+        onConfirm={statuses.handleConfirmDelete}
+        onCancel={statuses.handleCloseDelete}
+        isConfirming={statuses.isDeleting}
+        error={statuses.deleteError}
+        blocked={statuses.deleteBlocked}
         blockedActionLabel="Hide instead"
-        onBlockedAction={handleHideStatusInstead}
+        onBlockedAction={statuses.handleHideInstead}
       />
 
       <ConfirmDialog
-        isOpen={Boolean(employeeToDelete)}
+        isOpen={Boolean(employees.employeeToDelete)}
         title="Delete this employee?"
         message={
-          employeeToDelete
-            ? `"${employeeToDelete.full_name}" will be permanently removed. This cannot be undone.`
+          employees.employeeToDelete
+            ? `"${employees.employeeToDelete.full_name}" will be permanently removed. This cannot be undone.`
             : ""
         }
         confirmLabel="Delete employee"
-        onConfirm={handleConfirmDeleteEmployee}
-        onCancel={handleCloseDeleteEmployee}
-        isConfirming={isDeletingEmployee}
-        error={deleteEmployeeError}
-        blocked={deleteEmployeeBlocked}
+        onConfirm={employees.handleConfirmDelete}
+        onCancel={employees.handleCloseDelete}
+        isConfirming={employees.isDeleting}
+        error={employees.deleteError}
+        blocked={employees.deleteBlocked}
         blockedActionLabel="Unassign devices"
-        onBlockedAction={handleViewAssignedDevicesFromDelete}
+        onBlockedAction={employees.handleViewAssignedDevicesFromDelete}
       />
 
       <ConfirmDialog
-        isOpen={Boolean(equipmentToUnassign)}
+        isOpen={Boolean(equipment.equipmentToUnassign)}
         title="Unassign this equipment?"
         message={
-          equipmentToUnassign
-            ? `"${getEquipmentDisplayName(equipmentToUnassign)}" will be removed from ${equipmentToUnassign.owner_name || "its current owner"
+          equipment.equipmentToUnassign
+            ? `"${getEquipmentDisplayName(equipment.equipmentToUnassign)}" will be removed from ${equipment.equipmentToUnassign.owner_name || "its current owner"
             } and returned to stock available as Working - IT Stock.`
             : ""
         }
         confirmLabel="Unassign"
         confirmingLabel="Unassigning..."
-        onConfirm={handleConfirmUnassignEquipment}
-        onCancel={handleCloseUnassignEquipment}
-        isConfirming={isUnassigningEquipment}
-        error={unassignEquipmentError}
+        onConfirm={equipment.handleConfirmUnassign}
+        onCancel={equipment.handleCloseUnassign}
+        isConfirming={equipment.isUnassigning}
+        error={equipment.unassignError}
       />
 
       <ConfirmDialog
-        isOpen={Boolean(equipmentToDelete)}
+        isOpen={Boolean(equipment.equipmentToDelete)}
         title="Delete this equipment?"
         message={
-          equipmentToDelete
-            ? `"${getEquipmentDisplayName(equipmentToDelete)}" will be permanently removed. This cannot be undone.`
+          equipment.equipmentToDelete
+            ? `"${getEquipmentDisplayName(equipment.equipmentToDelete)}" will be permanently removed. This cannot be undone.`
             : ""
         }
         confirmLabel="Delete equipment"
-        onConfirm={handleConfirmDeleteEquipment}
-        onCancel={handleCloseDeleteEquipment}
-        isConfirming={isDeletingEquipment}
-        error={deleteEquipmentError}
+        onConfirm={equipment.handleConfirmDelete}
+        onCancel={equipment.handleCloseDelete}
+        isConfirming={equipment.isDeleting}
+        error={equipment.deleteError}
       />
 
       <ConfirmDialog
-        isOpen={Boolean(departmentToDelete)}
+        isOpen={Boolean(departments.departmentToDelete)}
         title="Delete this department?"
         message={
-          departmentToDelete
-            ? `"${departmentToDelete.department_name}" will be permanently removed. This cannot be undone.`
+          departments.departmentToDelete
+            ? `"${departments.departmentToDelete.department_name}" will be permanently removed. This cannot be undone.`
             : ""
         }
         confirmLabel="Delete department"
-        onConfirm={handleConfirmDeleteDepartment}
-        onCancel={handleCloseDeleteDepartment}
-        isConfirming={isDeletingDepartment}
-        error={deleteDepartmentError}
+        onConfirm={departments.handleConfirmDelete}
+        onCancel={departments.handleCloseDelete}
+        isConfirming={departments.isDeleting}
+        error={departments.deleteError}
       />
 
       <ConfirmDialog
-        isOpen={Boolean(categoryToDelete)}
+        isOpen={Boolean(equipment.categoryToDelete)}
         title="Delete this category?"
         message={
-          categoryToDelete
-            ? `"${categoryToDelete.category_name || categoryToDelete.category || categoryToDelete.label
+          equipment.categoryToDelete
+            ? `"${equipment.categoryToDelete.category_name || equipment.categoryToDelete.category || equipment.categoryToDelete.label
             }" will be permanently removed. This cannot be undone.`
             : ""
         }
         confirmLabel="Delete category"
-        onConfirm={handleConfirmDeleteCategory}
-        onCancel={handleCloseDeleteCategory}
-        isConfirming={isDeletingCategory}
-        error={deleteCategoryError}
+        onConfirm={equipment.handleConfirmDeleteCategory}
+        onCancel={equipment.handleCloseDeleteCategory}
+        isConfirming={equipment.isDeletingCategory}
+        error={equipment.deleteCategoryError}
       />
 
       <ConfirmDialog
-        isOpen={Boolean(recycleBinItemToDelete)}
+        isOpen={Boolean(recycleBin.itemToDelete)}
         title="Delete this item forever?"
         message="This will permanently remove it from the recycle bin. This cannot be undone."
         confirmLabel="Delete forever"
-        onConfirm={handleConfirmDeleteRecycleBinItem}
-        onCancel={handleCloseDeleteRecycleBinItem}
-        isConfirming={Boolean(deletingRecycleBinId)}
-        error={recycleBinActionError}
+        onConfirm={recycleBin.handleConfirmDelete}
+        onCancel={recycleBin.handleCloseDelete}
+        isConfirming={Boolean(recycleBin.deletingId)}
+        error={recycleBin.actionError}
       />
 
       <ConfirmDialog
-        isOpen={isPurgeRecycleBinOpen}
+        isOpen={recycleBin.isPurgeOpen}
         title="Purge the entire recycle bin?"
-        message={`${recycleBinEntries.length} item${recycleBinEntries.length === 1 ? "" : "s"} will be permanently deleted. This cannot be undone.`}
+        message={`${recycleBin.entries.length} item${recycleBin.entries.length === 1 ? "" : "s"} will be permanently deleted. This cannot be undone.`}
         confirmLabel="Purge all"
-        onConfirm={handleConfirmPurgeRecycleBin}
-        onCancel={handleClosePurgeRecycleBin}
-        isConfirming={isPurgingRecycleBin}
-        error={recycleBinActionError}
+        onConfirm={recycleBin.handleConfirmPurge}
+        onCancel={recycleBin.handleClosePurge}
+        isConfirming={recycleBin.isPurging}
+        error={recycleBin.actionError}
       />
     </div>
   );

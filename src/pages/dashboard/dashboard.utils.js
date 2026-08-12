@@ -12,6 +12,22 @@ export function extractEquipmentItems(data) {
   return normalizeRecordList(data);
 }
 
+// Shared display-name fallback chain — used by Equipment's own views and by
+// Borrow/Assign, which reference an equipment record without owning it.
+export function getEquipmentDisplayName(item) {
+  return (
+    item?.device_name ||
+    item?.name ||
+    item?.computer_name ||
+    [item?.device_type, item?.device_model].filter(Boolean).join(" - ") ||
+    item?.asset_code ||
+    item?.equipment_code ||
+    item?.service_tag ||
+    item?.serial_no ||
+    `${item?.category || item?.category_name || "Equipment"} #${item?.equipment_id || ""}`.trim()
+  );
+}
+
 export function getEmployeeDepartmentCode(employee) {
   return employee?.department_code || employee?.department || null;
 }
