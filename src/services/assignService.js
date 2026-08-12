@@ -12,10 +12,8 @@ export function fetchAssignableEquipment({ q, category } = {}) {
   return apiGet(`/api/assign/available${query ? `?${query}` : ""}`);
 }
 
-export function fetchAssignEmployees({ position, department, q } = {}) {
+export function fetchAssignEmployees({ q } = {}) {
   const params = new URLSearchParams();
-  if (position) params.set("position", position);
-  if (department) params.set("department", department);
   if (q) params.set("q", q);
   const query = params.toString();
   return apiGet(`/api/assign/employees${query ? `?${query}` : ""}`);

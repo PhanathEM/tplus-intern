@@ -29,9 +29,8 @@ function DeviceResultRow({ device, isSelected, onSelect }) {
     <button
       type="button"
       onClick={() => onSelect(device)}
-      className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${
-        isSelected ? "bg-orange-50" : "hover:bg-slate-50"
-      }`}
+      className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected ? "bg-orange-50" : "hover:bg-slate-50"
+        }`}
     >
       <div className="min-w-0">
         <p className="truncate text-[13px] font-medium text-slate-900">{device.display_name}</p>
@@ -53,9 +52,8 @@ function EmployeeResultRow({ employee, isSelected, onSelect }) {
     <button
       type="button"
       onClick={() => onSelect(employee)}
-      className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${
-        isSelected ? "bg-orange-50" : "hover:bg-slate-50"
-      }`}
+      className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected ? "bg-orange-50" : "hover:bg-slate-50"
+        }`}
     >
       <div className="min-w-0">
         <p className="truncate text-[13px] font-medium text-slate-900">{employee.full_name}</p>
@@ -76,7 +74,6 @@ export function AssignEquipmentView({
   formDataError,
   onRetryFormData,
   categories = [],
-  positions = [],
   statuses = [],
 
   deviceQuery,
@@ -89,9 +86,6 @@ export function AssignEquipmentView({
   selectedDevice,
   onSelectDevice,
   onClearDevice,
-
-  position,
-  onPositionChange,
 
   employeeQuery,
   onEmployeeQueryChange,
@@ -265,34 +259,26 @@ export function AssignEquipmentView({
           )}
         </SectionCard>
 
-        <SectionCard step={2} title="Pick a position" description="Narrows the employee list down.">
-          <select
-            value={position}
-            onChange={(e) => onPositionChange(e.target.value)}
-            className={formInputClass}
-          >
-            <option value="">Select position</option>
-            {positions.map((item) => (
-              <option key={item.position} value={item.position}>
-                {item.position} ({item.employee_count})
-              </option>
-            ))}
-          </select>
-        </SectionCard>
-
-        <SectionCard step={3} title="Pick an employee" description={position ? undefined : "Choose a position first."}>
-          {!position ? (
-            <p className="px-1 py-2 text-xs text-slate-400">Waiting for a position to be selected.</p>
-          ) : selectedEmployee ? (
+        <SectionCard step={2} title="Pick an employee" description="Search by employee name or staff code.">
+          {selectedEmployee ? (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-orange-200 bg-orange-50 px-3.5 py-2.5">
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-semibold text-slate-900">{selectedEmployee.full_name}</p>
+                <p className="truncate text-[13px] font-semibold text-slate-900">
+                  {selectedEmployee.full_name}
+                </p>
+
                 <p className="mt-0.5 truncate text-xs text-slate-500">
-                  {[selectedEmployee.department_name || selectedEmployee.department_code, selectedEmployee.location]
+                  {[
+                    selectedEmployee.staff_code,
+                    selectedEmployee.department_name ||
+                    selectedEmployee.department_code,
+                    selectedEmployee.location,
+                  ]
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
               </div>
+
               <button
                 type="button"
                 onClick={onClearEmployee}
@@ -309,30 +295,39 @@ export function AssignEquipmentView({
                   className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                   size={15}
                 />
+
                 <input
                   type="text"
                   autoComplete="off"
                   value={employeeQuery}
                   onChange={(e) => onEmployeeQueryChange(e.target.value)}
-                  placeholder="Search name or staff code..."
+                  placeholder="Search employee name or staff code..."
                   className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-100"
                 />
               </div>
 
               <div className="mt-3 max-h-72 overflow-y-auto rounded-lg border border-slate-100">
                 {isEmployeeLoading ? (
-                  <p className="px-3 py-6 text-center text-xs text-slate-400">Searching...</p>
+                  <p className="px-3 py-6 text-center text-xs text-slate-400">
+                    Searching...
+                  </p>
                 ) : employeeError ? (
-                  <p className="px-3 py-6 text-center text-xs text-rose-500">{employeeError}</p>
+                  <p className="px-3 py-6 text-center text-xs text-rose-500">
+                    {employeeError}
+                  </p>
                 ) : employeeOptions.length === 0 ? (
-                  <p className="px-3 py-6 text-center text-xs text-slate-400">No employees found.</p>
+                  <p className="px-3 py-6 text-center text-xs text-slate-400">
+                    No employees found.
+                  </p>
                 ) : (
                   <div className="divide-y divide-slate-50 p-1">
                     {employeeOptions.map((employee) => (
                       <EmployeeResultRow
                         key={employee.employee_id}
                         employee={employee}
-                        isSelected={false}
+                        isSelected={
+                          selectedEmployee?.employee_id === employee.employee_id
+                        }
                         onSelect={onSelectEmployee}
                       />
                     ))}
@@ -343,7 +338,7 @@ export function AssignEquipmentView({
           )}
         </SectionCard>
 
-        <SectionCard step={4} title="Status &amp; date">
+        <SectionCard step={3} title="Status &amp; date">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Status" htmlFor="assign-page-status">
               <select

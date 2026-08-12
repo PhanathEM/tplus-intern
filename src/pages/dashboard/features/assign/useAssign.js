@@ -1,16 +1,10 @@
 import { useEffect, useState } from "react";
-import {
-  fetchAssignFormData,
-  fetchAssignableEquipment,
-  fetchAssignEmployees,
-  submitAssign,
-} from "../../../../services/assignService";
+import { fetchAssignFormData, fetchAssignableEquipment, fetchAssignEmployees, submitAssign } from "../../../../services/assignService";
 import { unassignEquipment } from "../../../../services/equipmentService";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 
 export function useAssign({ isActive, user, onAssigned }) {
   const [formData, setFormData] = useState({
-    positions: [],
     statuses: [],
     categories: [],
     locations: [],
@@ -24,7 +18,6 @@ export function useAssign({ isActive, user, onAssigned }) {
   const [isDeviceLoading, setIsDeviceLoading] = useState(false);
   const [deviceError, setDeviceError] = useState(null);
   const [selectedDevice, setSelectedDevice] = useState(null);
-  const [position, setPosition] = useState("");
   const [employeeQuery, setEmployeeQuery] = useState("");
   const [employeeOptions, setEmployeeOptions] = useState([]);
   const [isEmployeeLoading, setIsEmployeeLoading] = useState(false);
@@ -47,7 +40,6 @@ export function useAssign({ isActive, user, onAssigned }) {
       .then((data) => {
         if (ignore) return;
         setFormData({
-          positions: Array.isArray(data?.positions) ? data.positions : [],
           statuses: Array.isArray(data?.statuses) ? data.statuses : [],
           categories: Array.isArray(data?.categories) ? data.categories : [],
           locations: Array.isArray(data?.locations) ? data.locations : [],
@@ -93,12 +85,14 @@ export function useAssign({ isActive, user, onAssigned }) {
   }, [isActive, selectedDevice, deviceQuery, deviceCategory]);
 
   useEffect(() => {
-    if (!isActive || !position || selectedEmployee) return;
+    if (!isActive || selectedEmployee) return;
 
     let ignore = false;
     const timer = setTimeout(() => {
       setIsEmployeeLoading(true);
-      fetchAssignEmployees({ position, q: employeeQuery.trim() })
+      fetchAssignEmployees({
+        q: employeeQuery.trim(),
+      })
         .then((data) => {
           if (ignore) return;
           setEmployeeOptions(Array.isArray(data?.employees) ? data.employees : []);
@@ -116,7 +110,7 @@ export function useAssign({ isActive, user, onAssigned }) {
       ignore = true;
       clearTimeout(timer);
     };
-  }, [isActive, position, selectedEmployee, employeeQuery]);
+  }, [isActive, selectedEmployee, employeeQuery]);
 
   function handleRetryFormData() {
     setIsFormDataLoading(true);
@@ -147,13 +141,6 @@ export function useAssign({ isActive, user, onAssigned }) {
     setSelectedDevice(null);
     setConflict(null);
     setSubmitError(null);
-  }
-
-  function handlePositionChange(value) {
-    setPosition(value);
-    setSelectedEmployee(null);
-    setEmployeeQuery("");
-    setEmployeeOptions([]);
   }
 
   function handleEmployeeQueryChange(value) {
@@ -256,8 +243,6 @@ export function useAssign({ isActive, user, onAssigned }) {
     selectedDevice,
     handleSelectDevice,
     handleClearDevice,
-    position,
-    handlePositionChange,
     employeeQuery,
     handleEmployeeQueryChange,
     employeeOptions,
