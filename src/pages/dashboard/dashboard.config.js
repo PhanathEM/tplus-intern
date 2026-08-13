@@ -115,28 +115,29 @@ export const userPermissionSections = navSections
 
 export const replacementColumns = [
   { key: "replacement_id", label: "Replacement ID" },
-  { key: "employee_id", label: "Employee ID" },
-  { key: "owner_name", label: "Owner Name" },
-  { key: "owner_department", label: "Owner Department" },
+  { key: "employee_name", label: "Employee" },
+  { key: "employee_position", label: "Position" },
+  { key: "employee_department", label: "Department" },
   { key: "old_computer_name", label: "Old Computer Name" },
-  { key: "old_device_model", label: "Old Device Model" },
-  { key: "old_service_tag", label: "Old Service Tag" },
   { key: "old_asset_code", label: "Old Asset Code" },
+  { key: "old_category", label: "Old Category" },
   { key: "old_device_status", label: "Old Device Status" },
-  { key: "old_device_location", label: "Old Device Location" },
   { key: "old_bag", label: "Old Bag" },
   { key: "old_mouse", label: "Old Mouse" },
   { key: "old_keyboard", label: "Old Keyboard" },
-  { key: "new_computer_name", label: "New Computer Name" },
-  { key: "new_device_model", label: "New Device Model" },
-  { key: "new_service_tag", label: "New Service Tag" },
   { key: "new_asset_code", label: "New Asset Code" },
+  { key: "new_category", label: "New Category" },
+  { key: "new_owner_location", label: "New Owner Location" },
   { key: "new_bag", label: "New Bag" },
   { key: "new_mouse", label: "New Mouse" },
   { key: "new_keyboard", label: "New Keyboard" },
-  { key: "new_owner_location", label: "New Owner Location" },
   { key: "replacement_date", label: "Replacement Date" },
 ];
+
+export const REPLACEMENT_FILTERS_INITIAL_VALUES = {
+  category: "All",
+  q: "",
+};
 
 export const departmentColumns = [
   { key: "department_id", label: "Department ID" },

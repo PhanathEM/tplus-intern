@@ -29,13 +29,13 @@ function getResultKey(type, item, index) {
   return [
     type,
     item.employee_id ??
-      item.department_id ??
-      item.equipment_id ??
-      item.user_id ??
-      item.owner_name ??
-      item.full_name ??
-      item.username ??
-      index,
+    item.department_id ??
+    item.equipment_id ??
+    item.user_id ??
+    item.owner_name ??
+    item.full_name ??
+    item.username ??
+    index,
   ].join("-");
 }
 

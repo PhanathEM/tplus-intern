@@ -18,11 +18,11 @@ export function RecordCellValue({ value }) {
     );
   }
 
-if (value === null || value === undefined || value === "") {
+  if (value === null || value === undefined || value === "") {
     return <span className="text-slate-400">N/A</span>;
   }
 
-return <span>{formatFieldValue(value)}</span>;
+  return <span>{formatFieldValue(value)}</span>;
 }
 
 export function RecordsTableView({
@@ -47,7 +47,7 @@ export function RecordsTableView({
 }) {
   const columns = useMemo(() => getRecordColumns(records, columnsConfig), [records, columnsConfig]);
 
-return (
+  return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
@@ -73,7 +73,7 @@ return (
           </div>
         </div>
 
-{isLoading ? (
+        {isLoading ? (
           <div className="px-5 py-10 text-center text-[13px] text-slate-500">{loadingText}</div>
         ) : error ? (
           <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">

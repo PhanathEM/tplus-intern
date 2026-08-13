@@ -6,6 +6,7 @@ import {
   FiX as X,
 } from "react-icons/fi";
 import { FormField, formInputClass } from "../../components/SharedControls";
+import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 
 function SectionCard({ step, title, description, children }) {
   return (
@@ -21,29 +22,6 @@ function SectionCard({ step, title, description, children }) {
       </div>
       {children}
     </div>
-  );
-}
-
-function DeviceResultRow({ device, isSelected, onSelect }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(device)}
-      className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected ? "bg-orange-50" : "hover:bg-slate-50"
-        }`}
-    >
-      <div className="min-w-0">
-        <p className="truncate text-[13px] font-medium text-slate-900">{device.display_name}</p>
-        <p className="mt-0.5 truncate text-xs text-slate-500">
-          {[device.category_name, device.asset_code, device.service_tag, device.location]
-            .filter(Boolean)
-            .join(" · ") || "—"}
-        </p>
-      </div>
-      <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-        {device.status}
-      </span>
-    </button>
   );
 }
 
@@ -81,6 +59,7 @@ export function AssignEquipmentView({
   deviceCategory,
   onDeviceCategoryChange,
   deviceOptions = [],
+  deviceColumns = [],
   isDeviceLoading,
   deviceError,
   selectedDevice,
@@ -236,24 +215,26 @@ export function AssignEquipmentView({
               </div>
 
               <div className="mt-3 max-h-72 overflow-y-auto rounded-lg border border-slate-100">
-                {isDeviceLoading ? (
-                  <p className="px-3 py-6 text-center text-xs text-slate-400">Searching...</p>
-                ) : deviceError ? (
-                  <p className="px-3 py-6 text-center text-xs text-rose-500">{deviceError}</p>
-                ) : deviceOptions.length === 0 ? (
-                  <p className="px-3 py-6 text-center text-xs text-slate-400">No assignable devices found.</p>
-                ) : (
-                  <div className="divide-y divide-slate-50 p-1">
-                    {deviceOptions.map((device) => (
-                      <DeviceResultRow
-                        key={device.equipment_id}
-                        device={device}
-                        isSelected={false}
-                        onSelect={onSelectDevice}
-                      />
-                    ))}
-                  </div>
-                )}
+                <DynamicEquipmentTable
+                  columns={deviceColumns}
+                  records={deviceOptions}
+                  rowKey={(device, index) => device.equipment_id ?? index}
+                  isLoading={isDeviceLoading}
+                  loadingText="Searching..."
+                  error={deviceError}
+                  errorTitle="Couldn't search devices"
+                  emptyTitle="No assignable devices found"
+                  emptyDescription="Try a different search or category."
+                  renderRowActions={(device) => (
+                    <button
+                      type="button"
+                      onClick={() => onSelectDevice(device)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                    >
+                      Select
+                    </button>
+                  )}
+                />
               </div>
             </>
           )}

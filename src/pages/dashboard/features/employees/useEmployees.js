@@ -33,9 +33,7 @@ export function useEmployees({ isActive, user, loadDepartments }) {
 
   const sortedEmployees = useMemo(() => {
     if (!sort.key) return employees;
-    const sorted = [...employees].sort((a, b) =>
-      String(a[sort.key] ?? "").localeCompare(String(b[sort.key] ?? ""))
-    );
+    const sorted = [...employees].sort((a, b) => String(a[sort.key] ?? "").localeCompare(String(b[sort.key] ?? "")));
     return sort.direction === "asc" ? sorted : sorted.reverse();
   }, [employees, sort]);
 
@@ -87,11 +85,7 @@ export function useEmployees({ isActive, user, loadDepartments }) {
   }, [searchTerm, isActive]);
 
   function handleSort(key) {
-    setSort((current) =>
-      current.key === key
-        ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
-        : { key, direction: "asc" }
-    );
+    setSort((current) => (current.key === key ? { key, direction: current.direction === "asc" ? "desc" : "asc" } : { key, direction: "asc" }));
     setPage(1);
   }
 
@@ -225,13 +219,7 @@ export function useEmployees({ isActive, user, loadDepartments }) {
         const ownedEquipment = data?.references?.owned_equipment || 0;
 
         setDeleteBlocked(ownedEquipment > 0);
-        setDeleteError(
-          ownedEquipment > 0
-            ? `This employee has ${ownedEquipment} assigned device${ownedEquipment === 1 ? "" : "s"}. Unassign ${
-                ownedEquipment === 1 ? "it" : "them"
-              } first.`
-            : data?.error || error.message || "Could not delete employee."
-        );
+        setDeleteError(ownedEquipment > 0 ? `This employee has ${ownedEquipment} assigned device${ownedEquipment === 1 ? "" : "s"}. Unassign ${ownedEquipment === 1 ? "it" : "them"} first.` : data?.error || error.message || "Could not delete employee.");
       })
       .finally(() => setIsDeleting(false));
   }
@@ -291,11 +279,7 @@ export function useEmployees({ isActive, user, loadDepartments }) {
     const firstDevice = group.devices?.[0] || {};
     const employeeId = group.employee_id ?? firstDevice.employee_id;
     const fullName = group.owner_name ?? firstDevice.owner_name ?? firstDevice.full_name ?? "";
-    const directoryRecord = employees.find(
-      (employee) =>
-        (employeeId !== undefined && String(employee.employee_id) === String(employeeId)) ||
-        (fullName && employee.full_name === fullName)
-    );
+    const directoryRecord = employees.find((employee) => (employeeId !== undefined && String(employee.employee_id) === String(employeeId)) || (fullName && employee.full_name === fullName));
 
     if (directoryRecord) return directoryRecord;
 
@@ -303,8 +287,7 @@ export function useEmployees({ isActive, user, loadDepartments }) {
       employee_id: employeeId,
       full_name: fullName,
       position: group.employee_position ?? firstDevice.employee_position ?? firstDevice.position ?? "",
-      department:
-        group.employee_department ?? firstDevice.employee_department ?? firstDevice.department ?? firstDevice.department_code ?? "",
+      department: group.employee_department ?? firstDevice.employee_department ?? firstDevice.department ?? firstDevice.department_code ?? "",
       department_code: group.employee_department ?? firstDevice.department_code ?? firstDevice.department ?? "",
       location: group.employee_location ?? firstDevice.employee_location ?? firstDevice.location ?? "",
       staff_code: firstDevice.staff_code ?? "",

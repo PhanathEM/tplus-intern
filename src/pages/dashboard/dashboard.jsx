@@ -42,12 +42,16 @@ import {
   CloudUsageView,
   LicenseFormModal,
   LicensesView,
-  ReplacementsView,
   ServerUsageView,
   SsdProcurementView,
   SsdUpgradesView,
 } from "./features/records/OperationalRecordViews";
-import { useReplacements } from "./features/records/useReplacements";
+import {
+  DeviceReplacementCategoryBar,
+  ReplaceableDevicesView,
+  ReplaceDeviceDialog,
+} from "./features/device-replacement/ReplacementView";
+import { useReplacements } from "./features/device-replacement/useReplacements";
 import { useSsdUpgrades } from "./features/records/useSsdUpgrades";
 import { useSsdProcurement } from "./features/records/useSsdProcurement";
 import { useAntivirus } from "./features/records/useAntivirus";
@@ -227,7 +231,7 @@ function Dashboard({ user, onLogout }) {
     loadDepartments: departments.loadDepartments,
   });
 
-  const replacements = useReplacements({ isActive: isReplacementView });
+  const replacements = useReplacements({ isActive: isReplacementView, user });
   const ssdUpgrades = useSsdUpgrades({ isActive: isSsdUpgradeView });
   const ssdProcurement = useSsdProcurement({ isActive: isSsdProcurementView });
   const antivirus = useAntivirus({ isActive: isAntivirusView });
@@ -589,12 +593,24 @@ function Dashboard({ user, onLogout }) {
           )}
 
           {isReplacementView && (
-            <ReplacementsView
-              replacements={replacements.replacements}
-              isLoading={replacements.isLoading}
-              error={replacements.error}
-              onRetry={replacements.handleRetry}
-            />
+            <>
+              <div className="px-4 pt-6 sm:px-6 lg:px-8">
+                <DeviceReplacementCategoryBar
+                  categories={replacements.categories}
+                  selected={replacements.selectedCategory}
+                  onSelect={replacements.handleSelectCategory}
+                />
+              </div>
+              <ReplaceableDevicesView
+                devices={replacements.replaceableDevices}
+                columns={replacements.replaceableColumns}
+                isLoading={replacements.isReplaceableLoading}
+                error={replacements.replaceableError}
+                onRetry={replacements.handleRetryReplaceable}
+                canManage={canCreateRecords}
+                onOpenReplaceDialog={replacements.handleOpenReplaceDialog}
+              />
+            </>
           )}
 
           {isSsdUpgradeView && (
@@ -850,6 +866,7 @@ function Dashboard({ user, onLogout }) {
                 deviceCategory={assign.deviceCategory}
                 onDeviceCategoryChange={assign.handleDeviceCategoryChange}
                 deviceOptions={assign.deviceOptions}
+                deviceColumns={assign.deviceColumns}
                 isDeviceLoading={assign.isDeviceLoading}
                 deviceError={assign.deviceError}
                 selectedDevice={assign.selectedDevice}
@@ -1076,6 +1093,33 @@ function Dashboard({ user, onLogout }) {
         onClose={equipment.handleCloseCategoryForm}
         isSubmitting={equipment.isSavingCategory}
         error={equipment.categoryFormError}
+      />
+
+      <ReplaceDeviceDialog
+        device={replacements.replaceDialogTarget}
+        onClose={replacements.handleCloseReplaceDialog}
+        activeTab={replacements.activeReplaceTab}
+        onSwitchTab={replacements.handleSwitchReplaceTab}
+        deviceOptions={replacements.newDeviceOptions}
+        deviceOptionColumns={replacements.newDeviceColumns}
+        isDeviceOptionsLoading={replacements.isNewDeviceOptionsLoading}
+        deviceOptionsError={replacements.newDeviceOptionsError}
+        selectedNewDevice={replacements.selectedNewDevice}
+        onSelectNewDevice={replacements.handleSelectNewDevice}
+        onClearNewDevice={replacements.handleClearNewDevice}
+        onSubmitDevice={replacements.handleSubmitReplace}
+        isSubmittingDevice={replacements.isSubmitting}
+        submitDeviceError={replacements.submitError}
+        partTypes={replacements.partTypes}
+        selectedPartTypeId={replacements.selectedPartTypeId}
+        onSelectPartType={replacements.handleSelectPartType}
+        partAction={replacements.partAction}
+        onSelectPartAction={replacements.handleSelectPartAction}
+        partNewValue={replacements.partNewValue}
+        onPartNewValueChange={replacements.handlePartNewValueChange}
+        onSubmitPart={replacements.handleSubmitPartReplace}
+        isSubmittingPart={replacements.isSubmittingPart}
+        submitPartError={replacements.submitPartError}
       />
 
       <LicenseFormModal

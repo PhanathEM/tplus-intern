@@ -1,16 +1,9 @@
-import { useMemo, useRef } from "react";
-import {
-  FiAlertTriangle as AlertTriangle,
-  FiBox as Box,
-  FiChevronDown as ChevronDown,
-  FiChevronLeft as ChevronLeft,
-  FiChevronRight as ChevronRight,
-  FiPlusCircle as PlusCircle,
-  FiRefreshCw as RefreshCw,
-} from "react-icons/fi";
+import { useMemo } from "react";
+import { FiBox as Box, FiChevronDown as ChevronDown, FiPlusCircle as PlusCircle } from "react-icons/fi";
 import { getRecordColumns } from "../../dashboard.utils";
 import { CategoryDropdown, EmptyState } from "../../components/SharedControls";
-import { RecordCellValue } from "../../components/RecordsTableView";
+import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
+import { CategoryTabs } from "../../components/CategoryTabs";
 
 export function EquipmentItemsTable({
   category,
@@ -86,163 +79,72 @@ return (
           </div>
         </div>
 
-{isLoading ? (
-          <div className="px-5 py-10 text-center text-[13px] text-slate-500">Loading equipment...</div>
-        ) : isUnconfigured ? (
+{isUnconfigured ? (
           <EmptyState
             icon={Box}
             title="Empty"
             description={`${category} has no columns configured yet. Click "Add New Item" to set them up.`}
           />
-        ) : error ? (
-          <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
-            <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500">
-              <AlertTriangle size={18} />
-            </div>
-            <p className="text-[13px] font-semibold text-slate-700">Couldn&apos;t load equipment</p>
-            <p className="text-xs text-slate-500">{error}</p>
-            <button
-              type="button"
-              onClick={onRetry}
-              className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-            >
-              <RefreshCw size={13} />
-              Retry
-            </button>
-          </div>
-        ) : items.length === 0 ? (
-          <EmptyState icon={Box} title="No equipment found" description="This category has no items." />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px]">
-              <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
-                <tr>
-                  {columns.map((column) => (
-                    <th key={column.key} className="whitespace-nowrap px-4 py-3 font-semibold">
-                      {column.label}
-                    </th>
-                  ))}
-                  {canManage && (
-                    <th className="whitespace-nowrap px-4 py-3 font-semibold text-right">Actions</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {items.map((item, index) => {
-                  const hasOwner = Boolean(item.owner_id || item.owner_name);
-
-                  return (
-                    <tr key={item.equipment_id ?? index} className="transition hover:bg-slate-50/70">
-                      {columns.map((column) => (
-                        <td
-                          key={column.key}
-                          className={`px-4 py-3 text-slate-600 ${column.key === "remark" ? "min-w-72 whitespace-normal" : "whitespace-nowrap"
-                            }`}
-                        >
-                          <RecordCellValue value={item[column.key]} />
-                        </td>
-                      ))}
-                      {canManage && (
-                        <td className="whitespace-nowrap px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {hasOwner && onUnassign && (
-                              <button
-                                type="button"
-                                onClick={() => onUnassign(item)}
-                                className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-700 outline-none transition hover:border-amber-300 hover:bg-amber-50 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                              >
-                                Unassign
-                              </button>
-                            )}
-                            {!hasOwner && onBorrow && borrowableStatusNames?.has(item.status) && (
-                              <button
-                                type="button"
-                                onClick={() => onBorrow(item)}
-                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                              >
-                                Borrow
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => onEdit(item)}
-                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                            >
-                              Edit
-                            </button>
-                            {onDelete && (
-                              <button
-                                type="button"
-                                onClick={() => onDelete(item)}
-                                className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                              >
-                                Delete
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DynamicEquipmentTable
+            columns={columns}
+            records={items}
+            rowKey={(item, index) => item.equipment_id ?? index}
+            isLoading={isLoading}
+            loadingText="Loading equipment..."
+            error={error}
+            errorTitle="Couldn't load equipment"
+            onRetry={onRetry}
+            emptyIcon={Box}
+            emptyTitle="No equipment found"
+            emptyDescription="This category has no items."
+            renderRowActions={
+              canManage &&
+              ((item) => {
+                const hasOwner = Boolean(item.owner_id || item.owner_name);
+                return (
+                  <div className="flex items-center justify-end gap-2">
+                    {hasOwner && onUnassign && (
+                      <button
+                        type="button"
+                        onClick={() => onUnassign(item)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-700 outline-none transition hover:border-amber-300 hover:bg-amber-50 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                      >
+                        Unassign
+                      </button>
+                    )}
+                    {!hasOwner && onBorrow && borrowableStatusNames?.has(item.status) && (
+                      <button
+                        type="button"
+                        onClick={() => onBorrow(item)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                      >
+                        Borrow
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onEdit(item)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                    >
+                      Edit
+                    </button>
+                    {onDelete && (
+                      <button
+                        type="button"
+                        onClick={() => onDelete(item)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            }
+          />
         )}
       </div>
-    </div>
-  );
-}
-
-function CategoryTabs({ options, selected, onSelect }) {
-  const scrollRef = useRef(null);
-
-  function scrollByAmount(amount) {
-    scrollRef.current?.scrollBy({ left: amount, behavior: "smooth" });
-  }
-
-  return (
-    <div className="flex items-center gap-1 border-b border-slate-100 pl-5 pr-2 py-3">
-      <button
-        type="button"
-        onClick={() => scrollByAmount(-240)}
-        aria-label="Scroll categories left"
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400"
-      >
-        <ChevronLeft size={16} />
-      </button>
-
-      <div
-        ref={scrollRef}
-        className="flex flex-nowrap gap-2 overflow-x-auto scroll-smooth scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {options.map((option) => {
-          const isActive = option.value === selected;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => onSelect(option.value)}
-              className={`inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${
-                isActive
-                  ? "bg-slate-950 text-white"
-                  : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-              }`}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <button
-        type="button"
-        onClick={() => scrollByAmount(240)}
-        aria-label="Scroll categories right"
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400"
-      >
-        <ChevronRight size={16} />
-      </button>
     </div>
   );
 }

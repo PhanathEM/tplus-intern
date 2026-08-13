@@ -6,7 +6,6 @@ import {
   FiHardDrive as HardDrive,
   FiKey as Key,
   FiPlusCircle as PlusCircle,
-  FiRefreshCw as RefreshCw,
   FiShield as Shield,
   FiShoppingCart as ShoppingCart,
   FiX as X,
@@ -16,7 +15,6 @@ import {
   cloudRateColumns,
   cloudUsageColumns,
   licenseColumns,
-  replacementColumns,
   serverUsageColumns,
   ssdProcurementColumns,
   ssdUpgradeColumns,
@@ -215,26 +213,6 @@ export function LicenseFormModal({
         </form>
       </div>
     </div>
-  );
-}
-
-export function ReplacementsView({ replacements, isLoading, error, onRetry }) {
-  return (
-    <RecordsTableView
-      records={replacements}
-      columnsConfig={replacementColumns}
-      title="Device replacements"
-      recordLabel="replacement"
-      loadingText="Loading replacements..."
-      errorTitle="Couldn't load replacements"
-      emptyIcon={RefreshCw}
-      emptyTitle="No replacements found"
-      emptyDescription="Replacement records will appear here."
-      rowKey={(replacement, index) => replacement.replacement_id ?? index}
-      isLoading={isLoading}
-      error={error}
-      onRetry={onRetry}
-    />
   );
 }
 

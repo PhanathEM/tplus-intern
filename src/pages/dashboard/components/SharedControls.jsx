@@ -22,7 +22,7 @@ export function CategoryDropdown({ options, selected, onSelect, label = "Select"
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
-useEffect(() => {
+  useEffect(() => {
     function handlePointerDown(event) {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsOpen(false);
@@ -39,7 +39,7 @@ useEffect(() => {
     };
   }, []);
 
-return (
+  return (
     <div className="relative" ref={containerRef}>
       <button
         type="button"
@@ -55,7 +55,7 @@ return (
         />
       </button>
 
-{isOpen && (
+      {isOpen && (
         <div
           role="listbox"
           className="absolute right-0 top-full z-30 mt-2 min-w-52 max-w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
@@ -118,9 +118,9 @@ export function ConfirmDialog({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onCancel]);
 
-if (!isOpen) return null;
+  if (!isOpen) return null;
 
-return (
+  return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
@@ -192,7 +192,7 @@ export function EmployeeSelectDropdown({ employees, selectedId, onSelect, disabl
   const [query, setQuery] = useState("");
   const containerRef = useRef(null);
 
-useEffect(() => {
+  useEffect(() => {
     function handlePointerDown(event) {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsOpen(false);
@@ -209,17 +209,17 @@ useEffect(() => {
     };
   }, []);
 
- const selectedEmployee = employees.find(
+  const selectedEmployee = employees.find(
     (employee) => String(employee.employee_id) === String(selectedId)
   );
 
- const filteredEmployees = useMemo(() => {
+  const filteredEmployees = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) return employees;
     return employees.filter((employee) => employee.full_name?.toLowerCase().includes(term));
   }, [employees, query]);
 
-return (
+  return (
     <div className="relative" ref={containerRef}>
       <button
         type="button"
@@ -238,7 +238,7 @@ return (
         />
       </button>
 
-{isOpen && (
+      {isOpen && (
         <div className="absolute left-0 top-full z-30 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
           <div className="border-b border-slate-100 p-2">
             <div className="relative">

@@ -36,37 +36,25 @@ export function EmployeeSearchPanel({
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-        <div>
-          <h2 className="text-[15px] font-semibold text-slate-950">Employee lookup</h2>
-          <p className="mt-0.5 text-[13px] text-slate-500">Search by name to see assigned equipment</p>
-        </div>
+      <div className="flex flex-wrap items-center justify-center gap-3 px-5 py-4">
         <form onSubmit={onSubmit} className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+          <div className="relative flex items-center">
+            <Search className="pointer-events-none absolute left-3 text-slate-400" size={15} />
             <input
               type="search"
               value={term}
               onChange={(e) => onTermChange(e.target.value)}
               placeholder="Search employee name"
-              className="h-9 w-56 rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-100"
+              className="h-9 w-56 rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:bg-white"
             />
           </div>
-          <button
-            type="submit"
-            disabled={isLoading || !term.trim()}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Search
-          </button>
         </form>
       </div>
 
       {!hasSearched ? (
         <EmptyState
           icon={Search}
-          title="Search for an employee"
-          description="Results show the equipment assigned to them."
+          title="No search yet"
         />
       ) : isLoading ? (
         <div className="px-5 py-10 text-center text-[13px] text-slate-500">Searching...</div>
@@ -629,15 +617,15 @@ export function EmployeeDetailModal({
                     {Object.entries(device)
                       .filter(([key]) => !EMPLOYEE_DEVICE_DETAIL_HIDDEN_KEYS.has(key))
                       .map(([key, value]) => (
-                      <div key={key} className="min-w-0">
-                        <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                          {humanizeFieldKey(key)}
-                        </dt>
-                        <dd className="mt-0.5 truncate text-[13px] text-slate-800" title={formatFieldValue(value)}>
-                          {formatFieldValue(value)}
-                        </dd>
-                      </div>
-                    ))}
+                        <div key={key} className="min-w-0">
+                          <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                            {humanizeFieldKey(key)}
+                          </dt>
+                          <dd className="mt-0.5 truncate text-[13px] text-slate-800" title={formatFieldValue(value)}>
+                            {formatFieldValue(value)}
+                          </dd>
+                        </div>
+                      ))}
                   </dl>
                 </div>
               ))}
@@ -648,7 +636,3 @@ export function EmployeeDetailModal({
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Sidebar
-// ---------------------------------------------------------------------------

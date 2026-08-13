@@ -11,6 +11,7 @@ export const ACTIVITY_MODULES = {
   USER: "User",
   LICENSE: "Software License",
   STATUS: "Status",
+  REPLACEMENT: "Device Replacement",
 };
 
 export const ACTIVITY_ACTIONS = {
@@ -23,6 +24,7 @@ export const ACTIVITY_ACTIONS = {
   UNASSIGN: "unassign",
   BORROW: "borrow",
   RETURN: "return",
+  REPLACE: "replace",
 };
 
 export const ACTIVITY_MODULE_VALUES = Object.values(ACTIVITY_MODULES);
