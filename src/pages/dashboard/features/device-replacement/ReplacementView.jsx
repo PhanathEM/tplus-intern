@@ -1,25 +1,11 @@
 import { useMemo } from "react";
 import { FiAlertTriangle as AlertTriangle, FiRefreshCw as RefreshCw, FiSearch as Search, FiX as X } from "react-icons/fi";
-import { replacementColumns } from "../../dashboard.config";
+import { HD_CAPACITY_OPTIONS, RAM_CAPACITY_OPTIONS, replacementColumns } from "../../dashboard.config";
 import { getRecordColumns } from "../../dashboard.utils";
 import { EmptyState, formInputClass } from "../../components/SharedControls";
 import { RecordCellValue } from "../../components/RecordsTableView";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
-
-const RAM_CAPACITY_OPTIONS = ["2 GB", "4 GB", "8 GB", "16 GB", "32 GB", "64 GB", "128 GB", "256 GB"];
-const HD_CAPACITY_OPTIONS = [
-  "500 GB",
-  "1000 GB (1 TB)",
-  "2000 GB (2 TB)",
-  "4000 GB (4 TB)",
-  "8000 GB (8 TB)",
-  "12000 GB (12 TB)",
-  "16000 GB (16 TB)",
-  "20000 GB (20 TB)",
-  "24000 GB (24 TB)",
-  "26000 GB (26 TB)",
-];
 
 function FilterBar({ filters, onFilterChange, categories, idPrefix }) {
   const categoryOptions = useMemo(

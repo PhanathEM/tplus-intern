@@ -52,6 +52,8 @@ import {
   ReplaceDeviceDialog,
 } from "./features/device-replacement/ReplacementView";
 import { useReplacements } from "./features/device-replacement/useReplacements";
+import { PartStockView } from "./features/part-stock/PartStockView";
+import { usePartStock } from "./features/part-stock/usePartStock";
 import { useSsdUpgrades } from "./features/records/useSsdUpgrades";
 import { useSsdProcurement } from "./features/records/useSsdProcurement";
 import { useAntivirus } from "./features/records/useAntivirus";
@@ -150,6 +152,7 @@ function Dashboard({ user, onLogout }) {
     const resetMap = {
       "All Equipment": equipment.resetForEntry,
       "Device Replacement": replacements.resetForEntry,
+      "Stock of Replace a Part": partStock.resetForEntry,
       "SSD Upgrade": ssdUpgrades.resetForEntry,
       "SSD Procurement": ssdProcurement.resetForEntry,
       "Antivirus Install": antivirus.resetForEntry,
@@ -204,6 +207,7 @@ function Dashboard({ user, onLogout }) {
   const isDepartmentsView = activeView === "Departments" && hasActiveViewAccess;
   const isEquipmentView = activeView === "All Equipment" && hasActiveViewAccess;
   const isReplacementView = activeView === "Device Replacement" && hasActiveViewAccess;
+  const isPartStockView = activeView === "Stock of Replace a Part" && hasActiveViewAccess;
   const isSsdUpgradeView = activeView === "SSD Upgrade" && hasActiveViewAccess;
   const isSsdProcurementView = activeView === "SSD Procurement" && hasActiveViewAccess;
   const isAntivirusView = activeView === "Antivirus Install" && hasActiveViewAccess;
@@ -232,6 +236,7 @@ function Dashboard({ user, onLogout }) {
   });
 
   const replacements = useReplacements({ isActive: isReplacementView, user });
+  const partStock = usePartStock({ isActive: isPartStockView, user });
   const ssdUpgrades = useSsdUpgrades({ isActive: isSsdUpgradeView });
   const ssdProcurement = useSsdProcurement({ isActive: isSsdProcurementView });
   const antivirus = useAntivirus({ isActive: isAntivirusView });
@@ -613,6 +618,43 @@ function Dashboard({ user, onLogout }) {
             </>
           )}
 
+          {isPartStockView && (
+            <PartStockView
+              stock={partStock.stock}
+              isLoading={partStock.isLoading}
+              error={partStock.error}
+              onRetry={partStock.handleRetry}
+              partTypes={partStock.partTypes}
+              selectedPartTypeId={partStock.selectedPartTypeId}
+              onSelectPart={partStock.handleSelectPart}
+              statuses={partStock.statuses}
+              isAddDialogOpen={partStock.isAddDialogOpen}
+              addFormValues={partStock.addFormValues}
+              isSubmittingAdd={partStock.isSubmittingAdd}
+              addError={partStock.addError}
+              onOpenAddDialog={partStock.handleOpenAddDialog}
+              onCloseAddDialog={partStock.handleCloseAddDialog}
+              onAddFormChange={partStock.handleAddFormChange}
+              onSubmitAdd={partStock.handleSubmitAdd}
+              editingStockId={partStock.editingStockId}
+              editQuantityValue={partStock.editQuantityValue}
+              isSavingQuantity={partStock.isSavingQuantity}
+              editQuantityError={partStock.editQuantityError}
+              onStartEditQuantity={partStock.handleStartEditQuantity}
+              onCancelEditQuantity={partStock.handleCancelEditQuantity}
+              onEditQuantityChange={partStock.handleEditQuantityChange}
+              onSaveEditQuantity={partStock.handleSaveEditQuantity}
+              stockToDelete={partStock.stockToDelete}
+              isDeletingStock={partStock.isDeletingStock}
+              deleteStockError={partStock.deleteStockError}
+              deleteStockBlocked={partStock.deleteStockBlocked}
+              onOpenDeleteStock={partStock.handleOpenDeleteStock}
+              onCloseDeleteStock={partStock.handleCloseDeleteStock}
+              onConfirmDeleteStock={partStock.handleConfirmDeleteStock}
+              onDeleteStockAnyway={partStock.handleDeleteStockAnyway}
+            />
+          )}
+
           {isSsdUpgradeView && (
             <SsdUpgradesView
               upgrades={ssdUpgrades.ssdUpgrades}
@@ -737,6 +779,7 @@ function Dashboard({ user, onLogout }) {
             !isDepartmentsView &&
             !isEquipmentView &&
             !isReplacementView &&
+            !isPartStockView &&
             !isSsdUpgradeView &&
             !isSsdProcurementView &&
             !isAntivirusView &&

@@ -45,7 +45,14 @@ export const navSections = [
           { label: "Borrow History", icon: Search, permission: PERMISSIONS.BORROW_HISTORY },
         ],
       },
-      { label: "Device Replacement", icon: RefreshCw, permission: PERMISSIONS.DEVICE_REPLACEMENT },
+      {
+        label: "Replacement",
+        icon: RefreshCw,
+        children: [
+          { label: "Stock of Replace a Part", icon: Box, permission: PERMISSIONS.PART_STOCK },
+          { label: "Device Replacement", icon: RefreshCw, permission: PERMISSIONS.DEVICE_REPLACEMENT },
+        ],
+      },
       { label: "SSD Upgrade", icon: HardDrive, permission: PERMISSIONS.SSD_UPGRADE },
       { label: "SSD Procurement", icon: ShoppingCart, permission: PERMISSIONS.SSD_PROCUREMENT },
     ],
@@ -139,6 +146,22 @@ export const REPLACEMENT_FILTERS_INITIAL_VALUES = {
   q: "",
 };
 
+// Shared between the Device Replacement dialog's part-value input and the
+// Stock page's "Add to stock" form, so both offer the same fixed options.
+export const RAM_CAPACITY_OPTIONS = ["2 GB", "4 GB", "8 GB", "16 GB", "32 GB", "64 GB", "128 GB", "256 GB"];
+export const HD_CAPACITY_OPTIONS = [
+  "500 GB",
+  "1000 GB (1 TB)",
+  "2000 GB (2 TB)",
+  "4000 GB (4 TB)",
+  "8000 GB (8 TB)",
+  "12000 GB (12 TB)",
+  "16000 GB (16 TB)",
+  "20000 GB (20 TB)",
+  "24000 GB (24 TB)",
+  "26000 GB (26 TB)",
+];
+
 export const departmentColumns = [
   { key: "department_id", label: "Department ID" },
   { key: "department_code", label: "Department Code" },
@@ -162,6 +185,18 @@ export const ssdUpgradeColumns = [
   { key: "ssd_capacity", label: "SSD Capacity" },
   { key: "ssd_equipment_code", label: "SSD Equipment Code" },
   { key: "remark", label: "Remark" },
+];
+
+export const partStockColumns = [
+  { key: "stock_id", label: "Stock ID" },
+  { key: "part_name", label: "Part" },
+  { key: "is_countable", label: "Countable" },
+  { key: "part_value", label: "Value" },
+  { key: "quantity", label: "Quantity" },
+  { key: "status", label: "Status" },
+  { key: "location", label: "Location" },
+  { key: "remark", label: "Remark" },
+  { key: "updated_at", label: "Last Updated" },
 ];
 
 export const ssdProcurementColumns = [

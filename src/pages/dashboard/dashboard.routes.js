@@ -13,6 +13,7 @@ export const dashboardRouteByView = {
   Assign: "assign",
   "Currently Borrowed": "currently-borrowed",
   "Borrow History": "borrow-history",
+  "Stock of Replace a Part": "part-stock",
   "Device Replacement": "device-replacement",
   "SSD Upgrade": "ssd-upgrade",
   "SSD Procurement": "ssd-procurement",
