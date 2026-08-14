@@ -7,6 +7,20 @@ import { RecordCellValue } from "../../components/RecordsTableView";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
 
+const RAM_CAPACITY_OPTIONS = ["2 GB", "4 GB", "8 GB", "16 GB", "32 GB", "64 GB", "128 GB", "256 GB"];
+const HD_CAPACITY_OPTIONS = [
+  "500 GB",
+  "1000 GB (1 TB)",
+  "2000 GB (2 TB)",
+  "4000 GB (4 TB)",
+  "8000 GB (8 TB)",
+  "12000 GB (12 TB)",
+  "16000 GB (16 TB)",
+  "20000 GB (20 TB)",
+  "24000 GB (24 TB)",
+  "26000 GB (26 TB)",
+];
+
 function FilterBar({ filters, onFilterChange, categories, idPrefix }) {
   const categoryOptions = useMemo(
     () => [
@@ -207,12 +221,6 @@ export function ReplacementsView({ replacements, isLoading, error, onRetry, filt
   );
 }
 
-const PART_ACTION_OPTIONS = [
-  { value: "replace", label: "Replace" },
-  { value: "add", label: "Add" },
-  { value: "remove", label: "Remove" },
-];
-
 const REPLACE_DIALOG_TABS = [
   { value: "device", label: "Replace the whole" },
   { value: "part", label: "Replace a part" },
@@ -251,18 +259,45 @@ export function ReplaceDeviceDialog({
   if (!device) return null;
 
   const selectedPartType = partTypes.find((item) => String(item.part_type_id) === String(selectedPartTypeId));
-  // "add" only makes sense for parts that accumulate (RAM, storage) — a CPU
-  // has nothing to sum, so the option only shows once a countable part is picked.
-  const partAvailableActions = PART_ACTION_OPTIONS.filter(
-    (option) => option.value !== "add" || selectedPartType?.is_countable
-  );
-  const partNeedsValue = partAction === "add" || (partAction === "replace" && selectedPartType?.tracks_value);
+  // CPUs (is_countable: false) can only ever be swapped one-for-one — there's
+  // nowhere to "add" a second one — so only countable parts (RAM, storage)
+  // get the Add option; everything else is always a replace.
+  const partNeedsValue =
+    partAction === "add" || (partAction === "replace" && Boolean(selectedPartType?.tracks_value));
   const canSubmitPart = Boolean(selectedPartTypeId && (!partNeedsValue || partNewValue.trim()));
+  const isRamPart = selectedPartType?.part_name?.trim().toLowerCase() === "ram";
+  const isHdPart = selectedPartType?.part_name?.trim().toLowerCase() === "hard disk";
+  const capacityOptions = isRamPart ? RAM_CAPACITY_OPTIONS : isHdPart ? HD_CAPACITY_OPTIONS : null;
+
+  // Read straight off the device row instead of asking — the API never wants
+  // old_value for a part with an equipment_column, since it'd just be
+  // misreported.
+  function getPartOldValueDisplay(partType) {
+    const value = partType.equipment_column ? device[partType.equipment_column] : null;
+    if (value === null || value === undefined || value === "") {
+      return partType.equipment_column ? "—" : "Not tracked";
+    }
+    return String(value);
+  }
+
+  // "16" + "4" -> "20"; "16GB" + "4" -> "20GB" — carry the old value's unit
+  // suffix (if any) over to the total so it still reads naturally.
+  let resultingTotal = null;
+  if (selectedPartType?.is_countable && partAction === "add") {
+    const oldRaw = selectedPartType.equipment_column ? device[selectedPartType.equipment_column] : null;
+    const oldStr = oldRaw === null || oldRaw === undefined ? "" : String(oldRaw);
+    const oldNum = parseFloat(oldStr);
+    const addNum = parseFloat(partNewValue);
+    if (!Number.isNaN(oldNum) && !Number.isNaN(addNum)) {
+      const unit = oldStr.match(/[a-zA-Z]+$/)?.[0] || "";
+      resultingTotal = `${oldNum + addNum}${unit}`;
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label="Close" />
-      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="relative flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950">Replace this device</h2>
@@ -281,72 +316,59 @@ export function ReplaceDeviceDialog({
           </button>
         </div>
 
-        <div className="flex gap-2 border-b border-slate-100 px-6 pt-3">
-          {REPLACE_DIALOG_TABS.map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => onSwitchTab(tab.value)}
-              className={`-mb-px inline-flex h-9 items-center border-b-2 px-3.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${activeTab === tab.value
-                ? "border-slate-950 text-slate-950"
-                : "border-transparent text-slate-500 hover:text-slate-700"
-                }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="border-b border-slate-200 bg-slate-50 px-6 pt-3">
+          <div className="flex gap-1">
+            {REPLACE_DIALOG_TABS.map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => onSwitchTab(tab.value)}
+                className={`-mb-px inline-flex h-10 items-center rounded-t-lg border px-4 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${activeTab === tab.value
+                  ? "border-slate-200 border-b-white bg-white text-slate-950"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {activeTab === "device" ? (
           <form onSubmit={onSubmitDevice} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
-            <div className="flex flex-col gap-4 overflow-y-auto px-6 py-5">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-5">
               {submitDeviceError && (
                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
                   {submitDeviceError}
                 </div>
               )}
 
-              <div>
+              <div className="flex min-h-0 flex-1 flex-col">
                 <p className="mb-1.5 text-xs font-semibold text-slate-600">New device</p>
-                {selectedNewDevice ? (
-                  <div className="flex items-center justify-between gap-3 rounded-lg border border-orange-200 bg-orange-50 px-3.5 py-2.5">
-                    <p className="truncate text-[13px] font-semibold text-slate-900">
-                      {selectedNewDevice.display_name}
-                      {selectedNewDevice.asset_code ? ` (${selectedNewDevice.asset_code})` : ""}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={onClearNewDevice}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50"
-                    >
-                      <X size={13} />
-                      Change
-                    </button>
-                  </div>
-                ) : (
-                  <div className="max-h-72 overflow-y-auto rounded-lg border border-slate-100">
-                    <DynamicEquipmentTable
-                      columns={deviceOptionColumns}
-                      records={deviceOptions}
-                      rowKey={(option, index) => option.equipment_id ?? index}
-                      isLoading={isDeviceOptionsLoading}
-                      loadingText={`Loading ${device.category_name} in stock...`}
-                      error={deviceOptionsError}
-                      errorTitle="Couldn't load devices"
-                      emptyTitle="No devices available"
-                      emptyDescription={`No ${device.category_name} available in stock right now.`}
-                      renderRowActions={(option) => (
-                        <button
-                          type="button"
-                          onClick={() => onSelectNewDevice(option)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                        >
-                          Select
-                        </button>
-                      )}
-                    />
-                  </div>
-                )}
+                <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-slate-100">
+                  <DynamicEquipmentTable
+                    columns={deviceOptionColumns}
+                    records={deviceOptions}
+                    rowKey={(option, index) => option.equipment_id ?? index}
+                    isLoading={isDeviceOptionsLoading}
+                    loadingText={`Loading ${device.category_name} in stock...`}
+                    error={deviceOptionsError}
+                    errorTitle="Couldn't load devices"
+                    emptyIcon={Search}
+                    emptyTitle="No devices available"
+                    emptyDescription={`No ${device.category_name} available in stock right now.`}
+                    getRowClassName={(option) =>
+                      selectedNewDevice?.equipment_id === option.equipment_id ? "bg-orange-50" : ""
+                    }
+                    selectable={{
+                      isSelected: (option) => selectedNewDevice?.equipment_id === option.equipment_id,
+                      onSelect: (option) =>
+                        selectedNewDevice?.equipment_id === option.equipment_id
+                          ? onClearNewDevice()
+                          : onSelectNewDevice(option),
+                    }}
+                  />
+                </div>
               </div>
             </div>
 
@@ -369,73 +391,105 @@ export function ReplaceDeviceDialog({
             </div>
           </form>
         ) : (
-          <form onSubmit={onSubmitPart} autoComplete="off">
-            <div className="flex flex-col gap-4 px-6 py-5">
+          <form onSubmit={onSubmitPart} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+            <div className="flex flex-col gap-4 overflow-y-auto px-6 py-5">
               {submitPartError && (
                 <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
                   {submitPartError}
                 </div>
               )}
 
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-600" htmlFor="replace-part-type">
-                  Part
-                </label>
-                <select
-                  id="replace-part-type"
-                  value={selectedPartTypeId}
-                  onChange={(e) => onSelectPartType(e.target.value)}
-                  className={formInputClass}
-                >
-                  <option value="">Select a part</option>
-                  {partTypes.map((partType) => (
-                    <option key={partType.part_type_id} value={partType.part_type_id}>
-                      {partType.part_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {selectedPartTypeId && (
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="mb-1.5 text-xs font-semibold text-slate-600">Action</p>
-                  <div className="flex gap-2">
-                    {partAvailableActions.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => onSelectPartAction(option.value)}
-                        className={`inline-flex h-9 flex-1 items-center justify-center rounded-lg border px-3 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${partAction === option.value
-                          ? "border-slate-950 bg-slate-950 text-white"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                          }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {partNeedsValue && (
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-600" htmlFor="replace-part-value">
-                    {partAction === "add" ? "Amount to add" : "New value"}
+                  <label htmlFor="replace-part-select" className="mb-1.5 block text-xs font-semibold text-slate-600">
+                    Part
                   </label>
-                  <input
-                    id="replace-part-value"
-                    type="text"
-                    autoComplete="off"
-                    value={partNewValue}
-                    onChange={(e) => onPartNewValueChange(e.target.value)}
-                    placeholder={`e.g. "32" for ${selectedPartType?.part_name || "this part"}`}
+                  <select
+                    id="replace-part-select"
+                    value={selectedPartTypeId}
+                    onChange={(e) => onSelectPartType(e.target.value)}
                     className={formInputClass}
-                  />
+                  >
+                    <option value="">Select a part...</option>
+                    {partTypes.map((partType) => (
+                      <option key={partType.part_type_id} value={partType.part_type_id}>
+                        {partType.part_name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
+
+                {selectedPartType?.is_countable && (
+                  <div>
+                    <label htmlFor="replace-part-action" className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      Action
+                    </label>
+                    <select
+                      id="replace-part-action"
+                      value={partAction}
+                      onChange={(e) => onSelectPartAction(e.target.value)}
+                      className={formInputClass}
+                    >
+                      <option value="replace">Replace</option>
+                      <option value="add">Add More</option>
+                    </select>
+                  </div>
+                )}
+
+                {selectedPartType && (
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold text-slate-600">Current {selectedPartType.part_name}</p>
+                    <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
+                      {getPartOldValueDisplay(selectedPartType)}
+                    </div>
+                  </div>
+                )}
+
+                {partNeedsValue && (
+                  <div>
+                    <label htmlFor="replace-part-value" className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      {partAction === "add" ? "Amount to add" : "New value"}
+                    </label>
+                    {capacityOptions ? (
+                      <select
+                        id="replace-part-value"
+                        value={partNewValue}
+                        onChange={(e) => onPartNewValueChange(e.target.value)}
+                        className={formInputClass}
+                      >
+                        <option value="">Select capacity...</option>
+                        {capacityOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        id="replace-part-value"
+                        type="text"
+                        autoComplete="off"
+                        value={partNewValue}
+                        onChange={(e) => onPartNewValueChange(e.target.value)}
+                        placeholder={partAction === "add" ? `e.g. "8"` : `e.g. "32"`}
+                        className={formInputClass}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {resultingTotal !== null && (
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold text-slate-600">Resulting total</p>
+                    <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700">
+                      {resultingTotal}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+            <div className="mt-auto flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
               <button
                 type="button"
                 onClick={onClose}

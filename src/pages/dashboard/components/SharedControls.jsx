@@ -6,7 +6,7 @@ import {
 } from "react-icons/fi";
 import { getEmployeeDepartmentCode } from "../dashboard.utils";
 
-export function EmptyState({ icon: Icon, title, description }) {
+export function EmptyState({ icon: Icon = Search, title, description }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 px-5 py-10 text-center">
       <div className="grid h-10 w-10 place-items-center rounded-full bg-slate-50 text-slate-400">

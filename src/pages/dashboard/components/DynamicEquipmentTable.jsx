@@ -20,6 +20,7 @@ export function DynamicEquipmentTable({
   renderRowActions,
   getRowClassName,
   onRowClick,
+  selectable,
 }) {
   if (isLoading) {
     return <div className="px-5 py-10 text-center text-[13px] text-slate-500">{loadingText}</div>;
@@ -54,6 +55,7 @@ export function DynamicEquipmentTable({
       <table className="min-w-full divide-y divide-slate-100 text-left text-[13px]">
         <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
           <tr>
+            {selectable && <th className="w-10 px-4 py-3" />}
             {columns.map((column) => (
               <th key={column.key} className="whitespace-nowrap px-4 py-3 font-semibold">
                 {column.label}
@@ -69,6 +71,16 @@ export function DynamicEquipmentTable({
               onClick={onRowClick ? () => onRowClick(record) : undefined}
               className={`transition hover:bg-slate-50/70 ${onRowClick ? "cursor-pointer" : ""} ${getRowClassName?.(record) || ""}`}
             >
+              {selectable && (
+                <td className="whitespace-nowrap px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={selectable.isSelected(record)}
+                    onChange={() => selectable.onSelect(record)}
+                    className="h-4 w-4 rounded border-slate-300 text-orange-500 outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+                  />
+                </td>
+              )}
               {columns.map((column) => (
                 <td
                   key={column.key}

@@ -227,7 +227,10 @@ export function useReplacements({ isActive, user }) {
     setSubmitError(null);
 
     const payload = {
-      employee_id: replaceDialogTarget.employee_id,
+      // The replaceable-equipment row carries the owner as owner_id, not
+      // employee_id — the API's own field naming for /api/replacements is
+      // employee_id, so translate it here rather than in every caller.
+      employee_id: replaceDialogTarget.owner_id,
       old_equipment_id: replaceDialogTarget.equipment_id,
       new_equipment_id: selectedNewDevice.equipment_id,
       // Optional — default to true rather than asking the admin to tick
