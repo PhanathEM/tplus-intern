@@ -133,6 +133,12 @@ export const RAM_CAPACITY_OPTIONS = ["2 GB", "4 GB", "8 GB", "16 GB", "32 GB", "
 export const RAM_TYPE_OPTIONS = ["DDR3", "DDR4", "DDR5", "DDR3 SODIMM", "DDR4 SODIMM", "DDR5 SODIMM"];
 export const HD_CAPACITY_OPTIONS = ["500 GB", "1000 GB (1 TB)", "2000 GB (2 TB)", "4000 GB (4 TB)", "8000 GB (8 TB)", "12000 GB (12 TB)", "16000 GB (16 TB)", "20000 GB (20 TB)", "24000 GB (24 TB)", "26000 GB (26 TB)"];
 
+// DB has a CHECK constraint (chk_disk_type) that only allows these two exact values.
+export const DISK_TYPE_OPTIONS = ["SSD", "HDD"];
+
+// DB has a CHECK constraint (chk_disk_interface) that only allows these exact values.
+export const DISK_INTERFACE_OPTIONS = ["SATA", "M.2", "NVMe", "IDE"];
+
 export const departmentColumns = [
   { key: "department_id", label: "Department ID" },
   { key: "department_code", label: "Department Code" },
@@ -160,10 +166,12 @@ export const ssdUpgradeColumns = [
 
 export const PART_STOCK_COLUMNS = {
   // Shown when no part card is selected — a mix of parts means part-specific
-  // fields (RAM Type, Disk Type, Model...) don't all apply, so this sticks to
-  // the columns every part has.
+  // fields (RAM Type, Disk Type, Model...) don't all apply as their own
+  // columns, so those are folded into one "Details" string by
+  // buildStockDetails() in PartStockView.jsx instead.
   default: [
     { key: "part_name", label: "Part Name" },
+    { key: "details", label: "Details" },
     { key: "part_value", label: "Value" },
     { key: "quantity", label: "Quantity" },
     { key: "status", label: "Status" },

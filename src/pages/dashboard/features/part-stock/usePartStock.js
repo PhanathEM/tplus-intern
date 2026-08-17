@@ -10,6 +10,8 @@ const ADD_FORM_INITIAL_VALUES = {
   part_value: "",
   model_name: "",
   model_number: "",
+  disk_type: "",
+  disk_interface: "",
   quantity: "1",
   status: "",
   remark: "",
@@ -138,10 +140,41 @@ export function usePartStock({ isActive, user }) {
 
     const partType = partTypes.find((item) => String(item.part_type_id) === String(addFormValues.part_type_id));
 
-    const isRam = partType?.part_name?.trim().toLowerCase() === "ram";
+    const normalizedPartName = partType?.part_name?.trim().toLowerCase();
+
+    const isRam = normalizedPartName === "ram";
+
+    const isCpu = normalizedPartName === "cpu";
+
+    const isHardDisk = normalizedPartName === "hard disk";
+
+    const isBag = normalizedPartName === "bag";
+
+    const isMouse = normalizedPartName === "mouse";
+
+    const isKeyboard = normalizedPartName === "keyboard";
+
+    const needsModelName = isCpu || isBag || isMouse || isKeyboard;
+
+    const needsModelNumber = isBag || isMouse || isKeyboard;
 
     if (isRam && !addFormValues.ram_type?.trim()) {
       setAddError("Please select RAM Type.");
+      return;
+    }
+
+    if (needsModelName && !addFormValues.model_name?.trim()) {
+      setAddError("Please enter Model Name.");
+      return;
+    }
+
+    if (needsModelNumber && !addFormValues.model_number?.trim()) {
+      setAddError("Please enter Model Number.");
+      return;
+    }
+
+    if (isHardDisk && (!addFormValues.disk_type?.trim() || !addFormValues.disk_interface?.trim())) {
+      setAddError("Please enter Disk Type and Disk Interface.");
       return;
     }
 
@@ -152,6 +185,14 @@ export function usePartStock({ isActive, user }) {
       part_type_id: Number(addFormValues.part_type_id),
 
       ram_type: isRam ? addFormValues.ram_type.trim() : null,
+
+      model_name: needsModelName ? addFormValues.model_name.trim() : null,
+
+      model_number: needsModelNumber ? addFormValues.model_number.trim() : null,
+
+      disk_type: isHardDisk ? addFormValues.disk_type.trim() : null,
+
+      disk_interface: isHardDisk ? addFormValues.disk_interface.trim() : null,
 
       part_value: partType?.tracks_value ? addFormValues.part_value.trim() : "",
 
@@ -200,6 +241,10 @@ export function usePartStock({ isActive, user }) {
     setEditError(null);
     setEditFormValues({
       ram_type: fullRecord.ram_type || "",
+      model_name: fullRecord.model_name || "",
+      model_number: fullRecord.model_number || "",
+      disk_type: fullRecord.disk_type || "",
+      disk_interface: fullRecord.disk_interface || "",
       part_value: fullRecord.part_value || "",
       quantity: String(fullRecord.quantity ?? ""),
       status: fullRecord.status || "",
@@ -221,10 +266,33 @@ export function usePartStock({ isActive, user }) {
     if (!editStockTarget || !editFormValues.quantity || !editFormValues.status) return;
 
     const partType = partTypes.find((item) => String(item.part_type_id) === String(editStockTarget.part_type_id));
-    const isRam = partType?.part_name?.trim().toLowerCase() === "ram";
+    const normalizedPartName = partType?.part_name?.trim().toLowerCase();
+    const isRam = normalizedPartName === "ram";
+    const isCpu = normalizedPartName === "cpu";
+    const isHardDisk = normalizedPartName === "hard disk";
+    const isBag = normalizedPartName === "bag";
+    const isMouse = normalizedPartName === "mouse";
+    const isKeyboard = normalizedPartName === "keyboard";
+    const needsModelName = isCpu || isBag || isMouse || isKeyboard;
+    const needsModelNumber = isBag || isMouse || isKeyboard;
 
     if (isRam && !editFormValues.ram_type?.trim()) {
       setEditError("Please select RAM Type.");
+      return;
+    }
+
+    if (needsModelName && !editFormValues.model_name?.trim()) {
+      setEditError("Please enter Model Name.");
+      return;
+    }
+
+    if (needsModelNumber && !editFormValues.model_number?.trim()) {
+      setEditError("Please enter Model Number.");
+      return;
+    }
+
+    if (isHardDisk && (!editFormValues.disk_type?.trim() || !editFormValues.disk_interface?.trim())) {
+      setEditError("Please enter Disk Type and Disk Interface.");
       return;
     }
 
@@ -233,6 +301,10 @@ export function usePartStock({ isActive, user }) {
 
     const payload = {
       ram_type: isRam ? editFormValues.ram_type.trim() : null,
+      model_name: needsModelName ? editFormValues.model_name.trim() : null,
+      model_number: needsModelNumber ? editFormValues.model_number.trim() : null,
+      disk_type: isHardDisk ? editFormValues.disk_type.trim() : null,
+      disk_interface: isHardDisk ? editFormValues.disk_interface.trim() : null,
       part_value: partType?.tracks_value ? editFormValues.part_value.trim() : "",
       quantity: Number(editFormValues.quantity),
       status: editFormValues.status,

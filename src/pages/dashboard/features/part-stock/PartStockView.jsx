@@ -11,6 +11,8 @@ import {
 } from "react-icons/fi";
 
 import {
+  DISK_INTERFACE_OPTIONS,
+  DISK_TYPE_OPTIONS,
   HD_CAPACITY_OPTIONS,
   PART_STOCK_COLUMNS,
   RAM_CAPACITY_OPTIONS,
@@ -41,6 +43,36 @@ const PART_ICON_BY_NAME = {
   mouse: MousePointer,
   keyboard: Type,
 };
+
+const MODEL_NAME_PLACEHOLDER_BY_PART = {
+  cpu: "e.g. i5-1135G7",
+  bag: "e.g. HP Business Carry Case",
+  mouse: "e.g. Logitech M185",
+  keyboard: "e.g. Logitech K120",
+};
+
+const MODEL_NUMBER_PLACEHOLDER_BY_PART = {
+  bag: "e.g. BP-15.6-BLK",
+  mouse: "e.g. 910-002235",
+  keyboard: "e.g. 920-002478",
+};
+
+// The "All part stock" view (no part card selected) mixes rows from every
+// part type, each with its own extra fields (RAM Type, Model Name/Number,
+// Disk Type/Interface...). Rather than showing a column per field — mostly
+// N/A for any given row — fold whichever of those fields a row actually has
+// into one human-readable "Details" string.
+function buildStockDetails(item) {
+  const parts = [
+    item.ram_type,
+    item.model_name,
+    item.model_number,
+    item.disk_type,
+    item.disk_interface,
+  ].filter((value) => value && String(value).trim());
+
+  return parts.length ? parts.join(" · ") : null;
+}
 
 function PartTypeCard({
   partType,
@@ -139,6 +171,27 @@ function AddStockDialog({
   const isRam =
     normalizedName === "ram";
 
+  const isCpu =
+    normalizedName === "cpu";
+
+  const isHardDisk =
+    normalizedName === "hard disk";
+
+  const isBag =
+    normalizedName === "bag";
+
+  const isMouse =
+    normalizedName === "mouse";
+
+  const isKeyboard =
+    normalizedName === "keyboard";
+
+  const needsModelName =
+    isCpu || isBag || isMouse || isKeyboard;
+
+  const needsModelNumber =
+    isBag || isMouse || isKeyboard;
+
   const needsValue =
     Boolean(selectedPartType?.tracks_value);
 
@@ -156,7 +209,14 @@ function AddStockDialog({
     (!needsValue ||
       values.part_value?.trim()) &&
     (!isRam ||
-      values.ram_type?.trim())
+      values.ram_type?.trim()) &&
+    (!needsModelName ||
+      values.model_name?.trim()) &&
+    (!needsModelNumber ||
+      values.model_number?.trim()) &&
+    (!isHardDisk ||
+      (values.disk_type?.trim() &&
+        values.disk_interface?.trim()))
   );
 
   return (
@@ -242,6 +302,129 @@ function AddStockDialog({
                 </select>
               )}
             </FormField>
+
+            {/* MODEL NAME - CPU, BAG, MOUSE, KEYBOARD */}
+            {needsModelName && (
+              <FormField
+                label="Model Name"
+                htmlFor="add-stock-model-name"
+              >
+                <input
+                  id="add-stock-model-name"
+                  type="text"
+                  autoComplete="off"
+                  value={values.model_name || ""}
+                  onChange={(e) =>
+                    onChange(
+                      "model_name",
+                      e.target.value
+                    )
+                  }
+                  placeholder={
+                    MODEL_NAME_PLACEHOLDER_BY_PART[
+                      normalizedName
+                    ] || "e.g. Model name..."
+                  }
+                  className={formInputClass}
+                />
+              </FormField>
+            )}
+
+            {/* MODEL NUMBER - BAG, MOUSE, KEYBOARD */}
+            {needsModelNumber && (
+              <FormField
+                label="Model Number"
+                htmlFor="add-stock-model-number"
+              >
+                <input
+                  id="add-stock-model-number"
+                  type="text"
+                  autoComplete="off"
+                  value={values.model_number || ""}
+                  onChange={(e) =>
+                    onChange(
+                      "model_number",
+                      e.target.value
+                    )
+                  }
+                  placeholder={
+                    MODEL_NUMBER_PLACEHOLDER_BY_PART[
+                      normalizedName
+                    ] || "e.g. Model number..."
+                  }
+                  className={formInputClass}
+                />
+              </FormField>
+            )}
+
+            {/* DISK TYPE / DISK INTERFACE - HARD DISK ONLY */}
+            {isHardDisk && (
+              <>
+                <FormField
+                  label="Disk Type"
+                  htmlFor="add-stock-disk-type"
+                >
+                  <select
+                    id="add-stock-disk-type"
+                    value={values.disk_type || ""}
+                    onChange={(e) =>
+                      onChange(
+                        "disk_type",
+                        e.target.value
+                      )
+                    }
+                    className={formInputClass}
+                  >
+                    <option value="">
+                      Select disk type...
+                    </option>
+
+                    {DISK_TYPE_OPTIONS.map(
+                      (type) => (
+                        <option
+                          key={type}
+                          value={type}
+                        >
+                          {type}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </FormField>
+
+                <FormField
+                  label="Disk Interface"
+                  htmlFor="add-stock-disk-interface"
+                >
+                  <select
+                    id="add-stock-disk-interface"
+                    value={values.disk_interface || ""}
+                    onChange={(e) =>
+                      onChange(
+                        "disk_interface",
+                        e.target.value
+                      )
+                    }
+                    className={formInputClass}
+                  >
+                    <option value="">
+                      Select disk interface...
+                    </option>
+
+                    {DISK_INTERFACE_OPTIONS.map(
+                      (type) => (
+                        <option
+                          key={type}
+                          value={type}
+                        >
+                          {type}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </FormField>
+              </>
+            )}
 
             {/* RAM TYPE - RAM ONLY */}
             {isRam && (
@@ -444,12 +627,25 @@ function EditStockDialog({ target, values, partTypes, statuses, onChange, onSubm
 
   const partType = partTypes.find((item) => String(item.part_type_id) === String(target.part_type_id));
   const isRam = partType?.part_name?.trim().toLowerCase() === "ram";
+  const isCpu = partType?.part_name?.trim().toLowerCase() === "cpu";
+  const isHardDisk = partType?.part_name?.trim().toLowerCase() === "hard disk";
+  const isBag = partType?.part_name?.trim().toLowerCase() === "bag";
+  const isMouse = partType?.part_name?.trim().toLowerCase() === "mouse";
+  const isKeyboard = partType?.part_name?.trim().toLowerCase() === "keyboard";
+  const needsModelName = isCpu || isBag || isMouse || isKeyboard;
+  const needsModelNumber = isBag || isMouse || isKeyboard;
   const needsValue = Boolean(partType?.tracks_value);
   const normalizedName = partType?.part_name?.trim().toLowerCase();
   const capacityOptions =
     normalizedName === "ram" ? RAM_CAPACITY_OPTIONS : normalizedName === "hard disk" ? HD_CAPACITY_OPTIONS : null;
   const canSubmit = Boolean(
-    values.quantity && values.status && (!needsValue || values.part_value?.trim()) && (!isRam || values.ram_type?.trim())
+    values.quantity &&
+      values.status &&
+      (!needsValue || values.part_value?.trim()) &&
+      (!isRam || values.ram_type?.trim()) &&
+      (!needsModelName || values.model_name?.trim()) &&
+      (!needsModelNumber || values.model_number?.trim()) &&
+      (!isHardDisk || (values.disk_type?.trim() && values.disk_interface?.trim()))
   );
 
   return (
@@ -484,6 +680,70 @@ function EditStockDialog({ target, values, partTypes, statuses, onChange, onSubm
                 {target.part_name}
               </div>
             </FormField>
+
+            {needsModelName && (
+              <FormField label="Model Name" htmlFor="edit-stock-model-name">
+                <input
+                  id="edit-stock-model-name"
+                  type="text"
+                  autoComplete="off"
+                  value={values.model_name || ""}
+                  onChange={(e) => onChange("model_name", e.target.value)}
+                  placeholder={MODEL_NAME_PLACEHOLDER_BY_PART[normalizedName] || "e.g. Model name..."}
+                  className={formInputClass}
+                />
+              </FormField>
+            )}
+
+            {needsModelNumber && (
+              <FormField label="Model Number" htmlFor="edit-stock-model-number">
+                <input
+                  id="edit-stock-model-number"
+                  type="text"
+                  autoComplete="off"
+                  value={values.model_number || ""}
+                  onChange={(e) => onChange("model_number", e.target.value)}
+                  placeholder={MODEL_NUMBER_PLACEHOLDER_BY_PART[normalizedName] || "e.g. Model number..."}
+                  className={formInputClass}
+                />
+              </FormField>
+            )}
+
+            {isHardDisk && (
+              <>
+                <FormField label="Disk Type" htmlFor="edit-stock-disk-type">
+                  <select
+                    id="edit-stock-disk-type"
+                    value={values.disk_type || ""}
+                    onChange={(e) => onChange("disk_type", e.target.value)}
+                    className={formInputClass}
+                  >
+                    <option value="">Select disk type...</option>
+                    {DISK_TYPE_OPTIONS.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+
+                <FormField label="Disk Interface" htmlFor="edit-stock-disk-interface">
+                  <select
+                    id="edit-stock-disk-interface"
+                    value={values.disk_interface || ""}
+                    onChange={(e) => onChange("disk_interface", e.target.value)}
+                    className={formInputClass}
+                  >
+                    <option value="">Select disk interface...</option>
+                    {DISK_INTERFACE_OPTIONS.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+              </>
+            )}
 
             {isRam && (
               <FormField label="RAM Type" htmlFor="edit-stock-ram-type">
@@ -656,7 +916,7 @@ export function PartStockView({
       )
       : stock
   ).map((item) => {
-    const rest = { ...item };
+    const rest = { ...item, details: buildStockDetails(item) };
 
     HIDDEN_STOCK_FIELDS.forEach(
       (key) => delete rest[key]
