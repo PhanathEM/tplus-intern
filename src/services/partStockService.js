@@ -8,8 +8,8 @@ export function addPartStock(payload) {
   return apiPost("/api/part-stock", payload);
 }
 
-export function updatePartStockQuantity(stockId, quantity) {
-  return apiPut(`/api/part-stock/${stockId}`, { quantity });
+export function updatePartStock(stockId, payload) {
+  return apiPut(`/api/part-stock/${stockId}`, payload);
 }
 
 // The API refuses (409) while the line still has stock, suggesting the

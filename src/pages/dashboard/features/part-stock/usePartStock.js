@@ -1,10 +1,19 @@
 import { useEffect, useState } from "react";
-import { addPartStock, deletePartStock, fetchPartStock, updatePartStockQuantity } from "../../../../services/partStockService";
+import { addPartStock, deletePartStock, fetchPartStock, updatePartStock } from "../../../../services/partStockService";
 import { fetchPartTypes } from "../../../../services/partTypeService";
 import { fetchStatuses } from "../../../../services/statusService";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 
-const ADD_FORM_INITIAL_VALUES = { part_type_id: "", part_value: "", quantity: "1", status: "" };
+const ADD_FORM_INITIAL_VALUES = {
+  part_type_id: "",
+  ram_type: "",
+  part_value: "",
+  model_name: "",
+  model_number: "",
+  quantity: "1",
+  status: "",
+  remark: "",
+};
 
 export function usePartStock({ isActive, user }) {
   const [stock, setStock] = useState([]);
@@ -51,11 +60,7 @@ export function usePartStock({ isActive, user }) {
       .then((data) => {
         if (ignore) return;
         const list = Array.isArray(data?.part_types) ? data.part_types : [];
-        setPartTypes(
-          list
-            .filter((partType) => partType.is_active !== false)
-            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-        );
+        setPartTypes(list.filter((partType) => partType.is_active !== false).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
       })
       .catch(() => {
         if (!ignore) setPartTypes([]);
@@ -77,9 +82,7 @@ export function usePartStock({ isActive, user }) {
       .then((data) => {
         if (ignore) return;
         const list = Array.isArray(data) ? data : [];
-        setStatuses(
-          list.filter((status) => status.is_active !== false).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-        );
+        setStatuses(list.filter((status) => status.is_active !== false).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
       })
       .catch(() => {
         if (!ignore) setStatuses([]);
@@ -128,18 +131,35 @@ export function usePartStock({ isActive, user }) {
 
   function handleSubmitAdd(event) {
     event.preventDefault();
-    if (!addFormValues.part_type_id || !addFormValues.quantity || !addFormValues.status) return;
+
+    if (!addFormValues.part_type_id || !addFormValues.quantity || !addFormValues.status) {
+      return;
+    }
 
     const partType = partTypes.find((item) => String(item.part_type_id) === String(addFormValues.part_type_id));
+
+    const isRam = partType?.part_name?.trim().toLowerCase() === "ram";
+
+    if (isRam && !addFormValues.ram_type?.trim()) {
+      setAddError("Please select RAM Type.");
+      return;
+    }
 
     setIsSubmittingAdd(true);
     setAddError(null);
 
     const payload = {
       part_type_id: Number(addFormValues.part_type_id),
+
+      ram_type: isRam ? addFormValues.ram_type.trim() : null,
+
       part_value: partType?.tracks_value ? addFormValues.part_value.trim() : "",
+
       quantity: Number(addFormValues.quantity),
+
       status: addFormValues.status,
+
+      remark: addFormValues.remark.trim(),
     };
 
     addPartStock(payload)
@@ -152,66 +172,93 @@ export function usePartStock({ isActive, user }) {
           entityLabel: `${partType?.part_name || "Part"}${payload.part_value ? ` (${payload.part_value})` : ""} x${payload.quantity}`,
           after: payload,
         });
+
         setIsAddDialogOpen(false);
         handleRetry();
       })
       .catch((error) => {
         const data = error.response?.data;
+
         setAddError(data?.error || error.message || "Could not add stock.");
       })
       .finally(() => setIsSubmittingAdd(false));
   }
 
-  // --- Edit quantity ----------------------------------------------------
+  // --- Edit stock ---------------------------------------------------------
 
-  const [editingStockId, setEditingStockId] = useState(null);
-  const [editQuantityValue, setEditQuantityValue] = useState("");
-  const [isSavingQuantity, setIsSavingQuantity] = useState(false);
-  const [editQuantityError, setEditQuantityError] = useState(null);
+  const [editStockTarget, setEditStockTarget] = useState(null);
+  const [editFormValues, setEditFormValues] = useState(null);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [editError, setEditError] = useState(null);
 
-  function handleStartEditQuantity(record) {
-    setEditingStockId(record.stock_id);
-    setEditQuantityValue(String(record.quantity ?? ""));
-    setEditQuantityError(null);
+  function handleOpenEditDialog(record) {
+    // The row passed in comes from the display list, which has fields like
+    // part_type_id stripped for a cleaner table — look up the full record so
+    // the dialog can tell what part this actually is (RAM, Hard Disk, ...).
+    const fullRecord = stock.find((item) => item.stock_id === record.stock_id) || record;
+    setEditStockTarget(fullRecord);
+    setEditError(null);
+    setEditFormValues({
+      ram_type: fullRecord.ram_type || "",
+      part_value: fullRecord.part_value || "",
+      quantity: String(fullRecord.quantity ?? ""),
+      status: fullRecord.status || "",
+      remark: fullRecord.remark || "",
+    });
   }
 
-  function handleCancelEditQuantity() {
-    setEditingStockId(null);
-    setEditQuantityError(null);
+  function handleCloseEditDialog() {
+    setEditStockTarget(null);
+    setEditFormValues(null);
   }
 
-  function handleEditQuantityChange(value) {
-    setEditQuantityValue(value);
+  function handleEditFormChange(field, value) {
+    setEditFormValues((current) => ({ ...current, [field]: value }));
   }
 
-  function handleSaveEditQuantity() {
-    if (editingStockId == null || editQuantityValue.trim() === "") return;
+  function handleSubmitEdit(event) {
+    event.preventDefault();
+    if (!editStockTarget || !editFormValues.quantity || !editFormValues.status) return;
 
-    const record = stock.find((item) => item.stock_id === editingStockId);
-    const nextQuantity = Number(editQuantityValue);
+    const partType = partTypes.find((item) => String(item.part_type_id) === String(editStockTarget.part_type_id));
+    const isRam = partType?.part_name?.trim().toLowerCase() === "ram";
 
-    setIsSavingQuantity(true);
-    setEditQuantityError(null);
+    if (isRam && !editFormValues.ram_type?.trim()) {
+      setEditError("Please select RAM Type.");
+      return;
+    }
 
-    updatePartStockQuantity(editingStockId, nextQuantity)
+    setIsSubmittingEdit(true);
+    setEditError(null);
+
+    const payload = {
+      ram_type: isRam ? editFormValues.ram_type.trim() : null,
+      part_value: partType?.tracks_value ? editFormValues.part_value.trim() : "",
+      quantity: Number(editFormValues.quantity),
+      status: editFormValues.status,
+      remark: editFormValues.remark.trim(),
+    };
+
+    updatePartStock(editStockTarget.stock_id, payload)
       .then(() => {
         logActivity({
           actor: user,
           action: "update",
           module: ACTIVITY_MODULES.PART_STOCK,
-          entityId: editingStockId,
-          entityLabel: `${record?.part_name || "Part"} quantity`,
-          before: { quantity: record?.quantity },
-          after: { quantity: nextQuantity },
+          entityId: editStockTarget.stock_id,
+          entityLabel: `${editStockTarget.part_name || "Part"}${payload.part_value ? ` (${payload.part_value})` : ""}`,
+          before: editStockTarget,
+          after: payload,
         });
-        setEditingStockId(null);
+        setEditStockTarget(null);
+        setEditFormValues(null);
         handleRetry();
       })
       .catch((error) => {
         const data = error.response?.data;
-        setEditQuantityError(data?.error || error.message || "Could not update quantity.");
+        setEditError(data?.error || error.message || "Could not update stock.");
       })
-      .finally(() => setIsSavingQuantity(false));
+      .finally(() => setIsSubmittingEdit(false));
   }
 
   // --- Delete -------------------------------------------------------------
@@ -256,12 +303,7 @@ export function usePartStock({ isActive, user }) {
       .catch((error) => {
         const blocked = error.status === 409;
         setDeleteStockBlocked(blocked);
-        setDeleteStockError(
-          blocked
-            ? error.response?.data?.error ||
-                "This line still has stock. Set the quantity to zero instead, or delete it anyway."
-            : error.response?.data?.error || error.message || "Could not delete this stock line."
-        );
+        setDeleteStockError(blocked ? error.response?.data?.error || "This line still has stock. Set the quantity to zero instead, or delete it anyway." : error.response?.data?.error || error.message || "Could not delete this stock line.");
       })
       .finally(() => setIsDeletingStock(false));
   }
@@ -294,14 +336,14 @@ export function usePartStock({ isActive, user }) {
     handleAddFormChange,
     handleSubmitAdd,
 
-    editingStockId,
-    editQuantityValue,
-    isSavingQuantity,
-    editQuantityError,
-    handleStartEditQuantity,
-    handleCancelEditQuantity,
-    handleEditQuantityChange,
-    handleSaveEditQuantity,
+    editStockTarget,
+    editFormValues,
+    isSubmittingEdit,
+    editError,
+    handleOpenEditDialog,
+    handleCloseEditDialog,
+    handleEditFormChange,
+    handleSubmitEdit,
 
     stockToDelete,
     isDeletingStock,

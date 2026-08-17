@@ -85,7 +85,7 @@ export function ReplaceableDevicesView({
             {!isLoading && !error && (
               <p className="mt-0.5 text-[13px] text-slate-500">
                 {devices.length} device{devices.length === 1 ? "" : "s"}
-                {canManage && devices.length > 0 ? " · click a row to replace" : ""}
+                {canManage && devices.length > 0 ? " · These devices have owners, click to replace devices" : ""}
               </p>
             )}
           </div>
@@ -330,7 +330,7 @@ export function ReplaceDeviceDialog({
               )}
 
               <div className="flex min-h-0 flex-1 flex-col">
-                <p className="mb-1.5 text-xs font-semibold text-slate-600">New device</p>
+                <p className="mb-1.5 text-xs font-semibold text-slate-600">These devices can choose to replace because don't have owner</p>
                 <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-slate-100">
                   <DynamicEquipmentTable
                     columns={deviceOptionColumns}

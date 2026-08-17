@@ -1,23 +1,4 @@
-import {
-  FiActivity as Activity,
-  FiBox as Box,
-  FiClock as Clock,
-  FiCloud as Cloud,
-  FiDollarSign as DollarSign,
-  FiHardDrive as HardDrive,
-  FiHome as Home,
-  FiKey as Key,
-  FiRefreshCw as RefreshCw,
-  FiSearch as Search,
-  FiShield as Shield,
-  FiShoppingCart as ShoppingCart,
-  FiSliders as Sliders,
-  FiTrash2 as Trash2,
-  FiUsers as Users,
-  FiUserCheck as UserCheck,
-  FiUserPlus as UserPlus,
-  FiLayers as Layers,
-} from "react-icons/fi";
+import { FiActivity as Activity, FiBox as Box, FiClock as Clock, FiCloud as Cloud, FiDollarSign as DollarSign, FiHardDrive as HardDrive, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiShield as Shield, FiShoppingCart as ShoppingCart, FiSliders as Sliders, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
 import { PERMISSIONS } from "../../lib/permissions";
 
 export const navSections = [
@@ -149,18 +130,8 @@ export const REPLACEMENT_FILTERS_INITIAL_VALUES = {
 // Shared between the Device Replacement dialog's part-value input and the
 // Stock page's "Add to stock" form, so both offer the same fixed options.
 export const RAM_CAPACITY_OPTIONS = ["2 GB", "4 GB", "8 GB", "16 GB", "32 GB", "64 GB", "128 GB", "256 GB"];
-export const HD_CAPACITY_OPTIONS = [
-  "500 GB",
-  "1000 GB (1 TB)",
-  "2000 GB (2 TB)",
-  "4000 GB (4 TB)",
-  "8000 GB (8 TB)",
-  "12000 GB (12 TB)",
-  "16000 GB (16 TB)",
-  "20000 GB (20 TB)",
-  "24000 GB (24 TB)",
-  "26000 GB (26 TB)",
-];
+export const RAM_TYPE_OPTIONS = ["DDR3", "DDR4", "DDR5", "DDR3 SODIMM", "DDR4 SODIMM", "DDR5 SODIMM"];
+export const HD_CAPACITY_OPTIONS = ["500 GB", "1000 GB (1 TB)", "2000 GB (2 TB)", "4000 GB (4 TB)", "8000 GB (8 TB)", "12000 GB (12 TB)", "16000 GB (16 TB)", "20000 GB (20 TB)", "24000 GB (24 TB)", "26000 GB (26 TB)"];
 
 export const departmentColumns = [
   { key: "department_id", label: "Department ID" },
@@ -187,17 +158,79 @@ export const ssdUpgradeColumns = [
   { key: "remark", label: "Remark" },
 ];
 
-export const partStockColumns = [
-  { key: "stock_id", label: "Stock ID" },
-  { key: "part_name", label: "Part" },
-  { key: "is_countable", label: "Countable" },
-  { key: "part_value", label: "Value" },
-  { key: "quantity", label: "Quantity" },
-  { key: "status", label: "Status" },
-  { key: "location", label: "Location" },
-  { key: "remark", label: "Remark" },
-  { key: "updated_at", label: "Last Updated" },
-];
+export const PART_STOCK_COLUMNS = {
+  // Shown when no part card is selected — a mix of parts means part-specific
+  // fields (RAM Type, Disk Type, Model...) don't all apply, so this sticks to
+  // the columns every part has.
+  default: [
+    { key: "part_name", label: "Part Name" },
+    { key: "part_value", label: "Value" },
+    { key: "quantity", label: "Quantity" },
+    { key: "status", label: "Status" },
+    { key: "remark", label: "Remark" },
+    { key: "updated_at", label: "Last Updated" },
+  ],
+
+  ram: [
+    { key: "part_name", label: "Part Name" },
+    { key: "ram_type", label: "RAM Type" },
+    { key: "part_value", label: "Value" },
+    { key: "quantity", label: "Quantity" },
+    { key: "status", label: "Status" },
+    { key: "remark", label: "Remark" },
+    { key: "updated_at", label: "Last Updated" },
+  ],
+
+  cpu: [
+    { key: "part_name", label: "Part Name" },
+    { key: "model_name", label: "Model Name" },
+    { key: "quantity", label: "Quantity" },
+    { key: "status", label: "Status" },
+    { key: "remark", label: "Remark" },
+    { key: "updated_at", label: "Last Updated" },
+  ],
+
+  "hard disk": [
+    { key: "part_name", label: "Part Name" },
+    { key: "part_value", label: "Value" },
+    { key: "disk_type", label: "Disk Type" },
+    { key: "quantity", label: "Quantity" },
+    { key: "disk_interface", label: "Disk Interface" },
+    { key: "status", label: "Status" },
+    { key: "remark", label: "Remark" },
+    { key: "updated_at", label: "Last Updated" },
+  ],
+
+  bag: [
+    { key: "part_name", label: "Part Name" },
+    { key: "model_name", label: "Model Name" },
+    { key: "model_number", label: "Model Number" },
+    { key: "quantity", label: "Quantity" },
+    { key: "status", label: "Status" },
+    { key: "remark", label: "Remark" },
+    { key: "updated_at", label: "Last Updated" },
+  ],
+
+  mouse: [
+    { key: "part_name", label: "Part Name" },
+    { key: "model_name", label: "Model Name" },
+    { key: "model_number", label: "Model Number" },
+    { key: "quantity", label: "Quantity" },
+    { key: "status", label: "Status" },
+    { key: "remark", label: "Remark" },
+    { key: "updated_at", label: "Last Updated" },
+  ],
+
+  keyboard: [
+    { key: "part_name", label: "Part Name" },
+    { key: "model_name", label: "Model Name" },
+    { key: "model_number", label: "Model Number" },
+    { key: "quantity", label: "Quantity" },
+    { key: "status", label: "Status" },
+    { key: "remark", label: "Remark" },
+    { key: "updated_at", label: "Last Updated" },
+  ],
+};
 
 export const ssdProcurementColumns = [
   { key: "procurement_id", label: "Procurement ID" },
