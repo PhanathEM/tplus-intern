@@ -130,7 +130,9 @@ export const REPLACEMENT_FILTERS_INITIAL_VALUES = {
 // Shared between the Device Replacement dialog's part-value input and the
 // Stock page's "Add to stock" form, so both offer the same fixed options.
 export const RAM_CAPACITY_OPTIONS = ["2 GB", "4 GB", "8 GB", "16 GB", "32 GB", "64 GB", "128 GB", "256 GB"];
-export const RAM_TYPE_OPTIONS = ["DDR3", "DDR4", "DDR5", "DDR3 SODIMM", "DDR4 SODIMM", "DDR5 SODIMM"];
+// Must match the backend's ram_type validation exactly (DDR3/DDR4/DDR5 only —
+// no SODIMM variants, even though laptop RAM is physically SODIMM).
+export const RAM_TYPE_OPTIONS = ["DDR3", "DDR4", "DDR5"];
 export const HD_CAPACITY_OPTIONS = ["500 GB", "1000 GB (1 TB)", "2000 GB (2 TB)", "4000 GB (4 TB)", "8000 GB (8 TB)", "12000 GB (12 TB)", "16000 GB (16 TB)", "20000 GB (20 TB)", "24000 GB (24 TB)", "26000 GB (26 TB)"];
 
 // DB has a CHECK constraint (chk_disk_type) that only allows these two exact values.
@@ -138,6 +140,19 @@ export const DISK_TYPE_OPTIONS = ["SSD", "HDD"];
 
 // DB has a CHECK constraint (chk_disk_interface) that only allows these exact values.
 export const DISK_INTERFACE_OPTIONS = ["SATA", "M.2", "NVMe", "IDE"];
+
+export const MODEL_NAME_PLACEHOLDER_BY_PART = {
+  cpu: "e.g. i5-1135G7",
+  bag: "e.g. HP Business Carry Case",
+  mouse: "e.g. Logitech M185",
+  keyboard: "e.g. Logitech K120",
+};
+
+export const MODEL_NUMBER_PLACEHOLDER_BY_PART = {
+  bag: "e.g. BP-15.6-BLK",
+  mouse: "e.g. 910-002235",
+  keyboard: "e.g. 920-002478",
+};
 
 export const departmentColumns = [
   { key: "department_id", label: "Department ID" },

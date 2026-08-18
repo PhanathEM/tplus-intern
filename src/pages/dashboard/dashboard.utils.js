@@ -1,5 +1,48 @@
 import { FIELD_LABEL_OVERRIDES } from "./dashboard.config";
 
+// Shared by the Part Stock page's Add/Edit dialogs and Device Replacement's
+// "add to stock" shortcut, so all three validate and shape the payload for
+// POST/PUT /api/part-stock identically.
+export function buildPartStockPayload(partType, formValues) {
+  const normalizedPartName = partType?.part_name?.trim().toLowerCase();
+  const isRam = normalizedPartName === "ram";
+  const isCpu = normalizedPartName === "cpu";
+  const isHardDisk = normalizedPartName === "hard disk";
+  const isBag = normalizedPartName === "bag";
+  const isMouse = normalizedPartName === "mouse";
+  const isKeyboard = normalizedPartName === "keyboard";
+  const needsModelName = isCpu || isBag || isMouse || isKeyboard;
+  const needsModelNumber = isBag || isMouse || isKeyboard;
+
+  if (isRam && !formValues.ram_type?.trim()) {
+    return { error: "Please select RAM Type." };
+  }
+  if (needsModelName && !formValues.model_name?.trim()) {
+    return { error: "Please enter Model Name." };
+  }
+  if (needsModelNumber && !formValues.model_number?.trim()) {
+    return { error: "Please enter Model Number." };
+  }
+  if (isHardDisk && (!formValues.disk_type?.trim() || !formValues.disk_interface?.trim())) {
+    return { error: "Please enter Disk Type and Disk Interface." };
+  }
+
+  const payload = {
+    part_type_id: Number(formValues.part_type_id),
+    ram_type: isRam ? formValues.ram_type.trim() : null,
+    model_name: needsModelName ? formValues.model_name.trim() : null,
+    model_number: needsModelNumber ? formValues.model_number.trim() : null,
+    disk_type: isHardDisk ? formValues.disk_type.trim() : null,
+    disk_interface: isHardDisk ? formValues.disk_interface.trim() : null,
+    part_value: partType?.tracks_value ? formValues.part_value.trim() : "",
+    quantity: Number(formValues.quantity),
+    status: formValues.status,
+    remark: (formValues.remark || "").trim(),
+  };
+
+  return { payload };
+}
+
 export function normalizeRecordList(data) {
   if (Array.isArray(data)) return data;
   if (data && typeof data === "object") return [data];

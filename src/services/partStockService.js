@@ -8,6 +8,12 @@ export function addPartStock(payload) {
   return apiPost("/api/part-stock", payload);
 }
 
+// Working lines only, quantity above zero — used for the "fit a part" picker
+// on Device Replacement, never offering a broken or empty line.
+export function fetchAvailablePartStock(partTypeId) {
+  return apiGet(`/api/part-stock/available?part_type_id=${partTypeId}`);
+}
+
 export function updatePartStock(stockId, payload) {
   return apiPut(`/api/part-stock/${stockId}`, payload);
 }

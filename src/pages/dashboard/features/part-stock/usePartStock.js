@@ -3,6 +3,7 @@ import { addPartStock, deletePartStock, fetchPartStock, updatePartStock } from "
 import { fetchPartTypes } from "../../../../services/partTypeService";
 import { fetchStatuses } from "../../../../services/statusService";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
+import { buildPartStockPayload } from "../../dashboard.utils";
 
 const ADD_FORM_INITIAL_VALUES = {
   part_type_id: "",
@@ -140,68 +141,14 @@ export function usePartStock({ isActive, user }) {
 
     const partType = partTypes.find((item) => String(item.part_type_id) === String(addFormValues.part_type_id));
 
-    const normalizedPartName = partType?.part_name?.trim().toLowerCase();
-
-    const isRam = normalizedPartName === "ram";
-
-    const isCpu = normalizedPartName === "cpu";
-
-    const isHardDisk = normalizedPartName === "hard disk";
-
-    const isBag = normalizedPartName === "bag";
-
-    const isMouse = normalizedPartName === "mouse";
-
-    const isKeyboard = normalizedPartName === "keyboard";
-
-    const needsModelName = isCpu || isBag || isMouse || isKeyboard;
-
-    const needsModelNumber = isBag || isMouse || isKeyboard;
-
-    if (isRam && !addFormValues.ram_type?.trim()) {
-      setAddError("Please select RAM Type.");
-      return;
-    }
-
-    if (needsModelName && !addFormValues.model_name?.trim()) {
-      setAddError("Please enter Model Name.");
-      return;
-    }
-
-    if (needsModelNumber && !addFormValues.model_number?.trim()) {
-      setAddError("Please enter Model Number.");
-      return;
-    }
-
-    if (isHardDisk && (!addFormValues.disk_type?.trim() || !addFormValues.disk_interface?.trim())) {
-      setAddError("Please enter Disk Type and Disk Interface.");
+    const { payload, error: validationError } = buildPartStockPayload(partType, addFormValues);
+    if (validationError) {
+      setAddError(validationError);
       return;
     }
 
     setIsSubmittingAdd(true);
     setAddError(null);
-
-    const payload = {
-      part_type_id: Number(addFormValues.part_type_id),
-
-      ram_type: isRam ? addFormValues.ram_type.trim() : null,
-
-      model_name: needsModelName ? addFormValues.model_name.trim() : null,
-
-      model_number: needsModelNumber ? addFormValues.model_number.trim() : null,
-
-      disk_type: isHardDisk ? addFormValues.disk_type.trim() : null,
-
-      disk_interface: isHardDisk ? addFormValues.disk_interface.trim() : null,
-
-      part_value: partType?.tracks_value ? addFormValues.part_value.trim() : "",
-
-      quantity: Number(addFormValues.quantity),
-
-      status: addFormValues.status,
-
-      remark: addFormValues.remark.trim(),
-    };
 
     addPartStock(payload)
       .then((data) => {
@@ -266,50 +213,21 @@ export function usePartStock({ isActive, user }) {
     if (!editStockTarget || !editFormValues.quantity || !editFormValues.status) return;
 
     const partType = partTypes.find((item) => String(item.part_type_id) === String(editStockTarget.part_type_id));
-    const normalizedPartName = partType?.part_name?.trim().toLowerCase();
-    const isRam = normalizedPartName === "ram";
-    const isCpu = normalizedPartName === "cpu";
-    const isHardDisk = normalizedPartName === "hard disk";
-    const isBag = normalizedPartName === "bag";
-    const isMouse = normalizedPartName === "mouse";
-    const isKeyboard = normalizedPartName === "keyboard";
-    const needsModelName = isCpu || isBag || isMouse || isKeyboard;
-    const needsModelNumber = isBag || isMouse || isKeyboard;
 
-    if (isRam && !editFormValues.ram_type?.trim()) {
-      setEditError("Please select RAM Type.");
+    const { payload, error: validationError } = buildPartStockPayload(partType, {
+      ...editFormValues,
+      part_type_id: editStockTarget.part_type_id,
+    });
+    if (validationError) {
+      setEditError(validationError);
       return;
     }
-
-    if (needsModelName && !editFormValues.model_name?.trim()) {
-      setEditError("Please enter Model Name.");
-      return;
-    }
-
-    if (needsModelNumber && !editFormValues.model_number?.trim()) {
-      setEditError("Please enter Model Number.");
-      return;
-    }
-
-    if (isHardDisk && (!editFormValues.disk_type?.trim() || !editFormValues.disk_interface?.trim())) {
-      setEditError("Please enter Disk Type and Disk Interface.");
-      return;
-    }
+    // A stock line's part never changes via edit — only carried along above
+    // so the shared validator/payload builder has what it needs.
+    delete payload.part_type_id;
 
     setIsSubmittingEdit(true);
     setEditError(null);
-
-    const payload = {
-      ram_type: isRam ? editFormValues.ram_type.trim() : null,
-      model_name: needsModelName ? editFormValues.model_name.trim() : null,
-      model_number: needsModelNumber ? editFormValues.model_number.trim() : null,
-      disk_type: isHardDisk ? editFormValues.disk_type.trim() : null,
-      disk_interface: isHardDisk ? editFormValues.disk_interface.trim() : null,
-      part_value: partType?.tracks_value ? editFormValues.part_value.trim() : "",
-      quantity: Number(editFormValues.quantity),
-      status: editFormValues.status,
-      remark: editFormValues.remark.trim(),
-    };
 
     updatePartStock(editStockTarget.stock_id, payload)
       .then(() => {

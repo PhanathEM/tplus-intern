@@ -7,9 +7,24 @@ import {
 import { fetchAssignFormData, fetchAssignableEquipment } from "../../../../services/assignService";
 import { fetchPartTypes } from "../../../../services/partTypeService";
 import { submitPartReplacement } from "../../../../services/partReplacementService";
+import { addPartStock, fetchAvailablePartStock } from "../../../../services/partStockService";
+import { fetchStatuses } from "../../../../services/statusService";
 import { REPLACEMENT_FILTERS_INITIAL_VALUES } from "../../dashboard.config";
-import { normalizeEquipmentTableColumns } from "../../dashboard.utils";
+import { buildPartStockPayload, normalizeEquipmentTableColumns } from "../../dashboard.utils";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
+
+const QUICK_ADD_FORM_INITIAL_VALUES = {
+  part_type_id: "",
+  ram_type: "",
+  part_value: "",
+  model_name: "",
+  model_number: "",
+  disk_type: "",
+  disk_interface: "",
+  quantity: "1",
+  status: "",
+  remark: "",
+};
 
 export function useReplacements({ isActive, user }) {
   // --- Replacement history -------------------------------------------
@@ -119,6 +134,34 @@ export function useReplacements({ isActive, user }) {
     };
   }, [isActive]);
 
+  // Statuses — used for the "old part status" field when replacing, and for
+  // the "add to stock" shortcut's status dropdown.
+  const [statuses, setStatuses] = useState([]);
+
+  useEffect(() => {
+    if (!isActive) return;
+
+    let ignore = false;
+
+    fetchStatuses()
+      .then((data) => {
+        if (ignore) return;
+        const list = Array.isArray(data) ? data : [];
+        setStatuses(
+          list
+            .filter((status) => status.is_active !== false)
+            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+        );
+      })
+      .catch(() => {
+        if (!ignore) setStatuses([]);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isActive]);
+
   // --- Devices you can replace ----------------------------------------
 
   const [replaceableDevices, setReplaceableDevices] = useState([]);
@@ -179,6 +222,102 @@ export function useReplacements({ isActive, user }) {
   const [isSubmittingPart, setIsSubmittingPart] = useState(false);
   const [submitPartError, setSubmitPartError] = useState(null);
 
+  // Fitting a part now requires picking a physical unit off the shelf
+  // (from_stock_id) — see stock-required.md. Loaded fresh whenever the
+  // selected part changes.
+  const [availableStock, setAvailableStock] = useState([]);
+  const [isAvailableStockLoading, setIsAvailableStockLoading] = useState(false);
+  const [availableStockError, setAvailableStockError] = useState(null);
+  const [selectedStockId, setSelectedStockId] = useState("");
+  const [oldPartStatus, setOldPartStatus] = useState("");
+
+  // "Add to stock" shortcut shown inline when the shelf is empty for the
+  // selected part, so the admin isn't forced off the page to fix it.
+  const [isQuickAddDialogOpen, setIsQuickAddDialogOpen] = useState(false);
+  const [quickAddFormValues, setQuickAddFormValues] = useState(QUICK_ADD_FORM_INITIAL_VALUES);
+  const [isSubmittingQuickAdd, setIsSubmittingQuickAdd] = useState(false);
+  const [quickAddError, setQuickAddError] = useState(null);
+
+  function loadAvailableStock(partTypeId) {
+    setIsAvailableStockLoading(true);
+    setAvailableStockError(null);
+
+    return fetchAvailablePartStock(partTypeId)
+      .then((data) => {
+        setAvailableStock(Array.isArray(data?.stock) ? data.stock : []);
+        setAvailableStockError(null);
+      })
+      .catch((error) => {
+        setAvailableStockError(error.message || "Something went wrong.");
+      })
+      .finally(() => setIsAvailableStockLoading(false));
+  }
+
+  function handleRetryAvailableStock() {
+    if (selectedPartTypeId) loadAvailableStock(selectedPartTypeId);
+  }
+
+  function handleSelectStock(stockId) {
+    setSelectedStockId(stockId);
+    // The picked stock line's own value *is* the new value being fitted —
+    // no separate free-text entry needed once a line is chosen.
+    const option = availableStock.find((item) => String(item.stock_id) === String(stockId));
+    if (option?.part_value) setPartNewValue(option.part_value);
+  }
+
+  function handleSelectOldPartStatus(value) {
+    setOldPartStatus(value);
+  }
+
+  function handleOpenQuickAddDialog(partTypeId) {
+    setIsQuickAddDialogOpen(true);
+    setQuickAddError(null);
+    setQuickAddFormValues({ ...QUICK_ADD_FORM_INITIAL_VALUES, part_type_id: partTypeId ? String(partTypeId) : "" });
+  }
+
+  function handleCloseQuickAddDialog() {
+    setIsQuickAddDialogOpen(false);
+  }
+
+  function handleQuickAddFormChange(field, value) {
+    setQuickAddFormValues((current) => ({ ...current, [field]: value }));
+  }
+
+  function handleSubmitQuickAdd(event) {
+    event.preventDefault();
+    if (!quickAddFormValues.part_type_id || !quickAddFormValues.quantity || !quickAddFormValues.status) return;
+
+    const partType = partTypes.find((item) => String(item.part_type_id) === String(quickAddFormValues.part_type_id));
+    const { payload, error: validationError } = buildPartStockPayload(partType, quickAddFormValues);
+    if (validationError) {
+      setQuickAddError(validationError);
+      return;
+    }
+
+    setIsSubmittingQuickAdd(true);
+    setQuickAddError(null);
+
+    addPartStock(payload)
+      .then((data) => {
+        logActivity({
+          actor: user,
+          action: "create",
+          module: ACTIVITY_MODULES.PART_STOCK,
+          entityId: data?.stock_id,
+          entityLabel: `${partType?.part_name || "Part"}${payload.part_value ? ` (${payload.part_value})` : ""} x${payload.quantity}`,
+          after: payload,
+        });
+        setIsQuickAddDialogOpen(false);
+        // The newly added line should show up (and be pickable) right away.
+        loadAvailableStock(quickAddFormValues.part_type_id);
+      })
+      .catch((error) => {
+        const data = error.response?.data;
+        setQuickAddError(data?.error || error.message || "Could not add stock.");
+      })
+      .finally(() => setIsSubmittingQuickAdd(false));
+  }
+
   function handleOpenReplaceDialog(device) {
     setReplaceDialogTarget(device);
     setActiveReplaceTab("device");
@@ -192,6 +331,11 @@ export function useReplacements({ isActive, user }) {
     setPartAction("replace");
     setPartNewValue("");
     setSubmitPartError(null);
+    setAvailableStock([]);
+    setAvailableStockError(null);
+    setIsAvailableStockLoading(false);
+    setSelectedStockId("");
+    setOldPartStatus("");
 
     fetchAssignableEquipment({ category: device.category_name })
       .then((data) => {
@@ -278,11 +422,19 @@ export function useReplacements({ isActive, user }) {
     // A part swapped in might not be countable, so don't carry "add" over.
     setPartAction("replace");
     setPartNewValue("");
+    setSelectedStockId("");
+    setOldPartStatus("");
+    setSubmitPartError(null);
+
+    setAvailableStock([]);
+    setAvailableStockError(null);
+    if (value) loadAvailableStock(value);
   }
 
   function handleSelectPartAction(value) {
     setPartAction(value);
     setPartNewValue("");
+    setSelectedStockId("");
   }
 
   function handlePartNewValueChange(value) {
@@ -298,12 +450,19 @@ export function useReplacements({ isActive, user }) {
     // an amount; "replace" only asks when the part actually tracks a value.
     const needsValue = partAction === "add" || (partAction === "replace" && partType?.tracks_value);
     if (needsValue && !partNewValue.trim()) return;
+    // Fitting a part (replace/add) now has to come off the shelf — remove is
+    // exempt since nothing is being installed. Replacing also asks what
+    // condition the displaced part is in, since that's where it lands in stock.
+    if (partAction !== "remove" && !selectedStockId) return;
+    if (partAction === "replace" && !oldPartStatus) return;
 
     setIsSubmittingPart(true);
     setSubmitPartError(null);
 
     const payload = { part_type_id: Number(selectedPartTypeId), action: partAction };
     if (needsValue) payload.new_value = partNewValue.trim();
+    if (partAction !== "remove") payload.from_stock_id = Number(selectedStockId);
+    if (partAction === "replace") payload.old_part_status = oldPartStatus;
 
     const actionVerb = { replace: "replaced on", add: "added to", remove: "removed from" }[partAction];
 
@@ -323,7 +482,15 @@ export function useReplacements({ isActive, user }) {
       })
       .catch((error) => {
         const data = error.response?.data;
-        setSubmitPartError(data?.error || error.message || "Could not replace the part.");
+        if (error.status === 409) {
+          // Someone else took the last one — refresh so the taken line drops
+          // out of the picker instead of failing again on retry.
+          setSubmitPartError(data?.error || "That stock line is gone. Pick another.");
+          setSelectedStockId("");
+          handleRetryAvailableStock();
+        } else {
+          setSubmitPartError(data?.error || error.message || "Could not replace the part.");
+        }
       })
       .finally(() => setIsSubmittingPart(false));
   }
@@ -374,5 +541,24 @@ export function useReplacements({ isActive, user }) {
     handleSubmitPartReplace,
     isSubmittingPart,
     submitPartError,
+
+    statuses,
+    availableStock,
+    isAvailableStockLoading,
+    availableStockError,
+    handleRetryAvailableStock,
+    selectedStockId,
+    handleSelectStock,
+    oldPartStatus,
+    handleSelectOldPartStatus,
+
+    isQuickAddDialogOpen,
+    quickAddFormValues,
+    isSubmittingQuickAdd,
+    quickAddError,
+    handleOpenQuickAddDialog,
+    handleCloseQuickAddDialog,
+    handleQuickAddFormChange,
+    handleSubmitQuickAdd,
   };
 }

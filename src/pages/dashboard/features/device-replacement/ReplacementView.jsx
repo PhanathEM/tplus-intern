@@ -1,11 +1,22 @@
 import { useMemo } from "react";
-import { FiAlertTriangle as AlertTriangle, FiRefreshCw as RefreshCw, FiSearch as Search, FiX as X } from "react-icons/fi";
-import { HD_CAPACITY_OPTIONS, RAM_CAPACITY_OPTIONS, replacementColumns } from "../../dashboard.config";
+import { FiAlertTriangle as AlertTriangle, FiPlusCircle as PlusCircle, FiRefreshCw as RefreshCw, FiSearch as Search, FiX as X } from "react-icons/fi";
+import { replacementColumns } from "../../dashboard.config";
 import { getRecordColumns } from "../../dashboard.utils";
 import { EmptyState, formInputClass } from "../../components/SharedControls";
 import { RecordCellValue } from "../../components/RecordsTableView";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
+import { AddStockDialog } from "../../components/AddStockDialog";
+
+// "16 GB · DDR5 (412 available)" — whichever identifying fields this stock
+// line has (part_value/ram_type for RAM, model_name/number for CPU etc.).
+function getStockOptionLabel(item) {
+  const bits = [item.part_value, item.ram_type, item.model_name, item.model_number, item.disk_type, item.disk_interface].filter(
+    (value) => value && String(value).trim()
+  );
+  const label = bits.length ? bits.join(" · ") : "Unlabeled";
+  return `${label} (${item.quantity} available)`;
+}
 
 function FilterBar({ filters, onFilterChange, categories, idPrefix }) {
   const categoryOptions = useMemo(
@@ -237,10 +248,30 @@ export function ReplaceDeviceDialog({
   partAction,
   onSelectPartAction,
   partNewValue,
-  onPartNewValueChange,
   onSubmitPart,
   isSubmittingPart,
   submitPartError,
+
+  // Stock picker — fitting a part now has to come off the shelf
+  statuses = [],
+  availableStock = [],
+  isAvailableStockLoading,
+  availableStockError,
+  onRetryAvailableStock,
+  selectedStockId,
+  onSelectStock,
+  oldPartStatus,
+  onSelectOldPartStatus,
+
+  // "Add to stock" shortcut, shown inline when the shelf is empty
+  isQuickAddDialogOpen,
+  quickAddFormValues,
+  isSubmittingQuickAdd,
+  quickAddError,
+  onOpenQuickAddDialog,
+  onCloseQuickAddDialog,
+  onQuickAddFormChange,
+  onSubmitQuickAdd,
 }) {
   if (!device) return null;
 
@@ -250,20 +281,19 @@ export function ReplaceDeviceDialog({
   // get the Add option; everything else is always a replace.
   const partNeedsValue =
     partAction === "add" || (partAction === "replace" && Boolean(selectedPartType?.tracks_value));
-  const canSubmitPart = Boolean(selectedPartTypeId && (!partNeedsValue || partNewValue.trim()));
-  const isRamPart = selectedPartType?.part_name?.trim().toLowerCase() === "ram";
-  const isHdPart = selectedPartType?.part_name?.trim().toLowerCase() === "hard disk";
-  const capacityOptions = isRamPart ? RAM_CAPACITY_OPTIONS : isHdPart ? HD_CAPACITY_OPTIONS : null;
+  const canSubmitPart = Boolean(
+    selectedPartTypeId &&
+      (!partNeedsValue || partNewValue.trim()) &&
+      (partAction === "remove" || selectedStockId) &&
+      (partAction !== "replace" || oldPartStatus)
+  );
 
   // Read straight off the device row instead of asking — the API never wants
   // old_value for a part with an equipment_column, since it'd just be
-  // misreported.
+  // misreported. Only called for parts that have one (see the gate below).
   function getPartOldValueDisplay(partType) {
-    const value = partType.equipment_column ? device[partType.equipment_column] : null;
-    if (value === null || value === undefined || value === "") {
-      return partType.equipment_column ? "—" : "Not tracked";
-    }
-    return String(value);
+    const value = device[partType.equipment_column];
+    return value === null || value === undefined || value === "" ? "—" : String(value);
   }
 
   // "16" + "4" -> "20"; "16GB" + "4" -> "20GB" — carry the old value's unit
@@ -422,7 +452,7 @@ export function ReplaceDeviceDialog({
                   </div>
                 )}
 
-                {selectedPartType && (
+                {selectedPartType?.equipment_column && (
                   <div>
                     <p className="mb-1.5 text-xs font-semibold text-slate-600">Current {selectedPartType.part_name}</p>
                     <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
@@ -431,36 +461,78 @@ export function ReplaceDeviceDialog({
                   </div>
                 )}
 
-                {partNeedsValue && (
-                  <div>
-                    <label htmlFor="replace-part-value" className="mb-1.5 block text-xs font-semibold text-slate-600">
-                      {partAction === "add" ? "Amount to add" : "New value"}
+                {selectedPartType && partAction !== "remove" && (
+                  <div className="col-span-2">
+                    <label htmlFor="replace-part-stock" className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      Pick from stock
                     </label>
-                    {capacityOptions ? (
+                    {isAvailableStockLoading ? (
+                      <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500">
+                        Loading stock...
+                      </div>
+                    ) : availableStockError ? (
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-700">
+                        <span>{availableStockError}</span>
+                        <button
+                          type="button"
+                          onClick={onRetryAvailableStock}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-700 outline-none transition hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400"
+                        >
+                          <RefreshCw size={13} />
+                          Retry
+                        </button>
+                      </div>
+                    ) : availableStock.length === 0 ? (
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+                        <span>No {selectedPartType.part_name} in stock right now.</span>
+                        <button
+                          type="button"
+                          onClick={() => onOpenQuickAddDialog(selectedPartTypeId)}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-800 outline-none transition hover:bg-amber-100 focus-visible:ring-2 focus-visible:ring-amber-400"
+                        >
+                          <PlusCircle size={13} />
+                          Add to stock
+                        </button>
+                      </div>
+                    ) : (
                       <select
-                        id="replace-part-value"
-                        value={partNewValue}
-                        onChange={(e) => onPartNewValueChange(e.target.value)}
+                        id="replace-part-stock"
+                        value={selectedStockId}
+                        onChange={(e) => onSelectStock(e.target.value)}
                         className={formInputClass}
                       >
-                        <option value="">Select capacity...</option>
-                        {capacityOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
+                        <option value="">Select a stock line...</option>
+                        {availableStock.map((option) => (
+                          <option key={option.stock_id} value={option.stock_id}>
+                            {getStockOptionLabel(option)}
                           </option>
                         ))}
                       </select>
-                    ) : (
-                      <input
-                        id="replace-part-value"
-                        type="text"
-                        autoComplete="off"
-                        value={partNewValue}
-                        onChange={(e) => onPartNewValueChange(e.target.value)}
-                        placeholder={partAction === "add" ? `e.g. "8"` : `e.g. "32"`}
-                        className={formInputClass}
-                      />
                     )}
+                  </div>
+                )}
+
+                {partAction === "replace" && selectedPartType && (
+                  <div>
+                    <label
+                      htmlFor="replace-old-part-status"
+                      className="mb-1.5 block text-xs font-semibold text-slate-600"
+                    >
+                      Old part status
+                    </label>
+                    <select
+                      id="replace-old-part-status"
+                      value={oldPartStatus}
+                      onChange={(e) => onSelectOldPartStatus(e.target.value)}
+                      className={formInputClass}
+                    >
+                      <option value="">Select status...</option>
+                      {statuses.map((status) => (
+                        <option key={status.status_id} value={status.status_name}>
+                          {status.status_name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
@@ -495,6 +567,19 @@ export function ReplaceDeviceDialog({
           </form>
         )}
       </div>
+
+      <AddStockDialog
+        isOpen={isQuickAddDialogOpen}
+        values={quickAddFormValues}
+        partTypes={partTypes}
+        statuses={statuses}
+        lockedPartTypeId={selectedPartTypeId}
+        onChange={onQuickAddFormChange}
+        onSubmit={onSubmitQuickAdd}
+        onClose={onCloseQuickAddDialog}
+        isSubmitting={isSubmittingQuickAdd}
+        error={quickAddError}
+      />
     </div>
   );
 }

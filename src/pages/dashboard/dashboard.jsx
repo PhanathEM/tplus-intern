@@ -1159,10 +1159,26 @@ function Dashboard({ user, onLogout }) {
         partAction={replacements.partAction}
         onSelectPartAction={replacements.handleSelectPartAction}
         partNewValue={replacements.partNewValue}
-        onPartNewValueChange={replacements.handlePartNewValueChange}
         onSubmitPart={replacements.handleSubmitPartReplace}
         isSubmittingPart={replacements.isSubmittingPart}
         submitPartError={replacements.submitPartError}
+        statuses={replacements.statuses}
+        availableStock={replacements.availableStock}
+        isAvailableStockLoading={replacements.isAvailableStockLoading}
+        availableStockError={replacements.availableStockError}
+        onRetryAvailableStock={replacements.handleRetryAvailableStock}
+        selectedStockId={replacements.selectedStockId}
+        onSelectStock={replacements.handleSelectStock}
+        oldPartStatus={replacements.oldPartStatus}
+        onSelectOldPartStatus={replacements.handleSelectOldPartStatus}
+        isQuickAddDialogOpen={replacements.isQuickAddDialogOpen}
+        quickAddFormValues={replacements.quickAddFormValues}
+        isSubmittingQuickAdd={replacements.isSubmittingQuickAdd}
+        quickAddError={replacements.quickAddError}
+        onOpenQuickAddDialog={replacements.handleOpenQuickAddDialog}
+        onCloseQuickAddDialog={replacements.handleCloseQuickAddDialog}
+        onQuickAddFormChange={replacements.handleQuickAddFormChange}
+        onSubmitQuickAdd={replacements.handleSubmitQuickAdd}
       />
 
       <LicenseFormModal
