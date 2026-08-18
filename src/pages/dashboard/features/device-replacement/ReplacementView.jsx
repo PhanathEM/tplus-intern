@@ -1,9 +1,8 @@
-import { useMemo } from "react";
-import { FiAlertTriangle as AlertTriangle, FiPlusCircle as PlusCircle, FiRefreshCw as RefreshCw, FiSearch as Search, FiX as X } from "react-icons/fi";
-import { replacementColumns } from "../../dashboard.config";
-import { getRecordColumns } from "../../dashboard.utils";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { FiAlertTriangle as AlertTriangle, FiChevronDown as ChevronDown, FiPlusCircle as PlusCircle, FiRefreshCw as RefreshCw, FiSearch as Search, FiX as X } from "react-icons/fi";
+import { PART_ACTION_OPTIONS } from "../../dashboard.config";
 import { EmptyState, formInputClass } from "../../components/SharedControls";
-import { RecordCellValue } from "../../components/RecordsTableView";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
 import { AddStockDialog } from "../../components/AddStockDialog";
@@ -16,6 +15,110 @@ function getStockOptionLabel(item) {
   );
   const label = bits.length ? bits.join(" · ") : "Unlabeled";
   return `${label} (${item.quantity} available)`;
+}
+
+// Radio-style list for picking a stock line — no search box, since these
+// lists are short (a handful of lines per part). Rendered through a portal
+// with fixed positioning so it isn't clipped by the dialog's own scrolling
+// content area, the way an absolutely-positioned panel would be.
+function StockLineSelect({ id, options, selectedId, onSelect, placeholder = "Select a stock line..." }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [menuRect, setMenuRect] = useState(null);
+  const containerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  function updateMenuRect() {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setMenuRect({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    updateMenuRect();
+
+    function handlePointerDown(event) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target) &&
+        menuRef.current &&
+        !menuRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    }
+    function handleKeyDown(event) {
+      if (event.key === "Escape") setIsOpen(false);
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", updateMenuRect);
+    window.addEventListener("scroll", updateMenuRect, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", updateMenuRect);
+      window.removeEventListener("scroll", updateMenuRect, true);
+    };
+  }, [isOpen]);
+
+  const selectedOption = options.find((option) => String(option.stock_id) === String(selectedId));
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        id={id}
+        onClick={() => setIsOpen((value) => !value)}
+        className={`${formInputClass} flex items-center justify-between text-left`}
+      >
+        <span className={`truncate ${selectedOption ? "text-slate-900" : "text-slate-400"}`}>
+          {selectedOption ? getStockOptionLabel(selectedOption) : placeholder}
+        </span>
+        <ChevronDown size={14} className={`shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {isOpen &&
+        menuRect &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ position: "fixed", top: menuRect.top, left: menuRect.left, width: menuRect.width }}
+            className="z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
+          >
+            <div className="max-h-56 overflow-y-auto p-1.5">
+              {options.map((option) => {
+                const isSelected = String(option.stock_id) === String(selectedId);
+                return (
+                  <button
+                    key={option.stock_id}
+                    type="button"
+                    onClick={() => {
+                      onSelect(option.stock_id);
+                      setIsOpen(false);
+                    }}
+                    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected ? "text-orange-700" : "text-slate-700 hover:bg-slate-50"
+                      }`}
+                  >
+                    <span
+                      className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border-2 ${isSelected ? "border-orange-500" : "border-slate-300"
+                        }`}
+                    >
+                      {isSelected && <span className="h-2 w-2 rounded-full bg-orange-500" />}
+                    </span>
+                    <span className="truncate">{getStockOptionLabel(option)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>,
+          document.body
+        )}
+    </div>
+  );
 }
 
 function FilterBar({ filters, onFilterChange, categories, idPrefix }) {
@@ -64,10 +167,7 @@ function FilterBar({ filters, onFilterChange, categories, idPrefix }) {
 
 export function DeviceReplacementCategoryBar({ categories = [], selected, onSelect }) {
   const categoryOptions = useMemo(
-    () => [
-      { value: "All", label: "All categories" },
-      ...categories.map((category) => ({ value: category.category_name, label: category.category_name })),
-    ],
+    () => categories.map((category) => ({ value: category.category_name, label: category.category_name })),
     [categories]
   );
 
@@ -86,7 +186,17 @@ export function ReplaceableDevicesView({
   onRetry,
   canManage = true,
   onOpenReplaceDialog,
+  search = "",
+  onSearchChange,
 }) {
+  // The backend's own equipment_id isn't sequential (and we dropped its "No."
+  // column), so number rows 1..n ourselves, matching whatever's on screen.
+  const numberedDevices = useMemo(
+    () => devices.map((device, index) => ({ ...device, _row_number: index + 1 })),
+    [devices]
+  );
+  const numberedColumns = useMemo(() => [{ key: "_row_number", label: "No." }, ...columns], [columns]);
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
@@ -100,20 +210,36 @@ export function ReplaceableDevicesView({
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onRetry}
-            disabled={isLoading}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-            Refresh
-          </button>
+
+          {onSearchChange && (
+            <div className="relative w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <input
+                id="replaceable-devices-search"
+                type="text"
+                autoComplete="off"
+                value={search}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Employee or device..."
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange("")}
+                  aria-label="Clear search"
+                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <DynamicEquipmentTable
-          columns={columns}
-          records={devices}
+          columns={numberedColumns}
+          records={numberedDevices}
           rowKey={(device, index) => device.equipment_id ?? index}
           isLoading={isLoading}
           loadingText="Loading devices..."
@@ -130,18 +256,68 @@ export function ReplaceableDevicesView({
   );
 }
 
-export function ReplacementsView({ replacements, isLoading, error, onRetry, filters, onFilterChange, categories = [] }) {
-  const columns = useMemo(() => getRecordColumns(replacements, replacementColumns), [replacements]);
+// A whole-device swap is a different physical unit, so nearly every one of
+// these pairs differs — unlike a single-part swap (e.g. just a RAM upgrade),
+// there's no single "the thing that changed" column to isolate.
+const REPLACEMENT_FIELD_PAIRS = [
+  { label: "Device", oldKey: "old_device_name", newKey: "new_device_name" },
+  { label: "Computer Name", oldKey: "old_computer_name", newKey: "new_computer_name" },
+  { label: "Model", oldKey: "old_device_model", newKey: "new_device_model" },
+  { label: "Asset Code", oldKey: "old_asset_code", newKey: "new_asset_code" },
+  { label: "Service Tag", oldKey: "old_service_tag", newKey: "new_service_tag" },
+  { label: "Category", oldKey: "old_category", newKey: "new_category" },
+  { label: "Location", oldKey: "old_device_location", newKey: "new_owner_location" },
+];
 
+function ReplacementHistoryRow({ replacement }) {
   return (
-    <div className="px-4 pb-6 sm:px-6 lg:px-8">
+    <tr className="transition hover:bg-slate-50/70">
+      <td className="whitespace-nowrap px-4 py-3 align-top">
+        <p className="font-semibold text-slate-900">{replacement.employee_name || "—"}</p>
+        <p className="text-xs text-slate-500">
+          {[replacement.employee_position, replacement.employee_department].filter(Boolean).join(" · ")}
+        </p>
+      </td>
+      <td className="whitespace-nowrap px-4 py-3 align-top text-slate-600">
+        {formatReplacementDate(replacement.replacement_date)}
+      </td>
+      {REPLACEMENT_FIELD_PAIRS.flatMap(({ oldKey, newKey }) => [
+        <td key={oldKey} className="whitespace-nowrap border-l border-slate-100 bg-rose-50/60 px-4 py-3 align-top text-rose-900">
+          {replacement[oldKey] ?? "—"}
+        </td>,
+        <td key={newKey} className="whitespace-nowrap bg-emerald-50/60 px-4 py-3 align-top text-emerald-900">
+          {replacement[newKey] ?? "—"}
+        </td>,
+      ])}
+    </tr>
+  );
+}
+
+function formatReplacementDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
+}
+
+export function ReplacementHistoryView({
+  replacements,
+  isLoading,
+  error,
+  onRetry,
+  filters,
+  onFilterChange,
+  categories = [],
+}) {
+  return (
+    <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">Replacement history</h2>
+            <h2 className="text-[15px] font-semibold text-slate-950">History Replacement</h2>
             {!isLoading && !error && (
               <p className="mt-0.5 text-[13px] text-slate-500">
-                {replacements.length} replacement{replacements.length === 1 ? "" : "s"}
+                {replacements.length} replacement{replacements.length === 1 ? "" : "s"} · red is what was removed,
+                green is what replaced it
               </p>
             )}
           </div>
@@ -192,22 +368,24 @@ export function ReplacementsView({ replacements, isLoading, error, onRetry, filt
             <table className="min-w-full divide-y divide-slate-100 text-left text-[13px]">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
                 <tr>
-                  {columns.map((column) => (
-                    <th key={column.key} className="whitespace-nowrap px-4 py-3 font-semibold">
-                      {column.label}
-                    </th>
-                  ))}
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Employee</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Date</th>
+                  {REPLACEMENT_FIELD_PAIRS.flatMap(({ label, oldKey, newKey }) => [
+                    <th
+                      key={oldKey}
+                      className="whitespace-nowrap border-l border-slate-200 bg-rose-50 px-4 py-3 font-semibold text-rose-600"
+                    >
+                      Old {label}
+                    </th>,
+                    <th key={newKey} className="whitespace-nowrap bg-emerald-50 px-4 py-3 font-semibold text-emerald-700">
+                      New {label}
+                    </th>,
+                  ])}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {replacements.map((replacement, index) => (
-                  <tr key={replacement.replacement_id ?? index} className="transition hover:bg-slate-50/70">
-                    {columns.map((column) => (
-                      <td key={column.key} className="whitespace-nowrap px-4 py-3 text-slate-600">
-                        <RecordCellValue value={replacement[column.key]} />
-                      </td>
-                    ))}
-                  </tr>
+                  <ReplacementHistoryRow key={replacement.replacement_id ?? index} replacement={replacement} />
                 ))}
               </tbody>
             </table>
@@ -253,15 +431,12 @@ export function ReplaceDeviceDialog({
   submitPartError,
 
   // Stock picker — fitting a part now has to come off the shelf
-  statuses = [],
   availableStock = [],
   isAvailableStockLoading,
   availableStockError,
   onRetryAvailableStock,
   selectedStockId,
   onSelectStock,
-  oldPartStatus,
-  onSelectOldPartStatus,
 
   // "Add to stock" shortcut, shown inline when the shelf is empty
   isQuickAddDialogOpen,
@@ -275,39 +450,28 @@ export function ReplaceDeviceDialog({
 }) {
   if (!device) return null;
 
+  // Same as "Devices you can replace" — equipment_id isn't sequential and
+  // has no "No." column anymore, so number rows ourselves.
+  const numberedDeviceOptions = deviceOptions.map((option, index) => ({ ...option, _row_number: index + 1 }));
+  const numberedDeviceOptionColumns = [{ key: "_row_number", label: "No." }, ...deviceOptionColumns];
+
   const selectedPartType = partTypes.find((item) => String(item.part_type_id) === String(selectedPartTypeId));
-  // CPUs (is_countable: false) can only ever be swapped one-for-one — there's
-  // nowhere to "add" a second one — so only countable parts (RAM, storage)
-  // get the Add option; everything else is always a replace.
+  // "add" always needs a value; "replace" only when the part tracks one.
+  // Both install a physical unit, so both need a stock pick; only "replace"
+  // displaces an old part, so only it asks what happens to it.
   const partNeedsValue =
     partAction === "add" || (partAction === "replace" && Boolean(selectedPartType?.tracks_value));
   const canSubmitPart = Boolean(
-    selectedPartTypeId &&
-      (!partNeedsValue || partNewValue.trim()) &&
-      (partAction === "remove" || selectedStockId) &&
-      (partAction !== "replace" || oldPartStatus)
+    selectedPartTypeId && (!partNeedsValue || partNewValue.trim()) && selectedStockId
   );
 
   // Read straight off the device row instead of asking — the API never wants
   // old_value for a part with an equipment_column, since it'd just be
-  // misreported. Only called for parts that have one (see the gate below).
+  // misreported.
   function getPartOldValueDisplay(partType) {
+    if (!partType.equipment_column) return "—";
     const value = device[partType.equipment_column];
     return value === null || value === undefined || value === "" ? "—" : String(value);
-  }
-
-  // "16" + "4" -> "20"; "16GB" + "4" -> "20GB" — carry the old value's unit
-  // suffix (if any) over to the total so it still reads naturally.
-  let resultingTotal = null;
-  if (selectedPartType?.is_countable && partAction === "add") {
-    const oldRaw = selectedPartType.equipment_column ? device[selectedPartType.equipment_column] : null;
-    const oldStr = oldRaw === null || oldRaw === undefined ? "" : String(oldRaw);
-    const oldNum = parseFloat(oldStr);
-    const addNum = parseFloat(partNewValue);
-    if (!Number.isNaN(oldNum) && !Number.isNaN(addNum)) {
-      const unit = oldStr.match(/[a-zA-Z]+$/)?.[0] || "";
-      resultingTotal = `${oldNum + addNum}${unit}`;
-    }
   }
 
   return (
@@ -317,10 +481,6 @@ export function ReplaceDeviceDialog({
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950">Replace this device</h2>
-            <p className="mt-0.5 text-[13px] text-slate-500">
-              {device.display_name} — {device.owner_name}
-              {device.owner_position ? ` (${device.owner_position})` : ""}
-            </p>
           </div>
           <button
             type="button"
@@ -363,8 +523,8 @@ export function ReplaceDeviceDialog({
                 <p className="mb-1.5 text-xs font-semibold text-slate-600">These devices can choose to replace because don't have owner</p>
                 <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-slate-100">
                   <DynamicEquipmentTable
-                    columns={deviceOptionColumns}
-                    records={deviceOptions}
+                    columns={numberedDeviceOptionColumns}
+                    records={numberedDeviceOptions}
                     rowKey={(option, index) => option.equipment_id ?? index}
                     isLoading={isDeviceOptionsLoading}
                     loadingText={`Loading ${device.category_name} in stock...`}
@@ -415,136 +575,116 @@ export function ReplaceDeviceDialog({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="replace-part-select" className="mb-1.5 block text-xs font-semibold text-slate-600">
-                    Part
-                  </label>
-                  <select
-                    id="replace-part-select"
-                    value={selectedPartTypeId}
-                    onChange={(e) => onSelectPartType(e.target.value)}
-                    className={formInputClass}
-                  >
-                    <option value="">Select a part...</option>
-                    {partTypes.map((partType) => (
-                      <option key={partType.part_type_id} value={partType.part_type_id}>
-                        {partType.part_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {selectedPartType?.is_countable && (
-                  <div>
-                    <label htmlFor="replace-part-action" className="mb-1.5 block text-xs font-semibold text-slate-600">
-                      Action
-                    </label>
-                    <select
-                      id="replace-part-action"
-                      value={partAction}
-                      onChange={(e) => onSelectPartAction(e.target.value)}
-                      className={formInputClass}
-                    >
-                      <option value="replace">Replace</option>
-                      <option value="add">Add More</option>
-                    </select>
-                  </div>
-                )}
-
-                {selectedPartType?.equipment_column && (
-                  <div>
-                    <p className="mb-1.5 text-xs font-semibold text-slate-600">Current {selectedPartType.part_name}</p>
-                    <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
-                      {getPartOldValueDisplay(selectedPartType)}
-                    </div>
-                  </div>
-                )}
-
-                {selectedPartType && partAction !== "remove" && (
-                  <div className="col-span-2">
-                    <label htmlFor="replace-part-stock" className="mb-1.5 block text-xs font-semibold text-slate-600">
-                      Pick from stock
-                    </label>
-                    {isAvailableStockLoading ? (
-                      <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500">
-                        Loading stock...
-                      </div>
-                    ) : availableStockError ? (
-                      <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-700">
-                        <span>{availableStockError}</span>
-                        <button
-                          type="button"
-                          onClick={onRetryAvailableStock}
-                          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-700 outline-none transition hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400"
-                        >
-                          <RefreshCw size={13} />
-                          Retry
-                        </button>
-                      </div>
-                    ) : availableStock.length === 0 ? (
-                      <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
-                        <span>No {selectedPartType.part_name} in stock right now.</span>
-                        <button
-                          type="button"
-                          onClick={() => onOpenQuickAddDialog(selectedPartTypeId)}
-                          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-800 outline-none transition hover:bg-amber-100 focus-visible:ring-2 focus-visible:ring-amber-400"
-                        >
-                          <PlusCircle size={13} />
-                          Add to stock
-                        </button>
-                      </div>
-                    ) : (
-                      <select
-                        id="replace-part-stock"
-                        value={selectedStockId}
-                        onChange={(e) => onSelectStock(e.target.value)}
-                        className={formInputClass}
+              <div>
+                <p className="mb-1.5 text-xs font-semibold text-slate-600">Part</p>
+                <div className="flex flex-wrap gap-2">
+                  {partTypes.map((partType) => {
+                    const isSelected = String(partType.part_type_id) === String(selectedPartTypeId);
+                    return (
+                      <button
+                        key={partType.part_type_id}
+                        type="button"
+                        onClick={() => onSelectPartType(partType.part_type_id)}
+                        className={`inline-flex h-9 items-center rounded-full border px-3.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${isSelected
+                          ? "border-slate-950 bg-slate-950 text-white"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                          }`}
                       >
-                        <option value="">Select a stock line...</option>
-                        {availableStock.map((option) => (
-                          <option key={option.stock_id} value={option.stock_id}>
-                            {getStockOptionLabel(option)}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                )}
+                        {partType.part_name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-                {partAction === "replace" && selectedPartType && (
+              {!selectedPartType ? (
+                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-200 py-10 text-center text-sm text-slate-500">
+                  Select a part above to continue
+                </div>
+              ) : (
+                <>
                   <div>
-                    <label
-                      htmlFor="replace-old-part-status"
-                      className="mb-1.5 block text-xs font-semibold text-slate-600"
-                    >
-                      Old part status
-                    </label>
-                    <select
-                      id="replace-old-part-status"
-                      value={oldPartStatus}
-                      onChange={(e) => onSelectOldPartStatus(e.target.value)}
-                      className={formInputClass}
-                    >
-                      <option value="">Select status...</option>
-                      {statuses.map((status) => (
-                        <option key={status.status_id} value={status.status_name}>
-                          {status.status_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {resultingTotal !== null && (
-                  <div>
-                    <p className="mb-1.5 text-xs font-semibold text-slate-600">Resulting total</p>
-                    <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700">
-                      {resultingTotal}
+                    <p className="mb-1.5 text-xs font-semibold text-slate-600">Action</p>
+                    <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1">
+                      {PART_ACTION_OPTIONS.map((option) => {
+                        const isSelected = partAction === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => onSelectPartAction(option.value)}
+                            className={`rounded-full px-4 py-1.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected
+                              ? "bg-white text-slate-900 shadow-sm"
+                              : "text-slate-500 hover:text-slate-700"
+                              }`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-                )}
-              </div>
+
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div>
+                      <label htmlFor="replace-part-current" className="mb-1.5 block text-xs font-semibold text-slate-600">
+                        Current {selectedPartType.part_name}
+                      </label>
+                      <div
+                        id="replace-part-current"
+                        className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600"
+                      >
+                        {getPartOldValueDisplay(selectedPartType)}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="replace-part-stock" className="mb-1.5 block text-xs font-semibold text-slate-600">
+                        New {selectedPartType.part_name}
+                      </label>
+
+                      {isAvailableStockLoading ? (
+                        <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500">
+                          Loading stock...
+                        </div>
+                      ) : availableStockError ? (
+                        <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5">
+                          <span className="text-sm text-rose-700">{availableStockError}</span>
+                          <button
+                            type="button"
+                            onClick={onRetryAvailableStock}
+                            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-700 outline-none transition hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400"
+                          >
+                            <RefreshCw size={13} />
+                            Retry
+                          </button>
+                        </div>
+                      ) : availableStock.length === 0 ? (
+                        <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+                          <span className="text-sm text-amber-800">
+                            No {selectedPartType.part_name} in stock right now.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => onOpenQuickAddDialog(selectedPartTypeId)}
+                            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-800 outline-none transition hover:bg-amber-100 focus-visible:ring-2 focus-visible:ring-amber-400"
+                          >
+                            <PlusCircle size={13} />
+                            Add to stock
+                          </button>
+                        </div>
+                      ) : (
+                        <StockLineSelect
+                          id="replace-part-stock"
+                          options={availableStock}
+                          selectedId={selectedStockId}
+                          onSelect={onSelectStock}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="mt-auto flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
@@ -572,7 +712,6 @@ export function ReplaceDeviceDialog({
         isOpen={isQuickAddDialogOpen}
         values={quickAddFormValues}
         partTypes={partTypes}
-        statuses={statuses}
         lockedPartTypeId={selectedPartTypeId}
         onChange={onQuickAddFormChange}
         onSubmit={onSubmitQuickAdd}

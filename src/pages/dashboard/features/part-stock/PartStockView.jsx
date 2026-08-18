@@ -131,7 +131,7 @@ function PartTypeCard({
   );
 }
 
-function EditStockDialog({ target, values, partTypes, statuses, onChange, onSubmit, onClose, isSubmitting, error }) {
+function EditStockDialog({ target, values, partTypes, onChange, onSubmit, onClose, isSubmitting, error }) {
   if (!target || !values) return null;
 
   const partType = partTypes.find((item) => String(item.part_type_id) === String(target.part_type_id));
@@ -149,7 +149,6 @@ function EditStockDialog({ target, values, partTypes, statuses, onChange, onSubm
     normalizedName === "ram" ? RAM_CAPACITY_OPTIONS : normalizedName === "hard disk" ? HD_CAPACITY_OPTIONS : null;
   const canSubmit = Boolean(
     values.quantity &&
-      values.status &&
       (!needsValue || values.part_value?.trim()) &&
       (!isRam || values.ram_type?.trim()) &&
       (!needsModelName || values.model_name?.trim()) &&
@@ -314,22 +313,6 @@ function EditStockDialog({ target, values, partTypes, statuses, onChange, onSubm
               />
             </FormField>
 
-            <FormField label="Status" htmlFor="edit-stock-status">
-              <select
-                id="edit-stock-status"
-                value={values.status || ""}
-                onChange={(e) => onChange("status", e.target.value)}
-                className={formInputClass}
-              >
-                <option value="">Select status...</option>
-                {statuses.map((status) => (
-                  <option key={status.status_id} value={status.status_name}>
-                    {status.status_name}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-
             <FormField label="Remark" htmlFor="edit-stock-remark">
               <textarea
                 id="edit-stock-remark"
@@ -373,7 +356,6 @@ export function PartStockView({
   partTypes,
   selectedPartTypeId,
   onSelectPart,
-  statuses,
 
   isAddDialogOpen,
   addFormValues,
@@ -556,7 +538,6 @@ export function PartStockView({
         isOpen={isAddDialogOpen}
         values={addFormValues}
         partTypes={partTypes}
-        statuses={statuses}
         lockedPartTypeId={
           selectedPartTypeId
         }
@@ -572,7 +553,6 @@ export function PartStockView({
         target={editStockTarget}
         values={editFormValues}
         partTypes={partTypes}
-        statuses={statuses}
         onChange={onEditFormChange}
         onSubmit={onSubmitEdit}
         onClose={onCloseEditDialog}

@@ -32,6 +32,7 @@ export const navSections = [
         children: [
           { label: "Stock of Replace a Part", icon: Box, permission: PERMISSIONS.PART_STOCK },
           { label: "Device Replacement", icon: RefreshCw, permission: PERMISSIONS.DEVICE_REPLACEMENT },
+          { label: "History Replacement", icon: Search, permission: PERMISSIONS.REPLACEMENT_HISTORY },
         ],
       },
       { label: "SSD Upgrade", icon: HardDrive, permission: PERMISSIONS.SSD_UPGRADE },
@@ -101,27 +102,6 @@ export const userPermissionSections = navSections
   }))
   .filter((section) => section.permissions.length > 0);
 
-export const replacementColumns = [
-  { key: "replacement_id", label: "Replacement ID" },
-  { key: "employee_name", label: "Employee" },
-  { key: "employee_position", label: "Position" },
-  { key: "employee_department", label: "Department" },
-  { key: "old_computer_name", label: "Old Computer Name" },
-  { key: "old_asset_code", label: "Old Asset Code" },
-  { key: "old_category", label: "Old Category" },
-  { key: "old_device_status", label: "Old Device Status" },
-  { key: "old_bag", label: "Old Bag" },
-  { key: "old_mouse", label: "Old Mouse" },
-  { key: "old_keyboard", label: "Old Keyboard" },
-  { key: "new_asset_code", label: "New Asset Code" },
-  { key: "new_category", label: "New Category" },
-  { key: "new_owner_location", label: "New Owner Location" },
-  { key: "new_bag", label: "New Bag" },
-  { key: "new_mouse", label: "New Mouse" },
-  { key: "new_keyboard", label: "New Keyboard" },
-  { key: "replacement_date", label: "Replacement Date" },
-];
-
 export const REPLACEMENT_FILTERS_INITIAL_VALUES = {
   category: "All",
   q: "",
@@ -153,6 +133,16 @@ export const MODEL_NUMBER_PLACEHOLDER_BY_PART = {
   mouse: "e.g. 910-002235",
   keyboard: "e.g. 920-002478",
 };
+
+// "Replace a part" tab, once a part is picked.
+export const PART_ACTION_OPTIONS = [
+  { value: "replace", label: "Replace" },
+  { value: "add", label: "Add" },
+];
+
+// Stock lines don't ask for a status in the UI anymore — every part added to
+// stock is assumed unused and sitting with IT until it's installed.
+export const DEFAULT_PART_STOCK_STATUS = "Working - IT Stock";
 
 export const departmentColumns = [
   { key: "department_id", label: "Department ID" },

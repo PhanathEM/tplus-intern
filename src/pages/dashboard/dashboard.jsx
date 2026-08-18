@@ -50,6 +50,7 @@ import {
   DeviceReplacementCategoryBar,
   ReplaceableDevicesView,
   ReplaceDeviceDialog,
+  ReplacementHistoryView,
 } from "./features/device-replacement/ReplacementView";
 import { useReplacements } from "./features/device-replacement/useReplacements";
 import { PartStockView } from "./features/part-stock/PartStockView";
@@ -152,6 +153,7 @@ function Dashboard({ user, onLogout }) {
     const resetMap = {
       "All Equipment": equipment.resetForEntry,
       "Device Replacement": replacements.resetForEntry,
+      "History Replacement": replacements.resetForEntry,
       "Stock of Replace a Part": partStock.resetForEntry,
       "SSD Upgrade": ssdUpgrades.resetForEntry,
       "SSD Procurement": ssdProcurement.resetForEntry,
@@ -207,6 +209,7 @@ function Dashboard({ user, onLogout }) {
   const isDepartmentsView = activeView === "Departments" && hasActiveViewAccess;
   const isEquipmentView = activeView === "All Equipment" && hasActiveViewAccess;
   const isReplacementView = activeView === "Device Replacement" && hasActiveViewAccess;
+  const isReplacementHistoryView = activeView === "History Replacement" && hasActiveViewAccess;
   const isPartStockView = activeView === "Stock of Replace a Part" && hasActiveViewAccess;
   const isSsdUpgradeView = activeView === "SSD Upgrade" && hasActiveViewAccess;
   const isSsdProcurementView = activeView === "SSD Procurement" && hasActiveViewAccess;
@@ -235,7 +238,7 @@ function Dashboard({ user, onLogout }) {
     loadDepartments: departments.loadDepartments,
   });
 
-  const replacements = useReplacements({ isActive: isReplacementView, user });
+  const replacements = useReplacements({ isActive: isReplacementView || isReplacementHistoryView, user });
   const partStock = usePartStock({ isActive: isPartStockView, user });
   const ssdUpgrades = useSsdUpgrades({ isActive: isSsdUpgradeView });
   const ssdProcurement = useSsdProcurement({ isActive: isSsdProcurementView });
@@ -300,13 +303,13 @@ function Dashboard({ user, onLogout }) {
               onClick={() => setIsMobileSidebarOpen(false)}
               aria-label="Close navigation"
             />
-            <aside className="relative flex h-full w-72 flex-col bg-slate-950 shadow-2xl">
-              <div className="flex items-center justify-between border-b border-white/10 pr-3">
+            <aside className="relative flex h-full w-72 flex-col border-r border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-100 pr-3">
                 <SidebarBrand collapsed={false} />
                 <button
                   type="button"
                   onClick={() => setIsMobileSidebarOpen(false)}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-300 outline-none transition hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                   aria-label="Close sidebar"
                 >
                   <X />
@@ -319,7 +322,7 @@ function Dashboard({ user, onLogout }) {
 
         {/* Desktop sidebar */}
         <aside
-          className={`sticky top-0 hidden h-screen min-h-0 shrink-0 flex-col bg-slate-950 transition-[width] duration-200 xl:flex ${isSidebarCollapsed ? "w-19" : "w-64"
+          className={`sticky top-0 hidden h-screen min-h-0 shrink-0 flex-col border-r border-slate-200 bg-white transition-[width] duration-200 xl:flex ${isSidebarCollapsed ? "w-19" : "w-64"
             }`}
         >
           <SidebarBrand
@@ -614,8 +617,22 @@ function Dashboard({ user, onLogout }) {
                 onRetry={replacements.handleRetryReplaceable}
                 canManage={canCreateRecords}
                 onOpenReplaceDialog={replacements.handleOpenReplaceDialog}
+                search={replacements.replaceableSearch}
+                onSearchChange={replacements.handleReplaceableSearchChange}
               />
             </>
+          )}
+
+          {isReplacementHistoryView && (
+            <ReplacementHistoryView
+              replacements={replacements.replacements}
+              isLoading={replacements.isLoading}
+              error={replacements.error}
+              onRetry={replacements.handleRetry}
+              filters={replacements.filters}
+              onFilterChange={replacements.handleFilterChange}
+              categories={replacements.categories}
+            />
           )}
 
           {isPartStockView && (
@@ -627,7 +644,6 @@ function Dashboard({ user, onLogout }) {
               partTypes={partStock.partTypes}
               selectedPartTypeId={partStock.selectedPartTypeId}
               onSelectPart={partStock.handleSelectPart}
-              statuses={partStock.statuses}
               isAddDialogOpen={partStock.isAddDialogOpen}
               addFormValues={partStock.addFormValues}
               isSubmittingAdd={partStock.isSubmittingAdd}
@@ -779,6 +795,7 @@ function Dashboard({ user, onLogout }) {
             !isDepartmentsView &&
             !isEquipmentView &&
             !isReplacementView &&
+            !isReplacementHistoryView &&
             !isPartStockView &&
             !isSsdUpgradeView &&
             !isSsdProcurementView &&
@@ -1162,15 +1179,12 @@ function Dashboard({ user, onLogout }) {
         onSubmitPart={replacements.handleSubmitPartReplace}
         isSubmittingPart={replacements.isSubmittingPart}
         submitPartError={replacements.submitPartError}
-        statuses={replacements.statuses}
         availableStock={replacements.availableStock}
         isAvailableStockLoading={replacements.isAvailableStockLoading}
         availableStockError={replacements.availableStockError}
         onRetryAvailableStock={replacements.handleRetryAvailableStock}
         selectedStockId={replacements.selectedStockId}
         onSelectStock={replacements.handleSelectStock}
-        oldPartStatus={replacements.oldPartStatus}
-        onSelectOldPartStatus={replacements.handleSelectOldPartStatus}
         isQuickAddDialogOpen={replacements.isQuickAddDialogOpen}
         quickAddFormValues={replacements.quickAddFormValues}
         isSubmittingQuickAdd={replacements.isSubmittingQuickAdd}

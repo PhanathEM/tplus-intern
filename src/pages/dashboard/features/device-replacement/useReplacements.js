@@ -8,10 +8,79 @@ import { fetchAssignFormData, fetchAssignableEquipment } from "../../../../servi
 import { fetchPartTypes } from "../../../../services/partTypeService";
 import { submitPartReplacement } from "../../../../services/partReplacementService";
 import { addPartStock, fetchAvailablePartStock } from "../../../../services/partStockService";
-import { fetchStatuses } from "../../../../services/statusService";
-import { REPLACEMENT_FILTERS_INITIAL_VALUES } from "../../dashboard.config";
+import { DEFAULT_PART_STOCK_STATUS, REPLACEMENT_FILTERS_INITIAL_VALUES } from "../../dashboard.config";
 import { buildPartStockPayload, normalizeEquipmentTableColumns } from "../../dashboard.utils";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
+
+// Both device lists are category-driven (their columns come straight from
+// the API), but the admin wants a fixed reading order regardless of category
+// — some columns dropped entirely, everything else in a fixed sequence.
+// Columns a category doesn't have (e.g. Server's ip_address) just get
+// skipped; columns not listed here (a brand-new category's own fields) fall
+// in at the end rather than disappearing.
+function buildColumnOrderer(hiddenKeys, orderedKeys) {
+  const priorityIndex = new Map(orderedKeys.map((key, index) => [key, index]));
+  return function orderColumns(columns) {
+    const visible = columns.filter((column) => !hiddenKeys.includes(column.key));
+    return [...visible].sort((a, b) => {
+      const aIndex = priorityIndex.has(a.key) ? priorityIndex.get(a.key) : orderedKeys.length;
+      const bIndex = priorityIndex.has(b.key) ? priorityIndex.get(b.key) : orderedKeys.length;
+      return aIndex - bIndex;
+    });
+  };
+}
+
+// "Devices you can replace" — these have an owner, so it leads.
+const orderReplaceableColumns = buildColumnOrderer(
+  ["equipment_id", "received_date"],
+  [
+    "owner_name",
+    "device_type",
+    "computer_name",
+    "asset_code",
+    "cpu",
+    "ram",
+    "hd",
+    "windows_license",
+    "av_license",
+    "status",
+    "bag",
+    "mouse",
+    "keyboard",
+    "owner_position",
+    "owner_department",
+    "location",
+    "service_tag",
+    "purchase_date",
+    "remark",
+  ]
+);
+
+// "New device" (assignable, no owner yet) — owner_name dropped since it's
+// always empty here.
+const orderAssignableColumns = buildColumnOrderer(
+  ["equipment_id", "received_date", "owner_name"],
+  [
+    "device_type",
+    "computer_name",
+    "owner_position",
+    "owner_department",
+    "asset_code",
+    "cpu",
+    "ram",
+    "hd",
+    "windows_license",
+    "av_license",
+    "status",
+    "location",
+    "purchase_date",
+    "service_tag",
+    "bag",
+    "mouse",
+    "keyboard",
+    "remark",
+  ]
+);
 
 const QUICK_ADD_FORM_INITIAL_VALUES = {
   part_type_id: "",
@@ -22,7 +91,7 @@ const QUICK_ADD_FORM_INITIAL_VALUES = {
   disk_type: "",
   disk_interface: "",
   quantity: "1",
-  status: "",
+  status: DEFAULT_PART_STOCK_STATUS,
   remark: "",
 };
 
@@ -97,14 +166,16 @@ export function useReplacements({ isActive, user }) {
     };
   }, [isActive]);
 
-  // Page-level category selection — the page currently shows just this bar;
-  // which section(s) it drives is still being worked out.
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  // Page-level category selection — there's no "All categories" tab, so
+  // default to the first real category once the list loads rather than an
+  // explicit "All" sentinel.
+  const [selectedCategoryOverride, setSelectedCategoryOverride] = useState("");
+  const selectedCategory = selectedCategoryOverride || categories[0]?.category_name || "";
 
   function handleSelectCategory(value) {
     setIsReplaceableLoading(true);
     setReplaceableError(null);
-    setSelectedCategory(value);
+    setSelectedCategoryOverride(value);
   }
 
   // Part types — fetched once on load for the "Replace a part" panel.
@@ -134,34 +205,6 @@ export function useReplacements({ isActive, user }) {
     };
   }, [isActive]);
 
-  // Statuses — used for the "old part status" field when replacing, and for
-  // the "add to stock" shortcut's status dropdown.
-  const [statuses, setStatuses] = useState([]);
-
-  useEffect(() => {
-    if (!isActive) return;
-
-    let ignore = false;
-
-    fetchStatuses()
-      .then((data) => {
-        if (ignore) return;
-        const list = Array.isArray(data) ? data : [];
-        setStatuses(
-          list
-            .filter((status) => status.is_active !== false)
-            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-        );
-      })
-      .catch(() => {
-        if (!ignore) setStatuses([]);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isActive]);
-
   // --- Devices you can replace ----------------------------------------
 
   const [replaceableDevices, setReplaceableDevices] = useState([]);
@@ -169,17 +212,18 @@ export function useReplacements({ isActive, user }) {
   const [isReplaceableLoading, setIsReplaceableLoading] = useState(true);
   const [replaceableError, setReplaceableError] = useState(null);
   const [replaceableFetchToken, setReplaceableFetchToken] = useState(0);
+  const [replaceableSearch, setReplaceableSearch] = useState("");
 
   useEffect(() => {
     if (!isActive) return;
 
     let ignore = false;
 
-    fetchReplaceableEquipment({ category: selectedCategory })
+    fetchReplaceableEquipment({ category: selectedCategory, q: replaceableSearch })
       .then((data) => {
         if (!ignore) {
           setReplaceableDevices(Array.isArray(data?.equipment) ? data.equipment : []);
-          setReplaceableColumns(normalizeEquipmentTableColumns(data));
+          setReplaceableColumns(orderReplaceableColumns(normalizeEquipmentTableColumns(data)));
           setReplaceableError(null);
         }
       })
@@ -193,12 +237,18 @@ export function useReplacements({ isActive, user }) {
     return () => {
       ignore = true;
     };
-  }, [isActive, replaceableFetchToken, selectedCategory]);
+  }, [isActive, replaceableFetchToken, selectedCategory, replaceableSearch]);
 
   function handleRetryReplaceable() {
     setIsReplaceableLoading(true);
     setReplaceableError(null);
     setReplaceableFetchToken((value) => value + 1);
+  }
+
+  function handleReplaceableSearchChange(value) {
+    setIsReplaceableLoading(true);
+    setReplaceableError(null);
+    setReplaceableSearch(value);
   }
 
   // --- Replace dialog -----------------------------------------------------
@@ -229,7 +279,6 @@ export function useReplacements({ isActive, user }) {
   const [isAvailableStockLoading, setIsAvailableStockLoading] = useState(false);
   const [availableStockError, setAvailableStockError] = useState(null);
   const [selectedStockId, setSelectedStockId] = useState("");
-  const [oldPartStatus, setOldPartStatus] = useState("");
 
   // "Add to stock" shortcut shown inline when the shelf is empty for the
   // selected part, so the admin isn't forced off the page to fix it.
@@ -260,13 +309,15 @@ export function useReplacements({ isActive, user }) {
   function handleSelectStock(stockId) {
     setSelectedStockId(stockId);
     // The picked stock line's own value *is* the new value being fitted —
-    // no separate free-text entry needed once a line is chosen.
+    // no separate free-text entry needed once a line is chosen. Stock stores
+    // it with a unit ("16 GB") for display, but the device's own field is a
+    // bare number ("4"), so strip the unit before it becomes new_value —
+    // otherwise "add" can't add "16 GB" to "4" server-side.
     const option = availableStock.find((item) => String(item.stock_id) === String(stockId));
-    if (option?.part_value) setPartNewValue(option.part_value);
-  }
-
-  function handleSelectOldPartStatus(value) {
-    setOldPartStatus(value);
+    if (option?.part_value) {
+      const numericValue = parseFloat(option.part_value);
+      setPartNewValue(Number.isNaN(numericValue) ? option.part_value : String(numericValue));
+    }
   }
 
   function handleOpenQuickAddDialog(partTypeId) {
@@ -285,7 +336,7 @@ export function useReplacements({ isActive, user }) {
 
   function handleSubmitQuickAdd(event) {
     event.preventDefault();
-    if (!quickAddFormValues.part_type_id || !quickAddFormValues.quantity || !quickAddFormValues.status) return;
+    if (!quickAddFormValues.part_type_id || !quickAddFormValues.quantity) return;
 
     const partType = partTypes.find((item) => String(item.part_type_id) === String(quickAddFormValues.part_type_id));
     const { payload, error: validationError } = buildPartStockPayload(partType, quickAddFormValues);
@@ -335,12 +386,11 @@ export function useReplacements({ isActive, user }) {
     setAvailableStockError(null);
     setIsAvailableStockLoading(false);
     setSelectedStockId("");
-    setOldPartStatus("");
 
     fetchAssignableEquipment({ category: device.category_name })
       .then((data) => {
         setNewDeviceOptions(Array.isArray(data?.equipment) ? data.equipment : []);
-        setNewDeviceColumns(normalizeEquipmentTableColumns(data));
+        setNewDeviceColumns(orderAssignableColumns(normalizeEquipmentTableColumns(data)));
         setNewDeviceOptionsError(null);
       })
       .catch((error) => setNewDeviceOptionsError(error.message || "Something went wrong."))
@@ -419,11 +469,9 @@ export function useReplacements({ isActive, user }) {
 
   function handleSelectPartType(value) {
     setSelectedPartTypeId(value);
-    // A part swapped in might not be countable, so don't carry "add" over.
     setPartAction("replace");
     setPartNewValue("");
     setSelectedStockId("");
-    setOldPartStatus("");
     setSubmitPartError(null);
 
     setAvailableStock([]);
@@ -446,25 +494,24 @@ export function useReplacements({ isActive, user }) {
     if (!replaceDialogTarget || !selectedPartTypeId) return;
 
     const partType = partTypes.find((item) => String(item.part_type_id) === String(selectedPartTypeId));
-    // "remove" takes the part out with nothing to type in; "add" always needs
-    // an amount; "replace" only asks when the part actually tracks a value.
-    const needsValue = partAction === "add" || (partAction === "replace" && partType?.tracks_value);
+    // "add" always needs a value (what's being added); "replace" only needs
+    // one when the part actually tracks a value. Both install a physical
+    // unit off the shelf, so both need a stock pick.
+    const needsValue = partAction === "add" || (partAction === "replace" && Boolean(partType?.tracks_value));
     if (needsValue && !partNewValue.trim()) return;
-    // Fitting a part (replace/add) now has to come off the shelf — remove is
-    // exempt since nothing is being installed. Replacing also asks what
-    // condition the displaced part is in, since that's where it lands in stock.
-    if (partAction !== "remove" && !selectedStockId) return;
-    if (partAction === "replace" && !oldPartStatus) return;
+    if (!selectedStockId) return;
 
     setIsSubmittingPart(true);
     setSubmitPartError(null);
 
-    const payload = { part_type_id: Number(selectedPartTypeId), action: partAction };
+    const payload = {
+      part_type_id: Number(selectedPartTypeId),
+      action: partAction,
+      from_stock_id: Number(selectedStockId),
+    };
     if (needsValue) payload.new_value = partNewValue.trim();
-    if (partAction !== "remove") payload.from_stock_id = Number(selectedStockId);
-    if (partAction === "replace") payload.old_part_status = oldPartStatus;
 
-    const actionVerb = { replace: "replaced on", add: "added to", remove: "removed from" }[partAction];
+    const actionVerb = { replace: "replaced on", add: "added to" }[partAction];
 
     submitPartReplacement(replaceDialogTarget.equipment_id, payload)
       .then((data) => {
@@ -514,6 +561,8 @@ export function useReplacements({ isActive, user }) {
     isReplaceableLoading,
     replaceableError,
     handleRetryReplaceable,
+    replaceableSearch,
+    handleReplaceableSearchChange,
 
     replaceDialogTarget,
     handleOpenReplaceDialog,
@@ -542,15 +591,12 @@ export function useReplacements({ isActive, user }) {
     isSubmittingPart,
     submitPartError,
 
-    statuses,
     availableStock,
     isAvailableStockLoading,
     availableStockError,
     handleRetryAvailableStock,
     selectedStockId,
     handleSelectStock,
-    oldPartStatus,
-    handleSelectOldPartStatus,
 
     isQuickAddDialogOpen,
     quickAddFormValues,

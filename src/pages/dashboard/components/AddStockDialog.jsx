@@ -13,7 +13,7 @@ import { FormField, formInputClass } from "./SharedControls";
 // Shared between the Part Stock page's "Add to stock" action and Device
 // Replacement's "add to stock" shortcut (shown inline when fitting a part
 // that has nothing available on the shelf).
-export function AddStockDialog({ isOpen, values, partTypes, statuses, lockedPartTypeId, onChange, onSubmit, onClose, isSubmitting, error }) {
+export function AddStockDialog({ isOpen, values, partTypes, lockedPartTypeId, onChange, onSubmit, onClose, isSubmitting, error }) {
   if (!isOpen) return null;
 
   const selectedPartType = partTypes.find((item) => String(item.part_type_id) === String(values.part_type_id));
@@ -33,7 +33,6 @@ export function AddStockDialog({ isOpen, values, partTypes, statuses, lockedPart
   const canSubmit = Boolean(
     values.part_type_id &&
       values.quantity &&
-      values.status &&
       (!needsValue || values.part_value?.trim()) &&
       (!isRam || values.ram_type?.trim()) &&
       (!needsModelName || values.model_name?.trim()) &&
@@ -213,22 +212,6 @@ export function AddStockDialog({ isOpen, values, partTypes, statuses, lockedPart
                 onChange={(e) => onChange("quantity", e.target.value)}
                 className={formInputClass}
               />
-            </FormField>
-
-            <FormField label="Status" htmlFor="add-stock-status">
-              <select
-                id="add-stock-status"
-                value={values.status || ""}
-                onChange={(e) => onChange("status", e.target.value)}
-                className={formInputClass}
-              >
-                <option value="">Select status...</option>
-                {statuses.map((status) => (
-                  <option key={status.status_id} value={status.status_name}>
-                    {status.status_name}
-                  </option>
-                ))}
-              </select>
             </FormField>
 
             <FormField label="Remark" htmlFor="add-stock-remark">

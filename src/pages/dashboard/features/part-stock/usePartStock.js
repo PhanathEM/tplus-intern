@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { addPartStock, deletePartStock, fetchPartStock, updatePartStock } from "../../../../services/partStockService";
 import { fetchPartTypes } from "../../../../services/partTypeService";
-import { fetchStatuses } from "../../../../services/statusService";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
+import { DEFAULT_PART_STOCK_STATUS } from "../../dashboard.config";
 import { buildPartStockPayload } from "../../dashboard.utils";
 
 const ADD_FORM_INITIAL_VALUES = {
@@ -14,7 +14,7 @@ const ADD_FORM_INITIAL_VALUES = {
   disk_type: "",
   disk_interface: "",
   quantity: "1",
-  status: "",
+  status: DEFAULT_PART_STOCK_STATUS,
   remark: "",
 };
 
@@ -26,7 +26,6 @@ export function usePartStock({ isActive, user }) {
 
   const [partTypes, setPartTypes] = useState([]);
   const [selectedPartTypeId, setSelectedPartTypeId] = useState(null);
-  const [statuses, setStatuses] = useState([]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -74,28 +73,6 @@ export function usePartStock({ isActive, user }) {
     };
   }, [isActive]);
 
-  // Statuses feed the "Add to stock" status dropdown — the same list the
-  // rest of the app uses for equipment status.
-  useEffect(() => {
-    if (!isActive) return;
-
-    let ignore = false;
-
-    fetchStatuses()
-      .then((data) => {
-        if (ignore) return;
-        const list = Array.isArray(data) ? data : [];
-        setStatuses(list.filter((status) => status.is_active !== false).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)));
-      })
-      .catch(() => {
-        if (!ignore) setStatuses([]);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isActive]);
-
   function handleRetry() {
     setIsLoading(true);
     setError(null);
@@ -135,7 +112,7 @@ export function usePartStock({ isActive, user }) {
   function handleSubmitAdd(event) {
     event.preventDefault();
 
-    if (!addFormValues.part_type_id || !addFormValues.quantity || !addFormValues.status) {
+    if (!addFormValues.part_type_id || !addFormValues.quantity) {
       return;
     }
 
@@ -194,7 +171,7 @@ export function usePartStock({ isActive, user }) {
       disk_interface: fullRecord.disk_interface || "",
       part_value: fullRecord.part_value || "",
       quantity: String(fullRecord.quantity ?? ""),
-      status: fullRecord.status || "",
+      status: fullRecord.status || DEFAULT_PART_STOCK_STATUS,
       remark: fullRecord.remark || "",
     });
   }
@@ -210,7 +187,7 @@ export function usePartStock({ isActive, user }) {
 
   function handleSubmitEdit(event) {
     event.preventDefault();
-    if (!editStockTarget || !editFormValues.quantity || !editFormValues.status) return;
+    if (!editStockTarget || !editFormValues.quantity) return;
 
     const partType = partTypes.find((item) => String(item.part_type_id) === String(editStockTarget.part_type_id));
 
@@ -315,7 +292,6 @@ export function usePartStock({ isActive, user }) {
     partTypes,
     selectedPartTypeId,
     handleSelectPart,
-    statuses,
 
     isAddDialogOpen,
     addFormValues,
