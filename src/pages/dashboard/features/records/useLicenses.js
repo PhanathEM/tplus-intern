@@ -40,7 +40,7 @@ export function useLicenses({ isActive, user, onLicensesLoaded }) {
 
     fetchLicenses()
       .then((data) => {
-        const records = normalizeRecordList(data);
+        const records = normalizeRecordList(data).sort((a, b) => (a.license_id ?? 0) - (b.license_id ?? 0));
         if (!ignore) {
           setLicenses(records);
           onLicensesLoaded?.(records);

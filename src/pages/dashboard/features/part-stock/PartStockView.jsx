@@ -1,11 +1,13 @@
 import {
   FiCpu as Cpu,
+  FiEdit2 as Edit2,
   FiHardDrive as HardDrive,
   FiMousePointer as MousePointer,
   FiPackage as Package,
   FiPlusCircle as PlusCircle,
   FiServer as Server,
   FiShoppingBag as ShoppingBag,
+  FiTrash2 as Trash2,
   FiType as Type,
   FiX as X,
 } from "react-icons/fi";
@@ -27,6 +29,7 @@ import {
   ConfirmDialog,
   FormField,
   formInputClass,
+  RowActionsMenu,
 } from "../../components/SharedControls";
 
 import { AddStockDialog } from "../../components/AddStockDialog";
@@ -485,6 +488,7 @@ export function PartStockView({
           isLoading={isLoading}
           error={error}
           onRetry={onRetry}
+          hideRefresh
           headerActions={
             <button
               type="button"
@@ -500,22 +504,13 @@ export function PartStockView({
             </button>
           }
           renderRowActions={(record) => (
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => onOpenEditDialog(record)}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-              >
-                Edit
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onOpenDeleteStock(record)}
-                className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-              >
-                Delete
-              </button>
+            <div className="flex items-center justify-end">
+              <RowActionsMenu
+                items={[
+                  { icon: Edit2, label: "Edit", onClick: () => onOpenEditDialog(record) },
+                  { icon: Trash2, label: "Delete", onClick: () => onOpenDeleteStock(record), destructive: true },
+                ]}
+              />
             </div>
           )}
         />

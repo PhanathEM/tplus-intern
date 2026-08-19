@@ -30,7 +30,11 @@ export function useEmployees({ isActive, user, loadDepartments }) {
   const filteredEmployees = useMemo(() => {
     const term = directorySearch.trim().toLowerCase();
     if (!term) return employees;
-    return employees.filter((employee) => (employee.full_name || "").toLowerCase().includes(term));
+    return employees.filter((employee) =>
+      `${employee.full_name || ""} ${employee.staff_code || ""} ${employee.phone || ""} ${employee.position || ""} ${getEmployeeDepartmentCode(employee) || ""} ${employee.sex || ""} ${employee.location || ""}`
+        .toLowerCase()
+        .includes(term)
+    );
   }, [employees, directorySearch]);
 
   const sortedEmployees = useMemo(() => {

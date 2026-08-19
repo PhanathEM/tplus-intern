@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Fragment, useEffect } from "react";
 import {
   FiAlertTriangle as AlertTriangle,
   FiBox as Box,
@@ -18,12 +18,7 @@ import {
   getEmployeeDepartmentCode,
 } from "../../dashboard.utils";
 import { EmptyState, FormField, formInputClass, RadioSelect, RowActionsMenu } from "../../components/SharedControls";
-import {
-  exportEmployeeDetailToExcel,
-  exportEmployeeDetailToPdf,
-  exportEmployeeToExcel,
-  exportEmployeeToPdf,
-} from "./employeeExport";
+import { exportEmployeeToExcel, exportEmployeeToPdf } from "./employeeExport";
 
 export function EmployeeFormModal({
   isOpen,
@@ -115,7 +110,7 @@ export function EmployeeFormModal({
                   options={departments.map((dept) => ({ value: dept.department_code, label: dept.department_name }))}
                   value={values.department}
                   onSelect={(value) => onChange("department", value)}
-                  placeholder="Select department..."
+                  placeholder="Select Department"
                   disabled={isSubmitting}
                 />
               </FormField>
@@ -165,7 +160,7 @@ export function EmployeeFormModal({
                   ]}
                   value={values.sex}
                   onSelect={(value) => onChange("sex", value)}
-                  placeholder="Select sex..."
+                  placeholder="Select Sex"
                   disabled={isSubmitting}
                 />
               </FormField>
@@ -418,7 +413,7 @@ export function EmployeeDetailModal({
         onClick={onClose}
         aria-label="Close detail"
       />
-      <div className="relative flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
           <div>
             <div className="flex items-center gap-2">
@@ -436,28 +431,6 @@ export function EmployeeDetailModal({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            {!isLoading && !error && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => exportEmployeeDetailToPdf(employee, devices)}
-                  className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
-                  aria-label="Download PDF"
-                  title="Download PDF"
-                >
-                  <FileText size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => exportEmployeeDetailToExcel(employee, devices)}
-                  className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
-                  aria-label="Download Excel"
-                  title="Download Excel"
-                >
-                  <Grid size={16} />
-                </button>
-              </>
-            )}
             <button
               type="button"
               onClick={onClose}
@@ -470,7 +443,7 @@ export function EmployeeDetailModal({
         </div>
 
         <div className="border-b border-slate-100 bg-slate-50/40 px-6 py-4">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-3">
+          <dl className="grid grid-cols-[max-content_1fr_max-content_1fr] items-baseline gap-x-4 gap-y-2 pl-4 text-[13px] text-slate-700">
             {[
               ["Position", employee.position],
               ["Department", getEmployeeDepartmentCode(employee)],
@@ -479,10 +452,10 @@ export function EmployeeDetailModal({
               ["Phone", employee.phone],
               ["Sex", employee.sex],
             ].map(([label, value]) => (
-              <div key={label} className="min-w-0">
-                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{label}</dt>
-                <dd className="mt-0.5 truncate text-[13px] text-slate-800">{formatFieldValue(value)}</dd>
-              </div>
+              <Fragment key={label}>
+                <dt className="font-semibold text-slate-800">{label}</dt>
+                <dd className="min-w-0 truncate">: {formatFieldValue(value)}</dd>
+              </Fragment>
             ))}
           </dl>
         </div>
@@ -530,41 +503,24 @@ export function EmployeeDetailModal({
                       </button>
                     )}
                   </div>
-                  <dl className="grid grid-cols-1 gap-x-4 gap-y-2.5 p-4 sm:grid-cols-2">
+                  <dl className="grid grid-cols-1 gap-x-4 gap-y-2 p-4 text-[13px] text-slate-700 sm:grid-cols-[max-content_1fr_max-content_1fr] sm:items-baseline">
                     {(device.columns || []).map(({ field, header }) => (
-                      <div key={field} className="min-w-0">
-                        <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{header}</dt>
-                        <dd
-                          className="mt-0.5 truncate text-[13px] text-slate-800"
-                          title={formatFieldValue(device.item?.[field])}
-                        >
-                          {formatFieldValue(device.item?.[field])}
+                      <Fragment key={field}>
+                        <dt className="font-semibold text-slate-800">{header}</dt>
+                        <dd className="min-w-0 truncate" title={formatFieldValue(device.item?.[field])}>
+                          : {formatFieldValue(device.item?.[field])}
                         </dd>
-                      </div>
+                      </Fragment>
                     ))}
+                    {device.licenses?.length > 0 && (
+                      <Fragment>
+                        <dt className="font-semibold text-slate-800">Software Licenses</dt>
+                        <dd className="min-w-0 truncate">
+                          : {device.licenses.map((license) => license.product_name).filter(Boolean).join(", ")}
+                        </dd>
+                      </Fragment>
+                    )}
                   </dl>
-                  {device.licenses?.length > 0 && (
-                    <div className="border-t border-slate-100 p-4">
-                      <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-400">Licenses</p>
-                      <div className="space-y-2">
-                        {device.licenses.map((license, licenseIdx) => (
-                          <div
-                            key={license.license_id ?? licenseIdx}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-[13px]"
-                          >
-                            <span className="font-medium text-slate-800">
-                              {license.product_name || "—"}
-                              {license.license_type ? ` · ${license.license_type}` : ""}
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              {license.status || "—"}
-                              {license.date_expire ? ` · Expires ${formatFieldValue(license.date_expire)}` : ""}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>

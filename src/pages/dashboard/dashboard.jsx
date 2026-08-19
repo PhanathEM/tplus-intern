@@ -126,8 +126,7 @@ function Dashboard({ user, onLogout }) {
     user,
     onSelectView: handleSelectView,
     onSelectEmployee: (item) => employees.handleSelectFromGlobalSearch(item),
-    onSelectEquipmentCategory: (category) =>
-      equipment.handleViewCategory(equipment.resolveView(category) || "All"),
+    onSelectEquipmentCategory: (category) => equipment.handleViewCategory(equipment.resolveView(category)),
   });
 
   function handleSelectGlobalSearchResult(type, item) {
@@ -594,8 +593,6 @@ function Dashboard({ user, onLogout }) {
               onEditCategory={equipment.handleOpenEditCategory}
               onDeleteCategory={equipment.handleOpenDeleteCategory}
               statuses={equipment.statuses}
-              statusFilter={equipment.statusFilter}
-              onFilterStatus={equipment.handleFilterStatus}
             />
           )}
 
@@ -1021,7 +1018,7 @@ function Dashboard({ user, onLogout }) {
         departments={departments.departments}
         statuses={equipment.statuses}
         categoryOptions={equipment.formCategoryOptions}
-        categoryLocked={equipment.formMode === "edit" || equipment.category !== "All"}
+        categoryLocked
         fields={equipment.formFields}
         onRemoveField={equipment.handleRemoveField}
         onOpenColumnsPicker={equipment.handleOpenColumnsPickerFromForm}

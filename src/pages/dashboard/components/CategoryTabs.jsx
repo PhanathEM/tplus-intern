@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { FiChevronLeft as ChevronLeft, FiChevronRight as ChevronRight } from "react-icons/fi";
 
-export function CategoryTabs({ options, selected, onSelect }) {
+export function CategoryTabs({ options, selected, onSelect, trailing }) {
   const scrollRef = useRef(null);
 
   function scrollByAmount(amount) {
@@ -49,6 +49,8 @@ export function CategoryTabs({ options, selected, onSelect }) {
       >
         <ChevronRight size={16} />
       </button>
+
+      {trailing}
     </div>
   );
 }

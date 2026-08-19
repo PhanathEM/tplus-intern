@@ -48,7 +48,10 @@ function excludeBrokenStatuses(data) {
 
 export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutated, onEquipmentUnassigned }) {
   const [categories, setCategories] = useState([]);
-  const [category, setCategory] = useState("All");
+  // No more "All categories" tab — defaults to the first real category once
+  // categories load, same pattern as the Device Replacement category bar.
+  const [categoryOverride, setCategoryOverride] = useState("");
+  const category = categoryOverride || categories[0]?.slug || "";
   const [tableColumns, setTableColumns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -57,7 +60,6 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
   const [isItemsLoading, setIsItemsLoading] = useState(false);
   const [itemsError, setItemsError] = useState(null);
   const [statuses, setStatuses] = useState([]);
-  const [statusFilter, setStatusFilter] = useState("All");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState("add");
   const [formTarget, setFormTarget] = useState(null);
@@ -167,7 +169,7 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
   }, [isActive, fetchToken]);
 
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || !category) return;
     fetchItemsForCategory(category);
   }, [isActive, fetchToken, category]);
 
@@ -178,43 +180,18 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     setItemsError(null);
 
     const views = categories.length > 0 ? categories : EQUIPMENT_VIEWS;
+    const view = views.find((item) => item.slug === targetCategory);
 
-    const request =
-      targetCategory === "All"
-        ? Promise.allSettled(views.map((view) => fetchEquipmentByView(view.slug))).then((results) => {
-            setTableColumns([]);
-            const merged = [];
-            let anyFulfilled = false;
-            results.forEach((result, index) => {
-              if (result.status !== "fulfilled") return;
-              anyFulfilled = true;
-              const view = views[index];
-              extractEquipmentItems(result.value).forEach((item) => {
-                merged.push({
-                  ...item,
-                  category: item.category || view.label,
-                  __equipment_view: view.slug,
-                  __category_id: view.categoryId ?? null,
-                });
-              });
-            });
-            if (!anyFulfilled && views.length > 0) {
-              throw new Error("Could not load any equipment categories.");
-            }
-            return merged;
-          })
-        : fetchEquipmentByView(targetCategory).then((data) => {
-            const view = views.find((item) => item.slug === targetCategory);
-            setTableColumns(normalizeEquipmentTableColumns(data));
-            return extractEquipmentItems(data).map((item) => ({
-              ...item,
-              category: item.category || view?.label || targetCategory,
-              __equipment_view: targetCategory,
-              __category_id: view?.categoryId ?? null,
-            }));
-          });
-
-    request
+    fetchEquipmentByView(targetCategory)
+      .then((data) => {
+        setTableColumns(normalizeEquipmentTableColumns(data));
+        return extractEquipmentItems(data).map((item) => ({
+          ...item,
+          category: item.category || view?.label || targetCategory,
+          __equipment_view: targetCategory,
+          __category_id: view?.categoryId ?? null,
+        }));
+      })
       .then((rows) => setItems(rows))
       .catch((error) => setItemsError(error.message || "Something went wrong."))
       .finally(() => setIsItemsLoading(false));
@@ -254,7 +231,7 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
   // have actually changed (e.g. after creating/deleting/unassigning an item),
   // where the category-change effect above won't retrigger on its own.
   function handleViewCategory(targetCategory) {
-    setCategory(targetCategory);
+    setCategoryOverride(targetCategory);
     fetchItemsForCategory(targetCategory);
   }
 
@@ -262,11 +239,7 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     // Only update state here — the effect watching `category` is solely
     // responsible for fetching on a real category change, so this doesn't
     // double-fetch.
-    setCategory(targetCategory);
-  }
-
-  function handleFilterStatus(status) {
-    setStatusFilter(status);
+    setCategoryOverride(targetCategory);
   }
 
   function handleOpenAddItem() {
@@ -278,11 +251,10 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
 
     setFormMode("add");
     setFormTarget(null);
-    const activeCategoryLabel = category === "All" ? "" : categories.find((item) => item.slug === category)?.label || "";
-    const sampleRecord = category === "All" ? null : items[0] || null;
+    const activeCategoryLabel = categories.find((item) => item.slug === category)?.label || "";
     const fields =
-      (category !== "All" && getEquipmentFormFieldsFromColumns(tableColumns)) ||
-      getEquipmentFormFields(sampleRecord) ||
+      getEquipmentFormFieldsFromColumns(tableColumns) ||
+      getEquipmentFormFields(items[0] || null) ||
       EQUIPMENT_FORM_FALLBACK_FIELDS;
     setFormFields(fields);
     setFormValues({ ...buildEquipmentFormValues(fields, {}), category: activeCategoryLabel });
@@ -849,8 +821,6 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     isItemsLoading,
     itemsError,
     statuses,
-    statusFilter,
-    handleFilterStatus,
     handleViewCategory,
     handleSelectCategory,
     formCategoryOptions,

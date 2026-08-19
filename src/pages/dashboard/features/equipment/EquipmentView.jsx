@@ -1,7 +1,17 @@
-import { useMemo } from "react";
-import { FiBox as Box, FiChevronDown as ChevronDown, FiPlusCircle as PlusCircle } from "react-icons/fi";
+import { useMemo, useState } from "react";
+import {
+  FiBox as Box,
+  FiChevronDown as ChevronDown,
+  FiEdit2 as Edit2,
+  FiPlusCircle as PlusCircle,
+  FiRepeat as Repeat,
+  FiSearch as Search,
+  FiTrash2 as Trash2,
+  FiUserX as UserX,
+  FiX as X,
+} from "react-icons/fi";
 import { getRecordColumns } from "../../dashboard.utils";
-import { CategoryDropdown, EmptyState } from "../../components/SharedControls";
+import { EmptyState, RowActionsMenu } from "../../components/SharedControls";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
 
@@ -13,9 +23,6 @@ export function EquipmentItemsTable({
   error,
   onRetry,
   onBack,
-  statusOptions,
-  statusFilter,
-  onFilterStatus,
   onEdit,
   onUnassign,
   onDelete,
@@ -27,19 +34,43 @@ export function EquipmentItemsTable({
   canManage = true,
   showBackButton = true,
 }) {
+  const [search, setSearch] = useState("");
+
   const baseColumns = useMemo(
     () => configuredColumns.map(({ key, label }) => ({ key, label })),
     [configuredColumns]
   );
-  const columns = useMemo(
-    () =>
-      getRecordColumns(items, baseColumns).filter(
-        // software_licenses is the raw array behind license_names/license_status/etc. —
-        // those flat fields already display fine as columns, the array itself doesn't.
-        (column) => !column.key.startsWith("__") && column.key !== "software_licenses"
-      ),
-    [items, baseColumns]
-  );
+  const columns = useMemo(() => {
+    const filtered = getRecordColumns(items, baseColumns).filter(
+      // software_licenses is the raw array behind license_names/license_status/etc. —
+      // those flat fields already display fine as columns, the array itself doesn't.
+      // category is redundant here since the page title/tabs already show it.
+      // equipment_id isn't sequential (739, 740, 741...) — replaced below with a
+      // frontend-numbered "No." column, same pattern as other tables in the app.
+      (column) =>
+        !column.key.startsWith("__") &&
+        column.key !== "software_licenses" &&
+        column.key !== "category" &&
+        column.key !== "equipment_id"
+    );
+    // Remark tends to be long free text — push it to the end so it doesn't
+    // interrupt the more scannable columns.
+    const remarkIndex = filtered.findIndex((column) => column.key === "remark");
+    const reordered = [...filtered];
+    if (remarkIndex !== -1) {
+      const [remarkColumn] = reordered.splice(remarkIndex, 1);
+      reordered.push(remarkColumn);
+    }
+    return [{ key: "_row_number", label: "No." }, ...reordered];
+  }, [items, baseColumns]);
+
+  const filteredItems = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const matches = !term
+      ? items
+      : items.filter((item) => columns.some((column) => String(item[column.key] ?? "").toLowerCase().includes(term)));
+    return matches.map((item, index) => ({ ...item, _row_number: index + 1 }));
+  }, [items, columns, search]);
 
 return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -59,12 +90,32 @@ return (
             <h2 className="text-[15px] font-semibold text-slate-950">{category}</h2>
             {!isLoading && !error && (
               <p className="mt-0.5 text-[13px] text-slate-500">
-                {items.length} item{items.length === 1 ? "" : "s"}
-                {statusFilter !== "All" && ` · ${statusFilter}`}
+                {filteredItems.length} item{filteredItems.length === 1 ? "" : "s"}
               </p>
             )}
           </div>
           <div className="flex items-center gap-2">
+            <div className="relative w-56">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <input
+                type="text"
+                autoComplete="off"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search Equipment"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  aria-label="Clear search"
+                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
             {canCreate && onAddNew && (
               <button
                 type="button"
@@ -72,10 +123,9 @@ return (
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
               >
                 <PlusCircle size={15} />
-                Add New Item
+                New Equipment
               </button>
             )}
-            <CategoryDropdown options={statusOptions} selected={statusFilter} onSelect={onFilterStatus} label="Status" />
           </div>
         </div>
 
@@ -83,12 +133,12 @@ return (
           <EmptyState
             icon={Box}
             title="Empty"
-            description={`${category} has no columns configured yet. Click "Add New Item" to set them up.`}
+            description={`${category} has no columns configured yet. Click "New Equipment" to set them up.`}
           />
         ) : (
           <DynamicEquipmentTable
             columns={columns}
-            records={items}
+            records={filteredItems}
             rowKey={(item, index) => item.equipment_id ?? index}
             isLoading={isLoading}
             loadingText="Loading equipment..."
@@ -97,47 +147,27 @@ return (
             onRetry={onRetry}
             emptyIcon={Box}
             emptyTitle="No equipment found"
-            emptyDescription="This category has no items."
+            emptyDescription={search ? `No equipment matches "${search}".` : "This category has no items."}
             renderRowActions={
               canManage &&
               ((item) => {
                 const hasOwner = Boolean(item.owner_id || item.owner_name);
+                const menuItems = [];
+
+                if (hasOwner && onUnassign) {
+                  menuItems.push({ icon: UserX, label: "Unassign", onClick: () => onUnassign(item) });
+                }
+                if (!hasOwner && onBorrow && borrowableStatusNames?.has(item.status)) {
+                  menuItems.push({ icon: Repeat, label: "Borrow", onClick: () => onBorrow(item) });
+                }
+                menuItems.push({ icon: Edit2, label: "Edit", onClick: () => onEdit(item) });
+                if (onDelete) {
+                  menuItems.push({ icon: Trash2, label: "Delete", onClick: () => onDelete(item), destructive: true });
+                }
+
                 return (
-                  <div className="flex items-center justify-end gap-2">
-                    {hasOwner && onUnassign && (
-                      <button
-                        type="button"
-                        onClick={() => onUnassign(item)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-700 outline-none transition hover:border-amber-300 hover:bg-amber-50 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                      >
-                        Unassign
-                      </button>
-                    )}
-                    {!hasOwner && onBorrow && borrowableStatusNames?.has(item.status) && (
-                      <button
-                        type="button"
-                        onClick={() => onBorrow(item)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                      >
-                        Borrow
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => onEdit(item)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                    >
-                      Edit
-                    </button>
-                    {onDelete && (
-                      <button
-                        type="button"
-                        onClick={() => onDelete(item)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                      >
-                        Delete
-                      </button>
-                    )}
+                  <div className="flex items-center justify-end">
+                    <RowActionsMenu items={menuItems} />
                   </div>
                 );
               })
@@ -166,26 +196,19 @@ export function EquipmentView({
   onDelete,
   onBorrow,
   statuses,
-  statusFilter,
-  onFilterStatus,
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
   canManage = true,
   canCreate = true,
 }) {
-  const statusOptions = useMemo(() => ["All", ...statuses.map((item) => item.status_name)], [statuses]);
-
   const borrowableStatusNames = useMemo(
     () => new Set(statuses.filter((item) => item.is_borrowable).map((item) => item.status_name)),
     [statuses]
   );
 
   const categoryOptions = useMemo(
-    () => [
-      { value: "All", label: "All Equipments" },
-      ...categories.map((item) => ({ value: item.slug, label: item.label })),
-    ],
+    () => categories.map((item) => ({ value: item.slug, label: item.label })),
     [categories]
   );
 
@@ -194,15 +217,9 @@ export function EquipmentView({
     [selectedCategory, categories]
   );
 
-  const selectedCategoryLabel =
-    selectedCategory === "All" ? "All equipment" : selectedCategoryEntry?.label || selectedCategory;
+  const selectedCategoryLabel = selectedCategoryEntry?.label || selectedCategory;
 
-  const isUnconfigured = selectedCategory !== "All" && selectedCategoryEntry?.columnCount === 0;
-
-  const filteredItems = useMemo(() => {
-    if (statusFilter === "All") return items;
-    return items.filter((item) => (item.status || item.status_name) === statusFilter);
-  }, [items, statusFilter]);
+  const isUnconfigured = selectedCategoryEntry?.columnCount === 0;
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -212,38 +229,8 @@ export function EquipmentView({
             <h2 className="text-[15px] font-semibold text-slate-950">Equipment</h2>
             {!isLoading && !error && (
               <p className="mt-0.5 text-[13px] text-slate-500">
-                {filteredItems.length} item{filteredItems.length === 1 ? "" : "s"} · {selectedCategoryLabel}
+                {items.length} item{items.length === 1 ? "" : "s"} · {selectedCategoryLabel}
               </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {canCreate && selectedCategory !== "All" && selectedCategoryEntry && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onEditCategory(selectedCategoryEntry)}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                >
-                  Edit Category
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDeleteCategory(selectedCategoryEntry)}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3.5 text-[13px] font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                >
-                  Delete Category
-                </button>
-              </>
-            )}
-            {canCreate && (
-              <button
-                type="button"
-                onClick={onAddCategory}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-              >
-                <PlusCircle size={15} />
-                Add New Category
-              </button>
             )}
           </div>
         </div>
@@ -252,20 +239,38 @@ export function EquipmentView({
           options={categoryOptions}
           selected={selectedCategory}
           onSelect={onSelectCategory}
+          trailing={
+            canCreate && (
+              <RowActionsMenu
+                items={[
+                  ...(selectedCategoryEntry
+                    ? [
+                        { icon: Edit2, label: "Edit Category", onClick: () => onEditCategory(selectedCategoryEntry) },
+                        {
+                          icon: Trash2,
+                          label: "Delete Category",
+                          onClick: () => onDeleteCategory(selectedCategoryEntry),
+                          destructive: true,
+                        },
+                        { divider: true },
+                      ]
+                    : []),
+                  { icon: PlusCircle, label: "New Category", onClick: onAddCategory },
+                ]}
+              />
+            )
+          }
         />
 
         <EquipmentItemsTable
           category={selectedCategoryLabel}
-          items={filteredItems}
-          configuredColumns={selectedCategory === "All" ? [] : columns}
+          items={items}
+          configuredColumns={columns}
           isLoading={isItemsLoading}
           error={itemsError}
           isUnconfigured={isUnconfigured}
           onRetry={onRetry}
           onBack={null}
-          statusOptions={statusOptions}
-          statusFilter={statusFilter}
-          onFilterStatus={onFilterStatus}
           onEdit={onEdit}
           onUnassign={onUnassign}
           onDelete={onDelete}

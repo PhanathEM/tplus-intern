@@ -23,12 +23,9 @@ function getEmployeeExportFields(employee) {
 // backend, same as what the detail popup renders.
 function getDeviceExportFields(device) {
   const fields = (device.columns || []).map(({ field, header }) => [header, formatFieldValue(device.item?.[field])]);
-  (device.licenses || []).forEach((license, index) => {
-    fields.push([
-      `License ${index + 1}`,
-      [license.product_name, license.license_type, license.status].filter(Boolean).join(" · ") || "—",
-    ]);
-  });
+  if (device.licenses?.length > 0) {
+    fields.push(["Software Licenses", device.licenses.map((license) => license.product_name).filter(Boolean).join(", ")]);
+  }
   return fields;
 }
 

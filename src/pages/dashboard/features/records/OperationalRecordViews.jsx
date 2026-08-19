@@ -3,11 +3,13 @@ import {
   FiActivity as Activity,
   FiCloud as Cloud,
   FiDollarSign as DollarSign,
+  FiEdit2 as Edit2,
   FiHardDrive as HardDrive,
   FiKey as Key,
   FiPlusCircle as PlusCircle,
   FiShield as Shield,
   FiShoppingCart as ShoppingCart,
+  FiTrash2 as Trash2,
   FiX as X,
 } from "react-icons/fi";
 import {
@@ -21,7 +23,7 @@ import {
 } from "../../dashboard.config";
 import { getLicenseExpiryInfo } from "../../dashboard.notifications";
 import { RecordCellValue, RecordsTableView } from "../../components/RecordsTableView";
-import { FormField, formInputClass } from "../../components/SharedControls";
+import { FormField, formInputClass, RadioSelect, RowActionsMenu } from "../../components/SharedControls";
 
 function LicenseStatusCell({ license }) {
   const status = String(license.status || "").toLowerCase();
@@ -129,19 +131,18 @@ export function LicenseFormModal({
               </FormField>
 
               <FormField label="License Type *" htmlFor="license-license-type">
-                <select
+                <RadioSelect
                   id="license-license-type"
-                  required
-                  autoComplete="off"
+                  options={[
+                    { value: "Free", label: "Free" },
+                    { value: "Annual Subscription", label: "Annual Subscription" },
+                    { value: "Perpetual", label: "Perpetual" },
+                  ]}
                   value={values.license_type}
-                  onChange={(e) => onChange("license_type", e.target.value)}
-                  className={formInputClass}
+                  onSelect={(value) => onChange("license_type", value)}
+                  placeholder="Select license type..."
                   disabled={isSubmitting}
-                >
-                  <option value="Free">Free</option>
-                  <option value="Annual Subscription">Annual Subscription</option>
-                  <option value="Perpetual">Perpetual</option>
-                </select>
+                />
               </FormField>
 
               <FormField label="Date Start" htmlFor="license-date-start">
@@ -298,10 +299,21 @@ export function LicensesView({
     return counts;
   }, [licenses]);
 
+  // License IDs aren't sequential (16, 17, 2, 1...), so hide that column and
+  // number rows ourselves instead.
+  const numberedLicenses = useMemo(
+    () => licenses.map((license, index) => ({ ...license, _row_number: index + 1 })),
+    [licenses]
+  );
+  const numberedColumns = useMemo(
+    () => [{ key: "_row_number", label: "No." }, ...licenseColumns.filter((column) => column.key !== "license_id")],
+    []
+  );
+
   return (
     <RecordsTableView
-      records={licenses}
-      columnsConfig={licenseColumns}
+      records={numberedLicenses}
+      columnsConfig={numberedColumns}
       title="Software Licenses"
       recordLabel="software license"
       loadingText="Loading software licenses..."
@@ -313,6 +325,7 @@ export function LicensesView({
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}
+      hideRefresh
       headerActions={
         <>
           <span className="rounded-full bg-rose-50 px-3 py-1 text-[13px] font-semibold text-rose-700">
@@ -349,21 +362,13 @@ export function LicensesView({
       renderRowActions={
         canManage &&
         ((license) => (
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => onEdit(license)}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              onClick={() => onDelete(license)}
-              className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-            >
-              Delete
-            </button>
+          <div className="flex items-center justify-end">
+            <RowActionsMenu
+              items={[
+                { icon: Edit2, label: "Edit", onClick: () => onEdit(license) },
+                { icon: Trash2, label: "Delete", onClick: () => onDelete(license), destructive: true },
+              ]}
+            />
           </div>
         ))
       }
