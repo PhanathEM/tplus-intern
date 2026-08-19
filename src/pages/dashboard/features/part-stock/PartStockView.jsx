@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   FiCpu as Cpu,
   FiEdit2 as Edit2,
@@ -29,6 +30,7 @@ import {
   ConfirmDialog,
   FormField,
   formInputClass,
+  RadioSelect,
   RowActionsMenu,
 } from "../../components/SharedControls";
 
@@ -73,6 +75,8 @@ function PartTypeCard({
   isSelected,
   quantity,
   onSelect,
+  onEdit,
+  onDelete,
 }) {
   const normalizedName =
     partType.part_name?.trim().toLowerCase();
@@ -81,18 +85,35 @@ function PartTypeCard({
     PART_ICON_BY_NAME[normalizedName] || Package;
 
   return (
-    <button
-      type="button"
-      onClick={() =>
-        onSelect(partType.part_type_id)
-      }
-      className={`flex flex-col overflow-hidden rounded-xl border text-left outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${isSelected
+    <div
+      className={`relative flex flex-col overflow-hidden rounded-xl border text-left transition ${isSelected
         ? "border-slate-300 ring-2 ring-slate-100"
         : "border-slate-200 hover:border-slate-300"
         }`}
     >
+      {/* Covers the whole card so it stays clickable as one target — the
+          kebab menu below sits above this in z-order with its own click
+          handling, so the two never conflict. */}
+      <button
+        type="button"
+        onClick={() => onSelect(partType.part_type_id)}
+        aria-label={`View ${partType.part_name} stock`}
+        className="absolute inset-0 z-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+      />
+
+      {(onEdit || onDelete) && (
+        <div className="absolute right-1.5 top-1.5 z-10 rounded-full bg-white/90 shadow-sm">
+          <RowActionsMenu
+            items={[
+              onEdit && { icon: Edit2, label: "Edit", onClick: () => onEdit(partType) },
+              onDelete && { icon: Trash2, label: "Delete", onClick: () => onDelete(partType), destructive: true },
+            ].filter(Boolean)}
+          />
+        </div>
+      )}
+
       <div
-        className={`grid h-24 place-items-center ${isSelected
+        className={`pointer-events-none grid h-24 place-items-center ${isSelected
           ? "bg-slate-100"
           : "bg-slate-50"
           }`}
@@ -107,7 +128,7 @@ function PartTypeCard({
         />
       </div>
 
-      <div className="flex items-center justify-between gap-2 px-3.5 py-3">
+      <div className="pointer-events-none flex items-center justify-between gap-2 px-3.5 py-3">
         <div className="min-w-0">
           <p className="truncate text-[13px] font-semibold text-slate-900">
             {partType.part_name}
@@ -130,7 +151,176 @@ function PartTypeCard({
           +
         </span>
       </div>
-    </button>
+    </div>
+  );
+}
+
+function PartTypeFormModal({
+  isOpen,
+  mode,
+  values,
+  columns,
+  columnsNote,
+  categories,
+  isLoadingCategories,
+  onChange,
+  onToggleCategory,
+  onSubmit,
+  onClose,
+  isSubmitting,
+  error,
+}) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  if (!isOpen) return null;
+
+  const isEdit = mode === "edit";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label="Close" />
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+          <div>
+            <h2 className="text-[15px] font-semibold text-slate-950">{isEdit ? "Edit part" : "Add new part"}</h2>
+            <p className="mt-0.5 text-[13px] text-slate-500">
+              {isEdit ? "Update this part's details." : "Add a new replaceable part to the catalog."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+          <div className="overflow-y-auto px-6 py-5">
+            {error && (
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+                {error}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-4">
+              <FormField label="Part Name *" htmlFor="part-type-name">
+                <input
+                  id="part-type-name"
+                  type="text"
+                  required
+                  autoComplete="off"
+                  value={values.part_name}
+                  onChange={(e) => onChange("part_name", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+
+              <FormField label="Description" htmlFor="part-type-description">
+                <input
+                  id="part-type-description"
+                  type="text"
+                  autoComplete="off"
+                  value={values.description}
+                  onChange={(e) => onChange("description", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+
+              <FormField label="Equipment Column" htmlFor="part-type-equipment-column">
+                <RadioSelect
+                  id="part-type-equipment-column"
+                  options={[
+                    { value: "", label: "None (history only)" },
+                    ...columns.map((column) => ({ value: column, label: column })),
+                  ]}
+                  value={values.equipment_column}
+                  onSelect={(value) => onChange("equipment_column", value)}
+                  placeholder="Select column..."
+                  disabled={isSubmitting}
+                />
+                {columnsNote && <p className="mt-1.5 text-xs text-slate-400">{columnsNote}</p>}
+              </FormField>
+
+              <div className="flex flex-wrap gap-4">
+                <label className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={values.tracks_value}
+                    onChange={(e) => onChange("tracks_value", e.target.checked)}
+                    disabled={isSubmitting}
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                  />
+                  Tracks a value (e.g. capacity)
+                </label>
+                <label className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={values.is_countable}
+                    onChange={(e) => onChange("is_countable", e.target.checked)}
+                    disabled={isSubmitting}
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                  />
+                  Countable in stock
+                </label>
+              </div>
+
+              <FormField label="Applies to categories">
+                {isLoadingCategories ? (
+                  <p className="text-[13px] text-slate-500">Loading categories...</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-3">
+                    {categories.map((category) => (
+                      <label
+                        key={category.category_id}
+                        className="inline-flex items-center gap-2 text-[13px] text-slate-700"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={values.category_ids.includes(category.category_id)}
+                          onChange={() => onToggleCategory(category.category_id)}
+                          disabled={isSubmitting}
+                          className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                        />
+                        {category.category_name}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </FormField>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add Part"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 
@@ -360,6 +550,31 @@ export function PartStockView({
   selectedPartTypeId,
   onSelectPart,
 
+  partTypeColumns,
+  partTypeColumnsNote,
+  allCategories,
+  isPartTypeFormOpen,
+  partTypeFormMode,
+  partTypeFormValues,
+  isSavingPartType,
+  partTypeFormError,
+  isLoadingPartTypeCategories,
+  onOpenAddPartType,
+  onOpenEditPartType,
+  onClosePartTypeForm,
+  onPartTypeFormFieldChange,
+  onTogglePartTypeCategory,
+  onSubmitPartTypeForm,
+
+  partTypeToDelete,
+  isDeletingPartType,
+  deletePartTypeError,
+  deletePartTypeBlocked,
+  onOpenDeletePartType,
+  onCloseDeletePartType,
+  onConfirmDeletePartType,
+  onDeactivatePartTypeInstead,
+
   isAddDialogOpen,
   addFormValues,
   isSubmittingAdd,
@@ -463,9 +678,20 @@ export function PartStockView({
                   }
                   quantity={quantity}
                   onSelect={onSelectPart}
+                  onEdit={onOpenEditPartType}
+                  onDelete={onOpenDeletePartType}
                 />
               );
             })}
+
+            <button
+              type="button"
+              onClick={onOpenAddPartType}
+              className="flex h-full min-h-[136px] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 text-slate-500 outline-none transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            >
+              <PlusCircle size={22} />
+              <span className="text-[13px] font-semibold">Add Part</span>
+            </button>
           </div>
         </div>
       </div>
@@ -577,6 +803,43 @@ export function PartStockView({
         onBlockedAction={
           onDeleteStockAnyway
         }
+      />
+
+      {/* Add/edit part type */}
+      <PartTypeFormModal
+        isOpen={isPartTypeFormOpen}
+        mode={partTypeFormMode}
+        values={partTypeFormValues}
+        columns={partTypeColumns}
+        columnsNote={partTypeColumnsNote}
+        categories={allCategories}
+        isLoadingCategories={isLoadingPartTypeCategories}
+        onChange={onPartTypeFormFieldChange}
+        onToggleCategory={onTogglePartTypeCategory}
+        onSubmit={onSubmitPartTypeForm}
+        onClose={onClosePartTypeForm}
+        isSubmitting={isSavingPartType}
+        error={partTypeFormError}
+      />
+
+      {/* Delete part type confirmation */}
+      <ConfirmDialog
+        isOpen={Boolean(partTypeToDelete)}
+        title="Delete this part?"
+        message={
+          partTypeToDelete
+            ? `Remove "${partTypeToDelete.part_name}" from the part catalog. This can't be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        confirmingLabel="Deleting..."
+        onConfirm={onConfirmDeletePartType}
+        onCancel={onCloseDeletePartType}
+        isConfirming={isDeletingPartType}
+        error={deletePartTypeError}
+        blocked={deletePartTypeBlocked}
+        blockedActionLabel="Deactivate instead"
+        onBlockedAction={onDeactivatePartTypeInstead}
       />
     </>
   );

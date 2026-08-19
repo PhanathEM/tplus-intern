@@ -103,7 +103,7 @@ export const userPermissionSections = navSections
   .filter((section) => section.permissions.length > 0);
 
 export const REPLACEMENT_FILTERS_INITIAL_VALUES = {
-  category: "All",
+  category: "",
   q: "",
 };
 
@@ -138,6 +138,12 @@ export const MODEL_NUMBER_PLACEHOLDER_BY_PART = {
 export const PART_ACTION_OPTIONS = [
   { value: "replace", label: "Replace" },
   { value: "add", label: "Add" },
+];
+
+// The backend rejects any old_part_status value other than exactly these two.
+export const OLD_PART_STATUS_OPTIONS = [
+  { value: "Working - IT Stock", label: "Working - IT Stock" },
+  { value: "Broken - IT Stock", label: "Broken - IT Stock" },
 ];
 
 // Stock lines don't ask for a status in the UI anymore — every part added to

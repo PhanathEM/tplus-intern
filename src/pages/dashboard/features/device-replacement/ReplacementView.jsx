@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FiAlertTriangle as AlertTriangle, FiChevronDown as ChevronDown, FiPlusCircle as PlusCircle, FiRefreshCw as RefreshCw, FiSearch as Search, FiX as X } from "react-icons/fi";
-import { PART_ACTION_OPTIONS } from "../../dashboard.config";
-import { EmptyState, formInputClass } from "../../components/SharedControls";
+import { OLD_PART_STATUS_OPTIONS, PART_ACTION_OPTIONS } from "../../dashboard.config";
+import { EmptyState, formInputClass, RadioSelect } from "../../components/SharedControls";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
 import { AddStockDialog } from "../../components/AddStockDialog";
@@ -123,10 +123,7 @@ function StockLineSelect({ id, options, selectedId, onSelect, placeholder = "Sel
 
 function FilterBar({ filters, onFilterChange, categories, idPrefix }) {
   const categoryOptions = useMemo(
-    () => [
-      { value: "All", label: "All categories" },
-      ...categories.map((category) => ({ value: category.category_name, label: category.category_name })),
-    ],
+    () => categories.map((category) => ({ value: category.category_name, label: category.category_name })),
     [categories]
   );
 
@@ -396,28 +393,9 @@ export function ReplacementHistoryView({
   );
 }
 
-const REPLACE_DIALOG_TABS = [
-  { value: "device", label: "Replace the whole" },
-  { value: "part", label: "Replace a part" },
-];
-
 export function ReplaceDeviceDialog({
   device,
   onClose,
-  activeTab,
-  onSwitchTab,
-
-  // "Replace the whole" tab
-  deviceOptions = [],
-  deviceOptionColumns = [],
-  isDeviceOptionsLoading,
-  deviceOptionsError,
-  selectedNewDevice,
-  onSelectNewDevice,
-  onClearNewDevice,
-  onSubmitDevice,
-  isSubmittingDevice,
-  submitDeviceError,
 
   // "Replace a part" tab
   partTypes = [],
@@ -426,6 +404,8 @@ export function ReplaceDeviceDialog({
   partAction,
   onSelectPartAction,
   partNewValue,
+  oldPartStatus,
+  onSelectOldPartStatus,
   onSubmitPart,
   isSubmittingPart,
   submitPartError,
@@ -450,11 +430,6 @@ export function ReplaceDeviceDialog({
 }) {
   if (!device) return null;
 
-  // Same as "Devices you can replace" — equipment_id isn't sequential and
-  // has no "No." column anymore, so number rows ourselves.
-  const numberedDeviceOptions = deviceOptions.map((option, index) => ({ ...option, _row_number: index + 1 }));
-  const numberedDeviceOptionColumns = [{ key: "_row_number", label: "No." }, ...deviceOptionColumns];
-
   const selectedPartType = partTypes.find((item) => String(item.part_type_id) === String(selectedPartTypeId));
   // "add" always needs a value; "replace" only when the part tracks one.
   // Both install a physical unit, so both need a stock pick; only "replace"
@@ -462,7 +437,10 @@ export function ReplaceDeviceDialog({
   const partNeedsValue =
     partAction === "add" || (partAction === "replace" && Boolean(selectedPartType?.tracks_value));
   const canSubmitPart = Boolean(
-    selectedPartTypeId && (!partNeedsValue || partNewValue.trim()) && selectedStockId
+    selectedPartTypeId &&
+      (!partNeedsValue || partNewValue.trim()) &&
+      selectedStockId &&
+      (partAction !== "replace" || oldPartStatus)
   );
 
   // Read straight off the device row instead of asking — the API never wants
@@ -492,220 +470,159 @@ export function ReplaceDeviceDialog({
           </button>
         </div>
 
-        <div className="border-b border-slate-200 bg-slate-50 px-6 pt-3">
-          <div className="flex gap-1">
-            {REPLACE_DIALOG_TABS.map((tab) => (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => onSwitchTab(tab.value)}
-                className={`-mb-px inline-flex h-10 items-center rounded-t-lg border px-4 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${activeTab === tab.value
-                  ? "border-slate-200 border-b-white bg-white text-slate-950"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
-                  }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <form onSubmit={onSubmitPart} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+          <div className="flex flex-col gap-4 overflow-y-auto px-6 py-5">
+            {submitPartError && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+                {submitPartError}
+              </div>
+            )}
 
-        {activeTab === "device" ? (
-          <form onSubmit={onSubmitDevice} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
-            <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-5">
-              {submitDeviceError && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
-                  {submitDeviceError}
-                </div>
-              )}
-
-              <div className="flex min-h-0 flex-1 flex-col">
-                <p className="mb-1.5 text-xs font-semibold text-slate-600">These devices can choose to replace because don't have owner</p>
-                <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-slate-100">
-                  <DynamicEquipmentTable
-                    columns={numberedDeviceOptionColumns}
-                    records={numberedDeviceOptions}
-                    rowKey={(option, index) => option.equipment_id ?? index}
-                    isLoading={isDeviceOptionsLoading}
-                    loadingText={`Loading ${device.category_name} in stock...`}
-                    error={deviceOptionsError}
-                    errorTitle="Couldn't load devices"
-                    emptyIcon={Search}
-                    emptyTitle="No devices available"
-                    emptyDescription={`No ${device.category_name} available in stock right now.`}
-                    getRowClassName={(option) =>
-                      selectedNewDevice?.equipment_id === option.equipment_id ? "bg-orange-50" : ""
-                    }
-                    selectable={{
-                      isSelected: (option) => selectedNewDevice?.equipment_id === option.equipment_id,
-                      onSelect: (option) =>
-                        selectedNewDevice?.equipment_id === option.equipment_id
-                          ? onClearNewDevice()
-                          : onSelectNewDevice(option),
-                    }}
-                  />
-                </div>
+            <div>
+              <p className="mb-1.5 text-xs font-semibold text-slate-600">Part</p>
+              <div className="flex flex-wrap gap-2">
+                {partTypes.map((partType) => {
+                  const isSelected = String(partType.part_type_id) === String(selectedPartTypeId);
+                  return (
+                    <button
+                      key={partType.part_type_id}
+                      type="button"
+                      onClick={() => onSelectPartType(partType.part_type_id)}
+                      className={`inline-flex h-9 items-center rounded-full border px-3.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${isSelected
+                        ? "border-slate-950 bg-slate-950 text-white"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                    >
+                      {partType.part_name}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isSubmittingDevice}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!selectedNewDevice || isSubmittingDevice}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isSubmittingDevice ? "Replacing..." : "Replace device"}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <form onSubmit={onSubmitPart} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
-            <div className="flex flex-col gap-4 overflow-y-auto px-6 py-5">
-              {submitPartError && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
-                  {submitPartError}
-                </div>
-              )}
-
-              <div>
-                <p className="mb-1.5 text-xs font-semibold text-slate-600">Part</p>
-                <div className="flex flex-wrap gap-2">
-                  {partTypes.map((partType) => {
-                    const isSelected = String(partType.part_type_id) === String(selectedPartTypeId);
-                    return (
-                      <button
-                        key={partType.part_type_id}
-                        type="button"
-                        onClick={() => onSelectPartType(partType.part_type_id)}
-                        className={`inline-flex h-9 items-center rounded-full border px-3.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${isSelected
-                          ? "border-slate-950 bg-slate-950 text-white"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                          }`}
-                      >
-                        {partType.part_name}
-                      </button>
-                    );
-                  })}
-                </div>
+            {!selectedPartType ? (
+              <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-200 py-10 text-center text-sm text-slate-500">
+                Select a part above to continue
               </div>
-
-              {!selectedPartType ? (
-                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-200 py-10 text-center text-sm text-slate-500">
-                  Select a part above to continue
+            ) : (
+              <>
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold text-slate-600">Action</p>
+                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1">
+                    {PART_ACTION_OPTIONS.map((option) => {
+                      const isSelected = partAction === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => onSelectPartAction(option.value)}
+                          className={`rounded-full px-4 py-1.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected
+                            ? "bg-white text-slate-900 shadow-sm"
+                            : "text-slate-500 hover:text-slate-700"
+                            }`}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              ) : (
-                <>
+
+                {partAction === "replace" && (
                   <div>
-                    <p className="mb-1.5 text-xs font-semibold text-slate-600">Action</p>
-                    <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1">
-                      {PART_ACTION_OPTIONS.map((option) => {
-                        const isSelected = partAction === option.value;
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => onSelectPartAction(option.value)}
-                            className={`rounded-full px-4 py-1.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected
-                              ? "bg-white text-slate-900 shadow-sm"
-                              : "text-slate-500 hover:text-slate-700"
-                              }`}
-                          >
-                            {option.label}
-                          </button>
-                        );
-                      })}
+                    <label htmlFor="replace-part-old-status" className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      Old {selectedPartType.part_name} Status
+                    </label>
+                    <RadioSelect
+                      id="replace-part-old-status"
+                      options={OLD_PART_STATUS_OPTIONS}
+                      value={oldPartStatus}
+                      onSelect={onSelectOldPartStatus}
+                      placeholder="Select a status..."
+                    />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div>
+                    <label htmlFor="replace-part-current" className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      Current {selectedPartType.part_name}
+                    </label>
+                    <div
+                      id="replace-part-current"
+                      className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600"
+                    >
+                      {getPartOldValueDisplay(selectedPartType)}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div>
-                      <label htmlFor="replace-part-current" className="mb-1.5 block text-xs font-semibold text-slate-600">
-                        Current {selectedPartType.part_name}
-                      </label>
-                      <div
-                        id="replace-part-current"
-                        className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600"
-                      >
-                        {getPartOldValueDisplay(selectedPartType)}
+                  <div>
+                    <label htmlFor="replace-part-stock" className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      New {selectedPartType.part_name}
+                    </label>
+
+                    {isAvailableStockLoading ? (
+                      <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500">
+                        Loading stock...
                       </div>
-                    </div>
-
-                    <div>
-                      <label htmlFor="replace-part-stock" className="mb-1.5 block text-xs font-semibold text-slate-600">
-                        New {selectedPartType.part_name}
-                      </label>
-
-                      {isAvailableStockLoading ? (
-                        <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500">
-                          Loading stock...
-                        </div>
-                      ) : availableStockError ? (
-                        <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5">
-                          <span className="text-sm text-rose-700">{availableStockError}</span>
-                          <button
-                            type="button"
-                            onClick={onRetryAvailableStock}
-                            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-700 outline-none transition hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400"
-                          >
-                            <RefreshCw size={13} />
-                            Retry
-                          </button>
-                        </div>
-                      ) : availableStock.length === 0 ? (
-                        <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
-                          <span className="text-sm text-amber-800">
-                            No {selectedPartType.part_name} in stock right now.
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => onOpenQuickAddDialog(selectedPartTypeId)}
-                            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-800 outline-none transition hover:bg-amber-100 focus-visible:ring-2 focus-visible:ring-amber-400"
-                          >
-                            <PlusCircle size={13} />
-                            Add to stock
-                          </button>
-                        </div>
-                      ) : (
-                        <StockLineSelect
-                          id="replace-part-stock"
-                          options={availableStock}
-                          selectedId={selectedStockId}
-                          onSelect={onSelectStock}
-                        />
-                      )}
-                    </div>
+                    ) : availableStockError ? (
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5">
+                        <span className="text-sm text-rose-700">{availableStockError}</span>
+                        <button
+                          type="button"
+                          onClick={onRetryAvailableStock}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-700 outline-none transition hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400"
+                        >
+                          <RefreshCw size={13} />
+                          Retry
+                        </button>
+                      </div>
+                    ) : availableStock.length === 0 ? (
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+                        <span className="text-sm text-amber-800">
+                          No {selectedPartType.part_name} in stock right now.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onOpenQuickAddDialog(selectedPartTypeId)}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-800 outline-none transition hover:bg-amber-100 focus-visible:ring-2 focus-visible:ring-amber-400"
+                        >
+                          <PlusCircle size={13} />
+                          Add to stock
+                        </button>
+                      </div>
+                    ) : (
+                      <StockLineSelect
+                        id="replace-part-stock"
+                        options={availableStock}
+                        selectedId={selectedStockId}
+                        onSelect={onSelectStock}
+                      />
+                    )}
                   </div>
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
+          </div>
 
-            <div className="mt-auto flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isSubmittingPart}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!canSubmitPart || isSubmittingPart}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isSubmittingPart ? "Saving..." : "Save"}
-              </button>
-            </div>
-          </form>
-        )}
+          <div className="mt-auto flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmittingPart}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!canSubmitPart || isSubmittingPart}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSubmittingPart ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </form>
       </div>
 
       <AddStockDialog

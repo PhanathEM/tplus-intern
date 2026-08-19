@@ -1,15 +1,12 @@
 import { useEffect, useState } from "react";
-import {
-  fetchReplacements,
-  fetchReplaceableEquipment,
-  submitReplacement,
-} from "../../../../services/replacementService";
-import { fetchAssignFormData, fetchAssignableEquipment } from "../../../../services/assignService";
+import { fetchReplacements } from "../../../../services/replacementService";
+import { fetchAssignFormData } from "../../../../services/assignService";
+import { fetchEquipmentByCategory } from "../../../../services/equipmentService";
 import { fetchPartTypes } from "../../../../services/partTypeService";
 import { submitPartReplacement } from "../../../../services/partReplacementService";
 import { addPartStock, fetchAvailablePartStock } from "../../../../services/partStockService";
 import { DEFAULT_PART_STOCK_STATUS, REPLACEMENT_FILTERS_INITIAL_VALUES } from "../../dashboard.config";
-import { buildPartStockPayload, normalizeEquipmentTableColumns } from "../../dashboard.utils";
+import { buildPartStockPayload, getRecordColumns } from "../../dashboard.utils";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 
 // Both device lists are category-driven (their columns come straight from
@@ -30,9 +27,26 @@ function buildColumnOrderer(hiddenKeys, orderedKeys) {
   };
 }
 
-// "Devices you can replace" — these have an owner, so it leads.
+// "Devices you can replace" — these have an owner, so it leads. The raw
+// /api/equipment record also carries a bunch of internal bookkeeping fields
+// (ids, booleans, borrow tracking) the old curated /replaceable endpoint
+// never surfaced — drop those here instead.
 const orderReplaceableColumns = buildColumnOrderer(
-  ["equipment_id", "received_date"],
+  [
+    "equipment_id",
+    "received_date",
+    "category_id",
+    "status_id",
+    "department_id",
+    "owner_id",
+    "is_assignable",
+    "is_borrowable",
+    "current_borrow_id",
+    "current_borrower",
+    "borrowed_on",
+    "due_back",
+    "category_name",
+  ],
   [
     "owner_name",
     "device_type",
@@ -52,32 +66,6 @@ const orderReplaceableColumns = buildColumnOrderer(
     "location",
     "service_tag",
     "purchase_date",
-    "remark",
-  ]
-);
-
-// "New device" (assignable, no owner yet) — owner_name dropped since it's
-// always empty here.
-const orderAssignableColumns = buildColumnOrderer(
-  ["equipment_id", "received_date", "owner_name"],
-  [
-    "device_type",
-    "computer_name",
-    "owner_position",
-    "owner_department",
-    "asset_code",
-    "cpu",
-    "ram",
-    "hd",
-    "windows_license",
-    "av_license",
-    "status",
-    "location",
-    "purchase_date",
-    "service_tag",
-    "bag",
-    "mouse",
-    "keyboard",
     "remark",
   ]
 );
@@ -104,47 +92,6 @@ export function useReplacements({ isActive, user }) {
   const [fetchToken, setFetchToken] = useState(0);
   const [filters, setFilters] = useState(REPLACEMENT_FILTERS_INITIAL_VALUES);
 
-  useEffect(() => {
-    if (!isActive) return;
-
-    let ignore = false;
-
-    fetchReplacements(filters)
-      .then((data) => {
-        if (!ignore) {
-          setReplacements(Array.isArray(data?.replacements) ? data.replacements : []);
-          setError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isActive, fetchToken, filters]);
-
-  function handleRetry() {
-    setIsLoading(true);
-    setError(null);
-    setFetchToken((value) => value + 1);
-  }
-
-  function resetForEntry() {
-    setIsLoading(true);
-    setError(null);
-  }
-
-  function handleFilterChange(key, value) {
-    setIsLoading(true);
-    setError(null);
-    setFilters((current) => ({ ...current, [key]: value }));
-  }
-
   // Category reference data — shared by both lists' category filters.
   const [categories, setCategories] = useState([]);
 
@@ -166,6 +113,56 @@ export function useReplacements({ isActive, user }) {
     };
   }, [isActive]);
 
+  // There's no "All categories" tab in the history filter either, so default
+  // to the first real category once the list loads rather than an explicit
+  // "All" sentinel.
+  const effectiveFilters = {
+    ...filters,
+    category: filters.category || categories[0]?.category_name || "",
+  };
+
+  useEffect(() => {
+    if (!isActive) return;
+
+    let ignore = false;
+
+    fetchReplacements(effectiveFilters)
+      .then((data) => {
+        if (!ignore) {
+          setReplacements(Array.isArray(data?.replacements) ? data.replacements : []);
+          setError(null);
+        }
+      })
+      .catch((error) => {
+        if (!ignore) setError(error.message || "Something went wrong.");
+      })
+      .finally(() => {
+        if (!ignore) setIsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, fetchToken, filters, categories]);
+
+  function handleRetry() {
+    setIsLoading(true);
+    setError(null);
+    setFetchToken((value) => value + 1);
+  }
+
+  function resetForEntry() {
+    setIsLoading(true);
+    setError(null);
+  }
+
+  function handleFilterChange(key, value) {
+    setIsLoading(true);
+    setError(null);
+    setFilters((current) => ({ ...current, [key]: value }));
+  }
+
   // Page-level category selection — there's no "All categories" tab, so
   // default to the first real category once the list loads rather than an
   // explicit "All" sentinel.
@@ -178,15 +175,81 @@ export function useReplacements({ isActive, user }) {
     setSelectedCategoryOverride(value);
   }
 
-  // Part types — fetched once on load for the "Replace a part" panel.
-  const [partTypes, setPartTypes] = useState([]);
+  // --- Devices you can replace ----------------------------------------
+  // The backend intentionally removed /api/replacements/replaceable — the
+  // device picker now reads straight off the same equipment list the
+  // Equipment page uses, filtered client-side down to devices with an owner
+  // (the only ones a part/whole replacement makes sense for).
+
+  const [replaceableDevices, setReplaceableDevices] = useState([]);
+  const [replaceableColumns, setReplaceableColumns] = useState([]);
+  const [isReplaceableLoading, setIsReplaceableLoading] = useState(true);
+  const [replaceableError, setReplaceableError] = useState(null);
+  const [replaceableFetchToken, setReplaceableFetchToken] = useState(0);
+  const [replaceableSearch, setReplaceableSearch] = useState("");
 
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || !selectedCategory) return;
 
     let ignore = false;
 
-    fetchPartTypes()
+    fetchEquipmentByCategory(selectedCategory)
+      .then((data) => {
+        if (ignore) return;
+        const owned = (Array.isArray(data) ? data : []).filter((item) => item.owner_id != null);
+        setReplaceableDevices(owned);
+        setReplaceableColumns(orderReplaceableColumns(getRecordColumns(owned, [])));
+        setReplaceableError(null);
+      })
+      .catch((error) => {
+        if (!ignore) setReplaceableError(error.message || "Something went wrong.");
+      })
+      .finally(() => {
+        if (!ignore) setIsReplaceableLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isActive, replaceableFetchToken, selectedCategory]);
+
+  function handleRetryReplaceable() {
+    setIsReplaceableLoading(true);
+    setReplaceableError(null);
+    setReplaceableFetchToken((value) => value + 1);
+  }
+
+  // The API behind this list has no search param anymore — filter client-side.
+  function handleReplaceableSearchChange(value) {
+    setReplaceableSearch(value);
+  }
+
+  const filteredReplaceableDevices = (() => {
+    const term = replaceableSearch.trim().toLowerCase();
+    if (!term) return replaceableDevices;
+    return replaceableDevices.filter((device) =>
+      replaceableColumns.some((column) => String(device[column.key] ?? "").toLowerCase().includes(term))
+    );
+  })();
+
+  // --- Replace dialog -----------------------------------------------------
+  // Whole-device replacement was removed (product decision) — this is just
+  // the "Replace a part" flow now. The row already carries employee_id,
+  // equipment_id and category_name, so the form doesn't need to ask again.
+
+  const [replaceDialogTarget, setReplaceDialogTarget] = useState(null);
+
+  // Part types depend on the selected device's category — fetched fresh each
+  // time the dialog opens for a device (the backend filters by category_id).
+  const [partTypes, setPartTypes] = useState([]);
+
+  useEffect(() => {
+    const categoryId = replaceDialogTarget?.category_id;
+    if (!isActive || !categoryId) return;
+
+    let ignore = false;
+
+    fetchPartTypes(categoryId)
       .then((data) => {
         if (ignore) return;
         const list = Array.isArray(data?.part_types) ? data.part_types : [];
@@ -203,72 +266,14 @@ export function useReplacements({ isActive, user }) {
     return () => {
       ignore = true;
     };
-  }, [isActive]);
-
-  // --- Devices you can replace ----------------------------------------
-
-  const [replaceableDevices, setReplaceableDevices] = useState([]);
-  const [replaceableColumns, setReplaceableColumns] = useState([]);
-  const [isReplaceableLoading, setIsReplaceableLoading] = useState(true);
-  const [replaceableError, setReplaceableError] = useState(null);
-  const [replaceableFetchToken, setReplaceableFetchToken] = useState(0);
-  const [replaceableSearch, setReplaceableSearch] = useState("");
-
-  useEffect(() => {
-    if (!isActive) return;
-
-    let ignore = false;
-
-    fetchReplaceableEquipment({ category: selectedCategory, q: replaceableSearch })
-      .then((data) => {
-        if (!ignore) {
-          setReplaceableDevices(Array.isArray(data?.equipment) ? data.equipment : []);
-          setReplaceableColumns(orderReplaceableColumns(normalizeEquipmentTableColumns(data)));
-          setReplaceableError(null);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) setReplaceableError(error.message || "Something went wrong.");
-      })
-      .finally(() => {
-        if (!ignore) setIsReplaceableLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isActive, replaceableFetchToken, selectedCategory, replaceableSearch]);
-
-  function handleRetryReplaceable() {
-    setIsReplaceableLoading(true);
-    setReplaceableError(null);
-    setReplaceableFetchToken((value) => value + 1);
-  }
-
-  function handleReplaceableSearchChange(value) {
-    setIsReplaceableLoading(true);
-    setReplaceableError(null);
-    setReplaceableSearch(value);
-  }
-
-  // --- Replace dialog -----------------------------------------------------
-  // One dialog, two tabs. The row already carries employee_id, equipment_id
-  // and category_name, so neither tab needs to ask for those again.
-
-  const [replaceDialogTarget, setReplaceDialogTarget] = useState(null);
-  const [activeReplaceTab, setActiveReplaceTab] = useState("device");
-
-  const [newDeviceOptions, setNewDeviceOptions] = useState([]);
-  const [newDeviceColumns, setNewDeviceColumns] = useState([]);
-  const [isNewDeviceOptionsLoading, setIsNewDeviceOptionsLoading] = useState(false);
-  const [newDeviceOptionsError, setNewDeviceOptionsError] = useState(null);
-  const [selectedNewDevice, setSelectedNewDevice] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
+  }, [isActive, replaceDialogTarget]);
 
   const [selectedPartTypeId, setSelectedPartTypeId] = useState("");
   const [partAction, setPartAction] = useState("replace");
   const [partNewValue, setPartNewValue] = useState("");
+  // Only meaningful for "replace" — an "add" doesn't displace an old part.
+  // The API rejects anything other than the two OLD_PART_STATUS_OPTIONS values.
+  const [oldPartStatus, setOldPartStatus] = useState("");
   const [isSubmittingPart, setIsSubmittingPart] = useState(false);
   const [submitPartError, setSubmitPartError] = useState(null);
 
@@ -371,106 +376,28 @@ export function useReplacements({ isActive, user }) {
 
   function handleOpenReplaceDialog(device) {
     setReplaceDialogTarget(device);
-    setActiveReplaceTab("device");
-
-    setSelectedNewDevice(null);
-    setSubmitError(null);
-    setNewDeviceOptions([]);
-    setIsNewDeviceOptionsLoading(true);
+    setPartTypes([]);
 
     setSelectedPartTypeId("");
     setPartAction("replace");
     setPartNewValue("");
+    setOldPartStatus("");
     setSubmitPartError(null);
     setAvailableStock([]);
     setAvailableStockError(null);
     setIsAvailableStockLoading(false);
     setSelectedStockId("");
-
-    fetchAssignableEquipment({ category: device.category_name })
-      .then((data) => {
-        setNewDeviceOptions(Array.isArray(data?.equipment) ? data.equipment : []);
-        setNewDeviceColumns(orderAssignableColumns(normalizeEquipmentTableColumns(data)));
-        setNewDeviceOptionsError(null);
-      })
-      .catch((error) => setNewDeviceOptionsError(error.message || "Something went wrong."))
-      .finally(() => setIsNewDeviceOptionsLoading(false));
   }
 
   function handleCloseReplaceDialog() {
     setReplaceDialogTarget(null);
   }
 
-  function handleSwitchReplaceTab(tab) {
-    setActiveReplaceTab(tab);
-  }
-
-  function handleSelectNewDevice(device) {
-    setSelectedNewDevice(device);
-  }
-
-  function handleClearNewDevice() {
-    setSelectedNewDevice(null);
-  }
-
-  function handleSubmitReplace(event) {
-    event.preventDefault();
-    if (!replaceDialogTarget || !selectedNewDevice) return;
-
-    setIsSubmitting(true);
-    setSubmitError(null);
-
-    const payload = {
-      // The replaceable-equipment row carries the owner as owner_id, not
-      // employee_id — the API's own field naming for /api/replacements is
-      // employee_id, so translate it here rather than in every caller.
-      employee_id: replaceDialogTarget.owner_id,
-      old_equipment_id: replaceDialogTarget.equipment_id,
-      new_equipment_id: selectedNewDevice.equipment_id,
-      // Optional — default to true rather than asking the admin to tick
-      // six boxes every time; nothing in the UI exposes these.
-      old_bag: true,
-      old_mouse: true,
-      old_keyboard: true,
-      new_bag: true,
-      new_mouse: true,
-      new_keyboard: true,
-    };
-
-    submitReplacement(payload)
-      .then((data) => {
-        logActivity({
-          actor: user,
-          action: "replace",
-          module: ACTIVITY_MODULES.REPLACEMENT,
-          entityId: data?.replacement_id,
-          entityLabel: `${replaceDialogTarget.display_name} → ${selectedNewDevice.display_name}`,
-          after: payload,
-        });
-        setReplaceDialogTarget(null);
-        handleRetry();
-        handleRetryReplaceable();
-      })
-      .catch((error) => {
-        const data = error.response?.data;
-        if (error.status === 409) {
-          setSubmitError(
-            data?.error ||
-              (data?.current_owner
-                ? `That device already belongs to ${data.current_owner}.`
-                : "That device already belongs to someone.")
-          );
-        } else {
-          setSubmitError(data?.error || error.message || "Could not replace the device.");
-        }
-      })
-      .finally(() => setIsSubmitting(false));
-  }
-
   function handleSelectPartType(value) {
     setSelectedPartTypeId(value);
     setPartAction("replace");
     setPartNewValue("");
+    setOldPartStatus("");
     setSelectedStockId("");
     setSubmitPartError(null);
 
@@ -482,11 +409,16 @@ export function useReplacements({ isActive, user }) {
   function handleSelectPartAction(value) {
     setPartAction(value);
     setPartNewValue("");
+    setOldPartStatus("");
     setSelectedStockId("");
   }
 
   function handlePartNewValueChange(value) {
     setPartNewValue(value);
+  }
+
+  function handleSelectOldPartStatus(value) {
+    setOldPartStatus(value);
   }
 
   function handleSubmitPartReplace(event) {
@@ -500,6 +432,9 @@ export function useReplacements({ isActive, user }) {
     const needsValue = partAction === "add" || (partAction === "replace" && Boolean(partType?.tracks_value));
     if (needsValue && !partNewValue.trim()) return;
     if (!selectedStockId) return;
+    // Only "replace" displaces an old part, so only it needs to say what
+    // condition that old part came out in.
+    if (partAction === "replace" && !oldPartStatus) return;
 
     setIsSubmittingPart(true);
     setSubmitPartError(null);
@@ -510,6 +445,7 @@ export function useReplacements({ isActive, user }) {
       from_stock_id: Number(selectedStockId),
     };
     if (needsValue) payload.new_value = partNewValue.trim();
+    if (partAction === "replace") payload.old_part_status = oldPartStatus;
 
     const actionVerb = { replace: "replaced on", add: "added to" }[partAction];
 
@@ -548,7 +484,7 @@ export function useReplacements({ isActive, user }) {
     error,
     handleRetry,
     resetForEntry,
-    filters,
+    filters: effectiveFilters,
     handleFilterChange,
 
     categories,
@@ -556,7 +492,7 @@ export function useReplacements({ isActive, user }) {
     handleSelectCategory,
     partTypes,
 
-    replaceableDevices,
+    replaceableDevices: filteredReplaceableDevices,
     replaceableColumns,
     isReplaceableLoading,
     replaceableError,
@@ -567,19 +503,6 @@ export function useReplacements({ isActive, user }) {
     replaceDialogTarget,
     handleOpenReplaceDialog,
     handleCloseReplaceDialog,
-    activeReplaceTab,
-    handleSwitchReplaceTab,
-
-    newDeviceOptions,
-    newDeviceColumns,
-    isNewDeviceOptionsLoading,
-    newDeviceOptionsError,
-    selectedNewDevice,
-    handleSelectNewDevice,
-    handleClearNewDevice,
-    handleSubmitReplace,
-    isSubmitting,
-    submitError,
 
     selectedPartTypeId,
     handleSelectPartType,
@@ -587,6 +510,8 @@ export function useReplacements({ isActive, user }) {
     handleSelectPartAction,
     partNewValue,
     handlePartNewValueChange,
+    oldPartStatus,
+    handleSelectOldPartStatus,
     handleSubmitPartReplace,
     isSubmittingPart,
     submitPartError,

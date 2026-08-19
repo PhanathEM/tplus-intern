@@ -1,5 +1,11 @@
-import { apiGet, apiPost } from "../lib/apiClient";
+import { apiGet } from "../lib/apiClient";
 
+// Whole-device replacement (POST /api/replacements) and the old
+// /api/replacements/replaceable device picker were intentionally removed
+// backend-side — this history GET is the only surviving route under
+// /api/replacements. The device picker now reads GET /api/equipment
+// directly (see equipmentService.js), and submitting a replacement goes
+// through partReplacementService.js instead.
 export function fetchReplacements({ category, q, from, to } = {}) {
   const params = new URLSearchParams();
   if (category && category !== "All") params.set("category", category);
@@ -8,18 +14,4 @@ export function fetchReplacements({ category, q, from, to } = {}) {
   if (to) params.set("to", to);
   const query = params.toString();
   return apiGet(`/api/replacements${query ? `?${query}` : ""}`);
-}
-
-// Devices that currently have an owner — the opposite of /api/assign/available.
-export function fetchReplaceableEquipment({ q, category, employee_id } = {}) {
-  const params = new URLSearchParams();
-  if (q) params.set("q", q);
-  if (category && category !== "All") params.set("category", category);
-  if (employee_id) params.set("employee_id", employee_id);
-  const query = params.toString();
-  return apiGet(`/api/replacements/replaceable${query ? `?${query}` : ""}`);
-}
-
-export function submitReplacement(payload) {
-  return apiPost("/api/replacements", payload);
 }
