@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   createDepartment,
   deleteDepartment,
@@ -9,6 +9,7 @@ import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 
 export function useDepartments({ isActive, user }) {
   const [departments, setDepartments] = useState([]);
+  const [departmentSearch, setDepartmentSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [fetchToken, setFetchToken] = useState(0);
@@ -45,6 +46,21 @@ export function useDepartments({ isActive, user }) {
       ignore = true;
     };
   }, [isActive, fetchToken]);
+
+  // Departments load in full (no pagination), so search just filters the
+  // already-fetched list — the raw `departments` list is left untouched
+  // since Employee/Equipment forms also read it for their department dropdown.
+  const filteredDepartments = useMemo(() => {
+    const term = departmentSearch.trim().toLowerCase();
+    if (!term) return departments;
+    return departments.filter((department) =>
+      `${department.department_code || ""} ${department.department_name || ""}`.toLowerCase().includes(term)
+    );
+  }, [departments, departmentSearch]);
+
+  function handleDepartmentSearchChange(value) {
+    setDepartmentSearch(value);
+  }
 
   function handleRetry() {
     setIsLoading(true);
@@ -163,6 +179,9 @@ export function useDepartments({ isActive, user }) {
 
   return {
     departments,
+    filteredDepartments,
+    departmentSearch,
+    handleDepartmentSearchChange,
     setDepartments,
     isLoading,
     error,

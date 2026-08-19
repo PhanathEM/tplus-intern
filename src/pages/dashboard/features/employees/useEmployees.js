@@ -1,15 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { createEmployee, deleteEmployee, fetchEmployees, searchEmployees, updateEmployee } from "../../../../services/employeeService";
+import { createEmployee, deleteEmployee, fetchEmployeeFull, fetchEmployees, updateEmployee } from "../../../../services/employeeService";
 import { getEmployeeDepartmentCode } from "../../dashboard.utils";
 import { EMPLOYEE_FORM_INITIAL_VALUES, EMPLOYEES_PAGE_SIZE } from "../../dashboard.config";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 
 export function useEmployees({ isActive, user, loadDepartments }) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearchLoading, setIsSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState(null);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [directorySearch, setDirectorySearch] = useState("");
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,11 +27,17 @@ export function useEmployees({ isActive, user, loadDepartments }) {
   const [deleteError, setDeleteError] = useState(null);
   const [deleteBlocked, setDeleteBlocked] = useState(false);
 
+  const filteredEmployees = useMemo(() => {
+    const term = directorySearch.trim().toLowerCase();
+    if (!term) return employees;
+    return employees.filter((employee) => (employee.full_name || "").toLowerCase().includes(term));
+  }, [employees, directorySearch]);
+
   const sortedEmployees = useMemo(() => {
-    if (!sort.key) return employees;
-    const sorted = [...employees].sort((a, b) => String(a[sort.key] ?? "").localeCompare(String(b[sort.key] ?? "")));
+    if (!sort.key) return filteredEmployees;
+    const sorted = [...filteredEmployees].sort((a, b) => String(a[sort.key] ?? "").localeCompare(String(b[sort.key] ?? "")));
     return sort.direction === "asc" ? sorted : sorted.reverse();
-  }, [employees, sort]);
+  }, [filteredEmployees, sort]);
 
   const pageCount = Math.max(1, Math.ceil(sortedEmployees.length / EMPLOYEES_PAGE_SIZE));
   const paginatedEmployees = sortedEmployees.slice((page - 1) * EMPLOYEES_PAGE_SIZE, page * EMPLOYEES_PAGE_SIZE);
@@ -64,25 +66,10 @@ export function useEmployees({ isActive, user, loadDepartments }) {
     };
   }, [isActive, fetchToken]);
 
-  function runSearch(term) {
-    setIsSearchLoading(true);
-    setSearchError(null);
-    setHasSearched(true);
-
-    searchEmployees(term)
-      .then((data) => setSearchResults(Array.isArray(data) ? data : []))
-      .catch((error) => setSearchError(error.message || "Something went wrong."))
-      .finally(() => setIsSearchLoading(false));
+  function handleDirectorySearchChange(value) {
+    setDirectorySearch(value);
+    setPage(1);
   }
-
-  useEffect(() => {
-    if (!isActive) return;
-    const term = searchTerm.trim();
-    if (!term) return;
-
-    const timeoutId = window.setTimeout(() => runSearch(term), 400);
-    return () => window.clearTimeout(timeoutId);
-  }, [searchTerm, isActive]);
 
   function handleSort(key) {
     setSort((current) => (current.key === key ? { key, direction: current.direction === "asc" ? "desc" : "asc" } : { key, direction: "asc" }));
@@ -208,8 +195,6 @@ export function useEmployees({ isActive, user, loadDepartments }) {
         });
         setEmployeeToDelete(null);
         handleRetry();
-        const term = searchTerm.trim();
-        if (hasSearched && term) runSearch(term);
       })
       .catch((error) => {
         // NOTE: this assumes the HTTP layer attaches the parsed error body to
@@ -230,10 +215,9 @@ export function useEmployees({ isActive, user, loadDepartments }) {
     setDetailError(null);
     setDetailDevices([]);
 
-    searchEmployees(employee.full_name)
+    fetchEmployeeFull(employee.employee_id)
       .then((data) => {
-        const rows = Array.isArray(data) ? data : [];
-        setDetailDevices(rows.filter((row) => row.employee_id === employee.employee_id));
+        setDetailDevices(Array.isArray(data?.equipment) ? data.equipment : []);
       })
       .catch((error) => setDetailError(error.message || "Something went wrong."))
       .finally(() => setIsDetailLoading(false));
@@ -247,74 +231,29 @@ export function useEmployees({ isActive, user, loadDepartments }) {
     setDetailTarget(null);
   }
 
-  function handleSearchSubmit(event) {
-    event.preventDefault();
-    const term = searchTerm.trim();
-    if (term) runSearch(term);
-  }
-
-  function handleSearchTermChange(value) {
-    setSearchTerm(value);
-    if (!value.trim()) {
-      setHasSearched(false);
-      setSearchResults([]);
-      setSearchError(null);
-    }
-  }
-
-  function handleViewSearchDetail(group) {
-    setDetailTarget({
+  // Global search hands back a grouped result (from groupEmployeeSearchResults),
+  // which only has an employee_id to go on — fetch the real detail by id
+  // rather than trusting whatever device rows happened to match the search term.
+  function handleSelectFromGlobalSearch(group) {
+    handleViewDetail({
       employee_id: group.employee_id,
       full_name: group.owner_name,
       position: group.employee_position,
       department: group.employee_department,
       location: group.employee_location,
     });
-    setDetailDevices(group.devices);
-    setIsDetailLoading(false);
-    setDetailError(null);
   }
 
-  function getRecordFromSearchGroup(group) {
-    const firstDevice = group.devices?.[0] || {};
-    const employeeId = group.employee_id ?? firstDevice.employee_id;
-    const fullName = group.owner_name ?? firstDevice.owner_name ?? firstDevice.full_name ?? "";
-    const directoryRecord = employees.find((employee) => (employeeId !== undefined && String(employee.employee_id) === String(employeeId)) || (fullName && employee.full_name === fullName));
-
-    if (directoryRecord) return directoryRecord;
-
-    return {
-      employee_id: employeeId,
-      full_name: fullName,
-      position: group.employee_position ?? firstDevice.employee_position ?? firstDevice.position ?? "",
-      department: group.employee_department ?? firstDevice.employee_department ?? firstDevice.department ?? firstDevice.department_code ?? "",
-      department_code: group.employee_department ?? firstDevice.department_code ?? firstDevice.department ?? "",
-      location: group.employee_location ?? firstDevice.employee_location ?? firstDevice.location ?? "",
-      staff_code: firstDevice.staff_code ?? "",
-      phone: firstDevice.phone ?? "",
-      sex: firstDevice.sex ?? "",
-    };
-  }
-
-  // DI target for Equipment's unassign handler — refreshes whatever employee
-  // search/detail view happens to be open, without Equipment needing to know
-  // about Employee's internal state.
+  // DI target for Equipment's unassign handler — refreshes the employee
+  // detail view if it's open, without Equipment needing to know about
+  // Employee's internal state.
   function refreshAfterExternalEquipmentChange() {
-    const term = searchTerm.trim();
-    if (hasSearched && term) runSearch(term);
     if (detailTarget) handleRetryDetail();
   }
 
   return {
-    searchTerm,
-    searchResults,
-    isSearchLoading,
-    searchError,
-    hasSearched,
-    handleSearchSubmit,
-    handleSearchTermChange,
-    handleViewSearchDetail,
-    getRecordFromSearchGroup,
+    directorySearch,
+    handleDirectorySearchChange,
     employees: paginatedEmployees,
     totalCount: sortedEmployees.length,
     sort,
@@ -351,6 +290,7 @@ export function useEmployees({ isActive, user, loadDepartments }) {
     detailError,
     handleRetryDetail,
     handleCloseDetail,
+    handleSelectFromGlobalSearch,
     refreshAfterExternalEquipmentChange,
   };
 }

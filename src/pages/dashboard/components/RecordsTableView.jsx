@@ -58,6 +58,7 @@ export function RecordsTableView({
   renderCell,
   getRowClassName,
   renderRowActions,
+  hideRefresh = false,
 }) {
   /*
    * IMPORTANT:
@@ -92,23 +93,25 @@ export function RecordsTableView({
           <div className="flex flex-wrap items-center gap-2">
             {headerActions}
 
-            <button
-              type="button"
-              onClick={onRetry}
-              disabled={isLoading}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <RefreshCw
-                size={14}
-                className={
-                  isLoading
-                    ? "animate-spin"
-                    : ""
-                }
-              />
+            {!hideRefresh && (
+              <button
+                type="button"
+                onClick={onRetry}
+                disabled={isLoading}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <RefreshCw
+                  size={14}
+                  className={
+                    isLoading
+                      ? "animate-spin"
+                      : ""
+                  }
+                />
 
-              Refresh
-            </button>
+                Refresh
+              </button>
+            )}
           </div>
         </div>
 

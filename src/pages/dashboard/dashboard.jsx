@@ -72,7 +72,6 @@ import {
   EmployeeDetailModal,
   EmployeeDirectoryTable,
   EmployeeFormModal,
-  EmployeeSearchPanel,
 } from "./features/employees/EmployeeViews";
 import { ResetPasswordModal, UserPermissionsModal, UsersView } from "./features/users/UserViews";
 import { StatusesView, StatusFormModal } from "./features/statuses/StatusViews";
@@ -126,7 +125,7 @@ function Dashboard({ user, onLogout }) {
   const globalSearch = useGlobalSearch({
     user,
     onSelectView: handleSelectView,
-    onSelectEmployee: (item) => employees.handleViewSearchDetail(item),
+    onSelectEmployee: (item) => employees.handleSelectFromGlobalSearch(item),
     onSelectEquipmentCategory: (category) =>
       equipment.handleViewCategory(equipment.resolveView(category) || "All"),
   });
@@ -716,10 +715,12 @@ function Dashboard({ user, onLogout }) {
             <DepartmentsView
               canManage={canManageDepartments}
               canCreate={canCreateRecords}
-              departments={departments.departments}
+              departments={departments.filteredDepartments}
               isLoading={departments.isLoading}
               error={departments.error}
               onRetry={departments.handleRetry}
+              search={departments.departmentSearch}
+              onSearchChange={departments.handleDepartmentSearchChange}
               onAddNew={departments.handleOpenAdd}
               onEdit={departments.handleOpenEdit}
               onDelete={departments.handleOpenDelete}
@@ -825,29 +826,12 @@ function Dashboard({ user, onLogout }) {
 
           {isEmployeeView && (
             <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-              {/* Employee search */}
-              <EmployeeSearchPanel
-                term={employees.searchTerm}
-                onTermChange={employees.handleSearchTermChange}
-                onSubmit={employees.handleSearchSubmit}
-                results={employees.searchResults}
-                isLoading={employees.isSearchLoading}
-                error={employees.searchError}
-                hasSearched={employees.hasSearched}
-                onViewDetail={employees.handleViewSearchDetail}
-                onEdit={(group) => employees.handleOpenEdit(employees.getRecordFromSearchGroup(group))}
-                onDelete={(group) => employees.handleOpenDelete(employees.getRecordFromSearchGroup(group))}
-                canManage={canManageEmployees}
-              />
-
               {/* Employee directory */}
               <EmployeeDirectoryTable
                 canManage={canManageEmployees}
                 canCreate={canCreateRecords}
                 employees={employees.employees}
                 totalCount={employees.totalCount}
-                sort={employees.sort}
-                onSort={employees.handleSort}
                 isLoading={employees.isLoading}
                 error={employees.error}
                 onRetry={employees.handleRetry}
@@ -855,6 +839,8 @@ function Dashboard({ user, onLogout }) {
                 pageCount={employees.pageCount}
                 onPageChange={employees.setPage}
                 pageSize={EMPLOYEES_PAGE_SIZE}
+                search={employees.directorySearch}
+                onSearchChange={employees.handleDirectorySearchChange}
                 onViewDetail={employees.handleViewDetail}
                 onAddNew={employees.handleOpenAdd}
                 onEdit={employees.handleOpenEdit}

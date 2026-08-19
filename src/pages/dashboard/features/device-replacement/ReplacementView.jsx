@@ -147,7 +147,7 @@ function FilterBar({ filters, onFilterChange, categories, idPrefix }) {
             value={filters.q}
             onChange={(e) => onFilterChange("q", e.target.value)}
             placeholder="Employee or device..."
-            className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+            className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
           />
           {filters.q && (
             <button
@@ -221,7 +221,7 @@ export function ReplaceableDevicesView({
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Employee or device..."
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
               />
               {search && (
                 <button

@@ -1,10 +1,124 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   FiAlertTriangle as AlertTriangle,
   FiChevronDown as ChevronDown,
+  FiMoreVertical as MoreVertical,
   FiSearch as Search,
 } from "react-icons/fi";
 import { getEmployeeDepartmentCode } from "../dashboard.utils";
+
+// Portal-based so the menu isn't clipped by a scrolling table container.
+// `items`: [{ icon, label, onClick, destructive? }] — pass `{ divider: true }`
+// for a separator between groups (e.g. downloads vs. edit/delete).
+export function RowActionsMenu({ items }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState(null);
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+
+  // Flip the menu above the trigger when there isn't room below (e.g. the
+  // last row of a table near the bottom of the viewport) — height is
+  // estimated from the item count rather than measured, since the menu
+  // isn't mounted yet on the first open and measuring would need an extra
+  // render pass (and a visible flash while it repositions).
+  const updateMenuPosition = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const dividerCount = items.filter((item) => item.divider).length;
+    const rowCount = items.length - dividerCount;
+    const estimatedHeight = 8 + rowCount * 36 + dividerCount * 9;
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUpward = spaceBelow < estimatedHeight + 8 && spaceAbove > spaceBelow;
+    const right = window.innerWidth - rect.right;
+
+    setMenuStyle(
+      openUpward ? { bottom: window.innerHeight - rect.top + 4, right } : { top: rect.bottom + 4, right }
+    );
+  }, [items]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    updateMenuPosition();
+
+    function handlePointerDown(event) {
+      if (
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target) &&
+        menuRef.current &&
+        !menuRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    }
+    function handleKeyDown(event) {
+      if (event.key === "Escape") setIsOpen(false);
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [isOpen, updateMenuPosition]);
+
+  return (
+    <div ref={buttonRef} className="inline-block">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen((value) => !value);
+        }}
+        aria-label="Row actions"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400"
+      >
+        <MoreVertical size={16} />
+      </button>
+
+      {isOpen &&
+        menuStyle &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ position: "fixed", ...menuStyle }}
+            className="z-50 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+          >
+            {items.map((item, index) =>
+              item.divider ? (
+                <div key={`divider-${index}`} className="my-1 border-t border-slate-100" />
+              ) : (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsOpen(false);
+                    item.onClick();
+                  }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] font-medium outline-none transition ${item.destructive ? "text-rose-600 hover:bg-rose-50" : "text-slate-700 hover:bg-slate-50"
+                    }`}
+                >
+                  <item.icon size={14} />
+                  {item.label}
+                </button>
+              )
+            )}
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+}
 
 export function EmptyState({ icon: Icon = Search, title, description }) {
   return (
@@ -94,7 +208,7 @@ export function FormField({ label, htmlFor, children }) {
 }
 
 export const formInputClass =
-  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100";
+  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100";
 
 export function ConfirmDialog({
   isOpen,
@@ -187,6 +301,112 @@ export function ConfirmDialog({
   );
 }
 
+// Radio-style list for picking one of a short, known set of options — no
+// search box (same look as the stock-line picker in ReplacementView.jsx).
+// Portal-based with fixed positioning so it isn't clipped by a dialog's own
+// scrolling content area, the way an absolutely-positioned panel would be.
+// `options`: [{ value, label }]
+export function RadioSelect({ id, options, value, onSelect, placeholder = "Select...", disabled = false }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [menuRect, setMenuRect] = useState(null);
+  const containerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  function updateMenuRect() {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setMenuRect({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    updateMenuRect();
+
+    function handlePointerDown(event) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target) &&
+        menuRef.current &&
+        !menuRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    }
+    function handleKeyDown(event) {
+      if (event.key === "Escape") setIsOpen(false);
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", updateMenuRect);
+    window.addEventListener("scroll", updateMenuRect, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", updateMenuRect);
+      window.removeEventListener("scroll", updateMenuRect, true);
+    };
+  }, [isOpen]);
+
+  const selectedOption = options.find((option) => String(option.value) === String(value));
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        id={id}
+        disabled={disabled}
+        onClick={() => setIsOpen((current) => !current)}
+        className="flex h-10 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 text-left text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <span className={`truncate ${selectedOption ? "text-slate-900" : "text-slate-400"}`}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <ChevronDown size={14} className={`shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {isOpen &&
+        menuRect &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ position: "fixed", top: menuRect.top, left: menuRect.left, width: menuRect.width }}
+            className="z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
+          >
+            <div className="max-h-56 overflow-y-auto p-1.5">
+              {options.map((option) => {
+                const isSelected = String(option.value) === String(value);
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      onSelect(option.value);
+                      setIsOpen(false);
+                    }}
+                    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-slate-400 ${isSelected ? "text-slate-900" : "text-slate-700 hover:bg-slate-50"
+                      }`}
+                  >
+                    <span
+                      className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border-2 ${isSelected ? "border-slate-900" : "border-slate-300"
+                        }`}
+                    >
+                      {isSelected && <span className="h-2 w-2 rounded-full bg-slate-900" />}
+                    </span>
+                    <span className="truncate">{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+}
+
 export function EmployeeSelectDropdown({ employees, selectedId, onSelect, disabled, placeholder = "Select employee" }) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -253,7 +473,7 @@ export function EmployeeSelectDropdown({ employees, selectedId, onSelect, disabl
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search employee name"
-                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 text-sm outline-none transition focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-100"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100"
               />
             </div>
           </div>

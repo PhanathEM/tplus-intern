@@ -197,7 +197,7 @@ export function AssignEquipmentView({
                     value={deviceQuery}
                     onChange={(e) => onDeviceQueryChange(e.target.value)}
                     placeholder="Search device name, asset code, service tag..."
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-100"
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100"
                   />
                 </div>
                 <select
@@ -283,7 +283,7 @@ export function AssignEquipmentView({
                   value={employeeQuery}
                   onChange={(e) => onEmployeeQueryChange(e.target.value)}
                   placeholder="Search employee name or staff code..."
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-100"
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100"
                 />
               </div>
 

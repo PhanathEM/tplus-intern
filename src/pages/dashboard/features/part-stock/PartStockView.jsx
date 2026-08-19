@@ -84,13 +84,13 @@ function PartTypeCard({
         onSelect(partType.part_type_id)
       }
       className={`flex flex-col overflow-hidden rounded-xl border text-left outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${isSelected
-        ? "border-orange-300 ring-2 ring-orange-100"
+        ? "border-slate-300 ring-2 ring-slate-100"
         : "border-slate-200 hover:border-slate-300"
         }`}
     >
       <div
         className={`grid h-24 place-items-center ${isSelected
-          ? "bg-orange-50"
+          ? "bg-slate-100"
           : "bg-slate-50"
           }`}
       >
@@ -98,7 +98,7 @@ function PartTypeCard({
           size={32}
           className={
             isSelected
-              ? "text-orange-500"
+              ? "text-slate-900"
               : "text-slate-400"
           }
         />
@@ -120,7 +120,7 @@ function PartTypeCard({
 
         <span
           className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-sm font-semibold leading-none ${isSelected
-            ? "bg-orange-500 text-white"
+            ? "bg-slate-950 text-white"
             : "bg-slate-100 text-slate-400"
             }`}
         >
@@ -149,11 +149,11 @@ function EditStockDialog({ target, values, partTypes, onChange, onSubmit, onClos
     normalizedName === "ram" ? RAM_CAPACITY_OPTIONS : normalizedName === "hard disk" ? HD_CAPACITY_OPTIONS : null;
   const canSubmit = Boolean(
     values.quantity &&
-      (!needsValue || values.part_value?.trim()) &&
-      (!isRam || values.ram_type?.trim()) &&
-      (!needsModelName || values.model_name?.trim()) &&
-      (!needsModelNumber || values.model_number?.trim()) &&
-      (!isHardDisk || (values.disk_type?.trim() && values.disk_interface?.trim()))
+    (!needsValue || values.part_value?.trim()) &&
+    (!isRam || values.ram_type?.trim()) &&
+    (!needsModelName || values.model_name?.trim()) &&
+    (!needsModelNumber || values.model_number?.trim()) &&
+    (!isHardDisk || (values.disk_type?.trim() && values.disk_interface?.trim()))
   );
 
   return (
@@ -398,23 +398,21 @@ export function PartStockView({
   const currentColumns =
     PART_STOCK_COLUMNS[normalizedPartName] || PART_STOCK_COLUMNS.default;
 
-  const filteredStock = (
-    selectedPartType
-      ? stock.filter(
-        (item) =>
-          String(item.part_type_id) ===
-          String(selectedPartTypeId)
-      )
-      : stock
-  ).map((item) => {
-    const rest = { ...item, details: buildStockDetails(item) };
+  const filteredStock = stock
+    .filter(
+      (item) =>
+        String(item.part_type_id) ===
+        String(selectedPartTypeId)
+    )
+    .map((item) => {
+      const rest = { ...item, details: buildStockDetails(item) };
 
-    HIDDEN_STOCK_FIELDS.forEach(
-      (key) => delete rest[key]
-    );
+      HIDDEN_STOCK_FIELDS.forEach(
+        (key) => delete rest[key]
+      );
 
-    return rest;
-  });
+      return rest;
+    });
 
   return (
     <>
@@ -422,11 +420,7 @@ export function PartStockView({
       <div className="px-4 pt-6 sm:px-6 lg:px-8">
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           <div className="border-b border-slate-100 px-5 py-4">
-            <h2 className="text-[15px] font-semibold text-slate-950">
-              Stock of Replace a Part
-            </h2>
-
-            <p className="mt-0.5 text-[13px] text-slate-500">
+            <p className="text-[13px] text-slate-500">
               Click a part to see its stock.
             </p>
           </div>
@@ -473,65 +467,59 @@ export function PartStockView({
         </div>
       </div>
 
-      {/* Stock table */}
-      <RecordsTableView
-        records={filteredStock}
-        columnsConfig={currentColumns}
-        title={
-          selectedPartType
-            ? `${selectedPartType.part_name} stock`
-            : "All part stock"
-        }
-        recordLabel="entry"
-        loadingText="Loading part stock..."
-        errorTitle="Couldn't load part stock"
-        emptyIcon={Package}
-        emptyTitle="No parts in stock"
-        emptyDescription={
-          selectedPartType
-            ? `No ${selectedPartType.part_name} in stock right now.`
-            : "Parts removed from equipment will appear here."
-        }
-        rowKey={(item, index) =>
-          item.stock_id ?? index
-        }
-        isLoading={isLoading}
-        error={error}
-        onRetry={onRetry}
-        headerActions={
-          <button
-            type="button"
-            onClick={() =>
-              onOpenAddDialog(
-                selectedPartTypeId
-              )
-            }
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-          >
-            <PlusCircle size={15} />
-            {selectedPartType ? `Add New ${selectedPartType.part_name}` : "Add to stock"}
-          </button>
-        }
-        renderRowActions={(record) => (
-          <div className="flex items-center justify-end gap-2">
+      {/* Stock table — only once a part card is picked; no more mixed "All part stock" listing */}
+      {selectedPartType ? (
+        <RecordsTableView
+          records={filteredStock}
+          columnsConfig={currentColumns}
+          title={`${selectedPartType.part_name} stock`}
+          recordLabel="entry"
+          loadingText="Loading part stock..."
+          errorTitle="Couldn't load part stock"
+          emptyIcon={Package}
+          emptyTitle="No parts in stock"
+          emptyDescription={`No ${selectedPartType.part_name} in stock right now.`}
+          rowKey={(item, index) =>
+            item.stock_id ?? index
+          }
+          isLoading={isLoading}
+          error={error}
+          onRetry={onRetry}
+          headerActions={
             <button
               type="button"
-              onClick={() => onOpenEditDialog(record)}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              onClick={() =>
+                onOpenAddDialog(
+                  selectedPartTypeId
+                )
+              }
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             >
-              Edit
+              <PlusCircle size={15} />
+              {`Add New ${selectedPartType.part_name}`}
             </button>
+          }
+          renderRowActions={(record) => (
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => onOpenEditDialog(record)}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              >
+                Edit
+              </button>
 
-            <button
-              type="button"
-              onClick={() => onOpenDeleteStock(record)}
-              className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-            >
-              Delete
-            </button>
-          </div>
-        )}
-      />
+              <button
+                type="button"
+                onClick={() => onOpenDeleteStock(record)}
+                className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              >
+                Delete
+              </button>
+            </div>
+          )}
+        />
+      ) : null}
 
       {/* Add stock dialog */}
       <AddStockDialog

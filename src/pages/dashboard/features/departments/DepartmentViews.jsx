@@ -1,11 +1,14 @@
 import { useEffect } from "react";
 import {
+  FiEdit2 as Edit2,
   FiPlusCircle as PlusCircle,
+  FiSearch as Search,
+  FiTrash2 as Trash2,
   FiUsers as Users,
   FiX as X,
 } from "react-icons/fi";
 import { departmentColumns } from "../../dashboard.config";
-import { FormField, formInputClass } from "../../components/SharedControls";
+import { FormField, formInputClass, RowActionsMenu } from "../../components/SharedControls";
 import { RecordsTableView } from "../../components/RecordsTableView";
 
 export function DepartmentsView({
@@ -13,6 +16,8 @@ export function DepartmentsView({
   isLoading,
   error,
   onRetry,
+  search = "",
+  onSearchChange,
   onAddNew,
   onEdit,
   onDelete,
@@ -29,41 +34,61 @@ export function DepartmentsView({
       errorTitle="Couldn't load departments"
       emptyIcon={Users}
       emptyTitle="No departments found"
-      emptyDescription="Department records will appear here."
+      emptyDescription={search ? `No department matches "${search}".` : "Department records will appear here."}
       rowKey={(department, index) => department.department_id ?? department.department_code ?? index}
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}
+      hideRefresh
       headerActions={
-        canCreate && (
-          <button
-            type="button"
-            onClick={onAddNew}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-          >
-            <PlusCircle size={14} />
-            Add Department
-          </button>
-        )
+        <>
+          {onSearchChange && (
+            <div className="relative w-56">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <input
+                id="department-search"
+                type="text"
+                autoComplete="off"
+                value={search}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Search Department"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange("")}
+                  aria-label="Clear search"
+                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          )}
+
+          {canCreate && (
+            <button
+              type="button"
+              onClick={onAddNew}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            >
+              <PlusCircle size={14} />
+              New Department
+            </button>
+          )}
+        </>
       }
       renderRowActions={
         canManage &&
         ((department) => (
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => onEdit(department)}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              onClick={() => onDelete(department)}
-              className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-            >
-              Delete
-            </button>
+          <div className="flex items-center justify-end">
+            <RowActionsMenu
+              items={[
+                { icon: Edit2, label: "Edit", onClick: () => onEdit(department) },
+                { icon: Trash2, label: "Delete", onClick: () => onDelete(department), destructive: true },
+              ]}
+            />
           </div>
         ))
       }
