@@ -16,6 +16,7 @@ import { buildEquipmentDisplayColumns } from "../../dashboard.utils";
 import { EmptyState, RowActionsMenu } from "../../components/SharedControls";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
+import { exportAllEquipmentToExcel, exportAllEquipmentToPdf } from "./equipmentExport";
 
 export function EquipmentItemsTable({
   category,
@@ -128,6 +129,22 @@ return (
             emptyIcon={Box}
             emptyTitle="No equipment found"
             emptyDescription={search ? `No equipment matches "${search}".` : "This category has no items."}
+            actionsHeader={
+              <RowActionsMenu
+                items={[
+                  {
+                    icon: FileText,
+                    label: "Download PDF",
+                    onClick: () => exportAllEquipmentToPdf([{ category, columns, items }], category),
+                  },
+                  {
+                    icon: Grid,
+                    label: "Download Excel",
+                    onClick: () => exportAllEquipmentToExcel([{ category, columns, items }], category),
+                  },
+                ]}
+              />
+            }
             renderRowActions={
               canManage &&
               ((item) => {

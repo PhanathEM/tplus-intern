@@ -31,8 +31,13 @@ function computeColumnWidths(head, rows) {
   });
 }
 
-// One workbook, one sheet per category.
-export function exportAllEquipmentToExcel(entries) {
+function getExportFilename(name) {
+  return (name || "equipment").replace(/[\\/:*?"<>|]/g, "-").trim() || "equipment";
+}
+
+// One workbook, one sheet per entry — works equally well for "download all"
+// (one entry per category) and a single category's own download (one entry).
+export function exportAllEquipmentToExcel(entries, filename) {
   const sheets = entries.map(({ category, columns, items }) => {
     const { head, rows } = buildCategoryTable({ columns, items });
     const headerRow = head.map((label) => ({ value: label, ...WIDE_TABLE_HEADER_STYLE }));
@@ -45,11 +50,11 @@ export function exportAllEquipmentToExcel(entries) {
     };
   });
 
-  return writeXlsxFile(sheets).toFile("equipment.xlsx");
+  return writeXlsxFile(sheets).toFile(`${getExportFilename(filename)}.xlsx`);
 }
 
-// One PDF, one heading + table per category, a fresh page between each.
-export function exportAllEquipmentToPdf(entries) {
+// One PDF, one heading + table per entry, a fresh page between each.
+export function exportAllEquipmentToPdf(entries, filename) {
   const doc = new jsPDF({ format: "a4", orientation: "landscape" });
 
   entries.forEach(({ category, columns, items }, index) => {
@@ -71,5 +76,5 @@ export function exportAllEquipmentToPdf(entries) {
     });
   });
 
-  doc.save("equipment.pdf");
+  doc.save(`${getExportFilename(filename)}.pdf`);
 }
