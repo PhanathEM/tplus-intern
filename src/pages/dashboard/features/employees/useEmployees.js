@@ -3,6 +3,7 @@ import { createEmployee, deleteEmployee, fetchEmployeeFull, fetchEmployees, upda
 import { getEmployeeDepartmentCode } from "../../dashboard.utils";
 import { EMPLOYEE_FORM_INITIAL_VALUES, EMPLOYEES_PAGE_SIZE } from "../../dashboard.config";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
+import { exportAllEmployeesToExcel, exportAllEmployeesToPdf, exportEmployeeToExcel, exportEmployeeToPdf } from "./employeeExport";
 
 export function useEmployees({ isActive, user, loadDepartments }) {
   const [directorySearch, setDirectorySearch] = useState("");
@@ -26,6 +27,8 @@ export function useEmployees({ isActive, user, loadDepartments }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteBlocked, setDeleteBlocked] = useState(false);
+  const [isDownloadingAllExcel, setIsDownloadingAllExcel] = useState(false);
+  const [isDownloadingAllPdf, setIsDownloadingAllPdf] = useState(false);
 
   const filteredEmployees = useMemo(() => {
     const term = directorySearch.trim().toLowerCase();
@@ -231,6 +234,49 @@ export function useEmployees({ isActive, user, loadDepartments }) {
     if (detailTarget) handleViewDetail(detailTarget);
   }
 
+  // The directory row only has the list's flat employee fields — both
+  // exports want every device too, so fetch the same detail the popup uses
+  // first. Falls back to an employee-only row rather than blocking the
+  // download outright if that fetch fails.
+  function downloadEmployeeExport(employee, exportFn) {
+    fetchEmployeeFull(employee.employee_id)
+      .then((data) => exportFn(employee, Array.isArray(data?.equipment) ? data.equipment : []))
+      .catch(() => exportFn(employee, []));
+  }
+
+  function handleDownloadEmployeeExcel(employee) {
+    downloadEmployeeExport(employee, exportEmployeeToExcel);
+  }
+
+  function handleDownloadEmployeePdf(employee) {
+    downloadEmployeeExport(employee, exportEmployeeToPdf);
+  }
+
+  // Bulk export — every employee in the directory (not just the current
+  // page/search), each with its own device detail fetched fresh. A failed
+  // fetch for one employee just leaves that one deviceless rather than
+  // failing the whole batch.
+  function downloadAllEmployeesExport(setIsDownloading, exportAllFn) {
+    setIsDownloading(true);
+    Promise.all(
+      employees.map((employee) =>
+        fetchEmployeeFull(employee.employee_id)
+          .then((data) => ({ employee, devices: Array.isArray(data?.equipment) ? data.equipment : [] }))
+          .catch(() => ({ employee, devices: [] }))
+      )
+    )
+      .then((entries) => exportAllFn(entries))
+      .finally(() => setIsDownloading(false));
+  }
+
+  function handleDownloadAllEmployeesExcel() {
+    downloadAllEmployeesExport(setIsDownloadingAllExcel, exportAllEmployeesToExcel);
+  }
+
+  function handleDownloadAllEmployeesPdf() {
+    downloadAllEmployeesExport(setIsDownloadingAllPdf, exportAllEmployeesToPdf);
+  }
+
   function handleCloseDetail() {
     setDetailTarget(null);
   }
@@ -296,5 +342,11 @@ export function useEmployees({ isActive, user, loadDepartments }) {
     handleCloseDetail,
     handleSelectFromGlobalSearch,
     refreshAfterExternalEquipmentChange,
+    handleDownloadEmployeeExcel,
+    handleDownloadEmployeePdf,
+    isDownloadingAllExcel,
+    isDownloadingAllPdf,
+    handleDownloadAllEmployeesExcel,
+    handleDownloadAllEmployeesPdf,
   };
 }

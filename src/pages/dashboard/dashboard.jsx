@@ -625,9 +625,6 @@ function Dashboard({ user, onLogout }) {
               isLoading={replacements.isLoading}
               error={replacements.error}
               onRetry={replacements.handleRetry}
-              filters={replacements.filters}
-              onFilterChange={replacements.handleFilterChange}
-              categories={replacements.categories}
             />
           )}
 
@@ -744,6 +741,8 @@ function Dashboard({ user, onLogout }) {
               onAddNew={departments.handleOpenAdd}
               onEdit={departments.handleOpenEdit}
               onDelete={departments.handleOpenDelete}
+              onDownloadAllExcel={departments.handleDownloadAllDepartmentsExcel}
+              onDownloadAllPdf={departments.handleDownloadAllDepartmentsPdf}
             />
           )}
 
@@ -865,6 +864,12 @@ function Dashboard({ user, onLogout }) {
                 onAddNew={employees.handleOpenAdd}
                 onEdit={employees.handleOpenEdit}
                 onDelete={employees.handleOpenDelete}
+                onDownloadExcel={employees.handleDownloadEmployeeExcel}
+                onDownloadPdf={employees.handleDownloadEmployeePdf}
+                onDownloadAllExcel={employees.handleDownloadAllEmployeesExcel}
+                onDownloadAllPdf={employees.handleDownloadAllEmployeesPdf}
+                isDownloadingAllExcel={employees.isDownloadingAllExcel}
+                isDownloadingAllPdf={employees.isDownloadingAllPdf}
               />
             </div>
           )}

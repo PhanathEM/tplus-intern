@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FiAlertTriangle as AlertTriangle, FiChevronDown as ChevronDown, FiPlusCircle as PlusCircle, FiRefreshCw as RefreshCw, FiSearch as Search, FiX as X } from "react-icons/fi";
+import { FiAlertTriangle as AlertTriangle, FiChevronDown as ChevronDown, FiMonitor as Monitor, FiPlusCircle as PlusCircle, FiRefreshCw as RefreshCw, FiSearch as Search, FiX as X } from "react-icons/fi";
 import { OLD_PART_STATUS_OPTIONS, PART_ACTION_OPTIONS } from "../../dashboard.config";
 import { EmptyState, formInputClass, RadioSelect } from "../../components/SharedControls";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
@@ -121,47 +121,6 @@ function StockLineSelect({ id, options, selectedId, onSelect, placeholder = "Sel
   );
 }
 
-function FilterBar({ filters, onFilterChange, categories, idPrefix }) {
-  const categoryOptions = useMemo(
-    () => categories.map((category) => ({ value: category.category_name, label: category.category_name })),
-    [categories]
-  );
-
-  return (
-    <>
-      <CategoryTabs
-        options={categoryOptions}
-        selected={filters.category}
-        onSelect={(value) => onFilterChange("category", value)}
-      />
-      <div className="border-b border-slate-100 bg-slate-50/60 px-5 py-3">
-        <div className="relative w-64">
-          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-          <input
-            id={`${idPrefix}-search`}
-            type="text"
-            autoComplete="off"
-            value={filters.q}
-            onChange={(e) => onFilterChange("q", e.target.value)}
-            placeholder="Employee or device..."
-            className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-          />
-          {filters.q && (
-            <button
-              type="button"
-              onClick={() => onFilterChange("q", "")}
-              aria-label="Clear search"
-              className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400"
-            >
-              <X size={13} />
-            </button>
-          )}
-        </div>
-      </div>
-    </>
-  );
-}
-
 export function DeviceReplacementCategoryBar({ categories = [], selected, onSelect }) {
   const categoryOptions = useMemo(
     () => categories.map((category) => ({ value: category.category_name, label: category.category_name })),
@@ -217,7 +176,7 @@ export function ReplaceableDevicesView({
                 autoComplete="off"
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Employee or device..."
+                placeholder="Search Employee"
                 className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
               />
               {search && (
@@ -253,34 +212,62 @@ export function ReplaceableDevicesView({
   );
 }
 
-// Each row is now a single part swap (RAM, CPU, etc.) rather than a whole
-// device — one old/new value pair, not a batch of field pairs.
+// "Kaisone Inthisane" -> "KI" for the avatar circle.
+function getInitials(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const initials = parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+  return initials || "?";
+}
+
+// RAM's value is a bare number ("16") everywhere else in the app (device
+// fields, stock lines) — only here, next to an arrow with no other context,
+// does it need the unit spelled out to read as a capacity at a glance.
+function formatPartValue(partName, value) {
+  if (value === null || value === undefined || value === "") return "Empty";
+  if (partName?.trim().toLowerCase() === "ram" && /^\d+(\.\d+)?$/.test(String(value).trim())) {
+    return `${value} GB`;
+  }
+  return String(value);
+}
+
 function ReplacementHistoryRow({ replacement }) {
   const deviceLabel =
     replacement.computer_name || replacement.device_name || replacement.device_model || replacement.asset_code || "—";
 
   return (
     <tr className="transition hover:bg-slate-50/70">
-      <td className="whitespace-nowrap px-4 py-3 align-top">
-        <p className="font-semibold text-slate-900">{replacement.owner_name || "—"}</p>
+      <td className="whitespace-nowrap px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600">
+            {getInitials(replacement.owner_name)}
+          </span>
+          <span className="font-semibold text-slate-900">{replacement.owner_name || "—"}</span>
+        </div>
       </td>
-      <td className="px-4 py-3 align-top">
-        <p className="font-medium text-slate-800">{deviceLabel}</p>
-        <p className="text-xs text-slate-500">
-          {[replacement.category_name, replacement.asset_code].filter(Boolean).join(" · ")}
-        </p>
+      <td className="whitespace-nowrap px-4 py-3">
+        <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs text-slate-700">
+          <Monitor size={12} className="shrink-0 text-slate-400" />
+          {deviceLabel}
+        </span>
       </td>
-      <td className="whitespace-nowrap px-4 py-3 align-top text-slate-700">{replacement.part_name || "—"}</td>
-      <td className="whitespace-nowrap border-l border-slate-100 bg-rose-50/60 px-4 py-3 align-top text-rose-900">
-        {replacement.old_value ?? "—"}
+      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{replacement.category_name || "—"}</td>
+      <td className="whitespace-nowrap px-4 py-3">
+        <div className="inline-flex items-center gap-2 text-[13px]">
+          <span className="font-semibold text-slate-700">{replacement.part_name || "Part"}</span>
+          <span className="rounded-md bg-rose-50 px-2 py-0.5 font-mono text-xs font-semibold text-rose-600 line-through">
+            {formatPartValue(replacement.part_name, replacement.old_value)}
+          </span>
+          <span className="text-slate-300">&rarr;</span>
+          <span className="rounded-md bg-emerald-50 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-700">
+            {formatPartValue(replacement.part_name, replacement.new_value)}
+          </span>
+        </div>
       </td>
-      <td className="whitespace-nowrap bg-emerald-50/60 px-4 py-3 align-top text-emerald-900">
-        {replacement.new_value ?? "—"}
-      </td>
-      <td className="whitespace-nowrap px-4 py-3 align-top text-slate-600">
-        {formatReplacementDate(replacement.replacement_date)}
-      </td>
-      <td className="whitespace-nowrap px-4 py-3 align-top text-slate-600">{replacement.replaced_by || "—"}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-slate-500">{formatReplacementDate(replacement.replacement_date)}</td>
     </tr>
   );
 }
@@ -288,7 +275,9 @@ function ReplacementHistoryRow({ replacement }) {
 function formatReplacementDate(value) {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 export function ReplacementHistoryView({
@@ -296,40 +285,18 @@ export function ReplacementHistoryView({
   isLoading,
   error,
   onRetry,
-  filters,
-  onFilterChange,
-  categories = [],
 }) {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-          <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">History Replacement</h2>
-            {!isLoading && !error && (
-              <p className="mt-0.5 text-[13px] text-slate-500">
-                {replacements.length} replacement{replacements.length === 1 ? "" : "s"} · red is what was removed,
-                green is what replaced it
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onRetry}
-            disabled={isLoading}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-            Refresh
-          </button>
+        <div className="border-b border-slate-100 px-5 py-4">
+          <h2 className="text-[15px] font-semibold text-slate-950">History Replacement</h2>
+          {!isLoading && !error && (
+            <p className="mt-0.5 text-[13px] text-slate-500">
+              {replacements.length} replacement{replacements.length === 1 ? "" : "s"}
+            </p>
+          )}
         </div>
-
-        <FilterBar
-          filters={filters}
-          onFilterChange={onFilterChange}
-          categories={categories}
-          idPrefix="replacement-history"
-        />
 
         {isLoading ? (
           <div className="px-5 py-10 text-center text-[13px] text-slate-500">Loading replacements...</div>
@@ -360,15 +327,11 @@ export function ReplacementHistoryView({
             <table className="min-w-full divide-y divide-slate-100 text-left text-[13px]">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Owner</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Device</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Part</th>
-                  <th className="whitespace-nowrap border-l border-slate-200 bg-rose-50 px-4 py-3 font-semibold text-rose-600">
-                    Old Value
-                  </th>
-                  <th className="whitespace-nowrap bg-emerald-50 px-4 py-3 font-semibold text-emerald-700">New Value</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Employee</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Computer</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Category</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Replacement</th>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Date</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Replaced By</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -519,22 +482,22 @@ export function ReplaceDeviceDialog({
                   </div>
                 </div>
 
-                {partAction === "replace" && (
-                  <div>
-                    <label htmlFor="replace-part-old-status" className="mb-1.5 block text-xs font-semibold text-slate-600">
-                      Old {selectedPartType.part_name} Status
-                    </label>
-                    <RadioSelect
-                      id="replace-part-old-status"
-                      options={OLD_PART_STATUS_OPTIONS}
-                      value={oldPartStatus}
-                      onSelect={onSelectOldPartStatus}
-                      placeholder="Select a status..."
-                    />
-                  </div>
-                )}
-
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  {partAction === "replace" && (
+                    <div>
+                      <label htmlFor="replace-part-old-status" className="mb-1.5 block text-xs font-semibold text-slate-600">
+                        Old {selectedPartType.part_name} Status
+                      </label>
+                      <RadioSelect
+                        id="replace-part-old-status"
+                        options={OLD_PART_STATUS_OPTIONS}
+                        value={oldPartStatus}
+                        onSelect={onSelectOldPartStatus}
+                        placeholder="Select a status..."
+                      />
+                    </div>
+                  )}
+
                   <div>
                     <label htmlFor="replace-part-current" className="mb-1.5 block text-xs font-semibold text-slate-600">
                       Current {selectedPartType.part_name}

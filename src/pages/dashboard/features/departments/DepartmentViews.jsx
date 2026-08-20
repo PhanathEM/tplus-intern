@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import {
   FiEdit2 as Edit2,
+  FiFileText as FileText,
+  FiGrid as Grid,
   FiPlusCircle as PlusCircle,
   FiSearch as Search,
   FiTrash2 as Trash2,
@@ -21,6 +23,8 @@ export function DepartmentsView({
   onAddNew,
   onEdit,
   onDelete,
+  onDownloadAllExcel,
+  onDownloadAllPdf,
   canManage = true,
   canCreate = true,
 }) {
@@ -40,6 +44,14 @@ export function DepartmentsView({
       error={error}
       onRetry={onRetry}
       hideRefresh
+      actionsHeader={
+        <RowActionsMenu
+          items={[
+            { icon: FileText, label: "Download All PDFs", onClick: onDownloadAllPdf },
+            { icon: Grid, label: "Download All Excel", onClick: onDownloadAllExcel },
+          ]}
+        />
+      }
       headerActions={
         <>
           {onSearchChange && (

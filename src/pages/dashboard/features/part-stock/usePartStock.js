@@ -452,13 +452,20 @@ export function usePartStock({ isActive, user }) {
     setEditError(null);
 
     updatePartStock(editStockTarget.stock_id, payload)
-      .then(() => {
+      .then((data) => {
+        // An edit that makes this line identical to an existing one (same
+        // value/type/status) gets merged into that line instead of erroring
+        // — the id we sent may not be the id that survives, so use whatever
+        // the API actually settled on rather than assuming it's unchanged.
+        const resolvedStockId = data?.stock?.stock_id ?? editStockTarget.stock_id;
         logActivity({
           actor: user,
           action: "update",
           module: ACTIVITY_MODULES.PART_STOCK,
-          entityId: editStockTarget.stock_id,
-          entityLabel: `${editStockTarget.part_name || "Part"}${payload.part_value ? ` (${payload.part_value})` : ""}`,
+          entityId: resolvedStockId,
+          entityLabel: `${editStockTarget.part_name || "Part"}${payload.part_value ? ` (${payload.part_value})` : ""}${
+            data?.merged ? " — merged into an existing line" : ""
+          }`,
           before: editStockTarget,
           after: payload,
         });

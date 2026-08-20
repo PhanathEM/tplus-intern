@@ -6,6 +6,7 @@ import {
   updateDepartment,
 } from "../../../../services/departmentService";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
+import { exportAllDepartmentsToExcel, exportAllDepartmentsToPdf } from "./departmentExport";
 
 export function useDepartments({ isActive, user }) {
   const [departments, setDepartments] = useState([]);
@@ -79,6 +80,16 @@ export function useDepartments({ isActive, user }) {
     return fetchDepartments()
       .then((data) => setDepartments(Array.isArray(data) ? data : []))
       .catch(() => setDepartments([]));
+  }
+
+  // Departments load in full already, so unlike Employee's bulk export this
+  // needs no extra per-row fetch — it's just the already-loaded list.
+  function handleDownloadAllDepartmentsExcel() {
+    exportAllDepartmentsToExcel(departments);
+  }
+
+  function handleDownloadAllDepartmentsPdf() {
+    exportAllDepartmentsToPdf(departments);
   }
 
   function handleOpenAdd() {
@@ -204,5 +215,7 @@ export function useDepartments({ isActive, user }) {
     handleOpenDelete,
     handleCloseDelete,
     handleConfirmDelete,
+    handleDownloadAllDepartmentsExcel,
+    handleDownloadAllDepartmentsPdf,
   };
 }

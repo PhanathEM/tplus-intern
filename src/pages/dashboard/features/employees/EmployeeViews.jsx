@@ -18,7 +18,6 @@ import {
   getEmployeeDepartmentCode,
 } from "../../dashboard.utils";
 import { EmptyState, FormField, formInputClass, RadioSelect, RowActionsMenu } from "../../components/SharedControls";
-import { exportEmployeeToExcel, exportEmployeeToPdf } from "./employeeExport";
 
 export function EmployeeFormModal({
   isOpen,
@@ -206,6 +205,12 @@ export function EmployeeDirectoryTable({
   onAddNew,
   onEdit,
   onDelete,
+  onDownloadExcel,
+  onDownloadPdf,
+  onDownloadAllExcel,
+  onDownloadAllPdf,
+  isDownloadingAllExcel = false,
+  isDownloadingAllPdf = false,
   canManage = true,
   canCreate = true,
 }) {
@@ -302,7 +307,22 @@ export function EmployeeDirectoryTable({
                       {column.label}
                     </th>
                   ))}
-                  <th className="px-5 py-3 font-semibold text-right">Actions</th>
+                  <th className="px-5 py-3 text-right">
+                    <RowActionsMenu
+                      items={[
+                        {
+                          icon: FileText,
+                          label: isDownloadingAllPdf ? "Preparing PDF..." : "Download All PDFs",
+                          onClick: onDownloadAllPdf,
+                        },
+                        {
+                          icon: Grid,
+                          label: isDownloadingAllExcel ? "Preparing Excel..." : "Download All Excel",
+                          onClick: onDownloadAllExcel,
+                        },
+                      ]}
+                    />
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -333,8 +353,8 @@ export function EmployeeDirectoryTable({
                         {canManage && (
                           <RowActionsMenu
                             items={[
-                              { icon: FileText, label: "Download PDF", onClick: () => exportEmployeeToPdf(employee) },
-                              { icon: Grid, label: "Download Excel", onClick: () => exportEmployeeToExcel(employee) },
+                              { icon: FileText, label: "Download PDF", onClick: () => onDownloadPdf(employee) },
+                              { icon: Grid, label: "Download Excel", onClick: () => onDownloadExcel(employee) },
                               { divider: true },
                               { icon: Edit2, label: "Edit", onClick: () => onEdit(employee) },
                               { icon: Trash2, label: "Delete", onClick: () => onDelete(employee), destructive: true },

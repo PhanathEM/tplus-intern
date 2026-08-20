@@ -102,11 +102,6 @@ export const userPermissionSections = navSections
   }))
   .filter((section) => section.permissions.length > 0);
 
-export const REPLACEMENT_FILTERS_INITIAL_VALUES = {
-  category: "",
-  q: "",
-};
-
 // Shared between the Device Replacement dialog's part-value input and the
 // Stock page's "Add to stock" form, so both offer the same fixed options.
 export const RAM_CAPACITY_OPTIONS = ["2 GB", "4 GB", "8 GB", "16 GB", "32 GB", "64 GB", "128 GB", "256 GB"];

@@ -1,15 +1,9 @@
 import { useEffect } from "react";
 import {
-  FiCpu as Cpu,
   FiEdit2 as Edit2,
-  FiHardDrive as HardDrive,
-  FiMousePointer as MousePointer,
   FiPackage as Package,
   FiPlusCircle as PlusCircle,
-  FiServer as Server,
-  FiShoppingBag as ShoppingBag,
   FiTrash2 as Trash2,
-  FiType as Type,
   FiX as X,
 } from "react-icons/fi";
 
@@ -25,6 +19,7 @@ import {
 } from "../../dashboard.config";
 
 import { RecordsTableView } from "../../components/RecordsTableView";
+import { CategoryTabs } from "../../components/CategoryTabs";
 
 import {
   ConfirmDialog,
@@ -44,15 +39,6 @@ const HIDDEN_STOCK_FIELDS = [
   "is_active",
 ];
 
-const PART_ICON_BY_NAME = {
-  ram: Server,
-  cpu: Cpu,
-  "hard disk": HardDrive,
-  bag: ShoppingBag,
-  mouse: MousePointer,
-  keyboard: Type,
-};
-
 // The "All part stock" view (no part card selected) mixes rows from every
 // part type, each with its own extra fields (RAM Type, Model Name/Number,
 // Disk Type/Interface...). Rather than showing a column per field — mostly
@@ -68,91 +54,6 @@ function buildStockDetails(item) {
   ].filter((value) => value && String(value).trim());
 
   return parts.length ? parts.join(" · ") : null;
-}
-
-function PartTypeCard({
-  partType,
-  isSelected,
-  quantity,
-  onSelect,
-  onEdit,
-  onDelete,
-}) {
-  const normalizedName =
-    partType.part_name?.trim().toLowerCase();
-
-  const Icon =
-    PART_ICON_BY_NAME[normalizedName] || Package;
-
-  return (
-    <div
-      className={`relative flex flex-col overflow-hidden rounded-xl border text-left transition ${isSelected
-        ? "border-slate-300 ring-2 ring-slate-100"
-        : "border-slate-200 hover:border-slate-300"
-        }`}
-    >
-      {/* Covers the whole card so it stays clickable as one target — the
-          kebab menu below sits above this in z-order with its own click
-          handling, so the two never conflict. */}
-      <button
-        type="button"
-        onClick={() => onSelect(partType.part_type_id)}
-        aria-label={`View ${partType.part_name} stock`}
-        className="absolute inset-0 z-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-      />
-
-      {(onEdit || onDelete) && (
-        <div className="absolute right-1.5 top-1.5 z-10 rounded-full bg-white/90 shadow-sm">
-          <RowActionsMenu
-            items={[
-              onEdit && { icon: Edit2, label: "Edit", onClick: () => onEdit(partType) },
-              onDelete && { icon: Trash2, label: "Delete", onClick: () => onDelete(partType), destructive: true },
-            ].filter(Boolean)}
-          />
-        </div>
-      )}
-
-      <div
-        className={`pointer-events-none grid h-24 place-items-center ${isSelected
-          ? "bg-slate-100"
-          : "bg-slate-50"
-          }`}
-      >
-        <Icon
-          size={32}
-          className={
-            isSelected
-              ? "text-slate-900"
-              : "text-slate-400"
-          }
-        />
-      </div>
-
-      <div className="pointer-events-none flex items-center justify-between gap-2 px-3.5 py-3">
-        <div className="min-w-0">
-          <p className="truncate text-[13px] font-semibold text-slate-900">
-            {partType.part_name}
-          </p>
-
-          <p className="mt-0.5 text-xs text-slate-500">
-            {quantity} in stock
-            {partType.is_countable === false
-              ? " · Not countable"
-              : ""}
-          </p>
-        </div>
-
-        <span
-          className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-sm font-semibold leading-none ${isSelected
-            ? "bg-slate-950 text-white"
-            : "bg-slate-100 text-slate-400"
-            }`}
-        >
-          +
-        </span>
-      </div>
-    </div>
-  );
 }
 
 function PartTypeFormModal({
@@ -634,7 +535,7 @@ export function PartStockView({
 
   return (
     <>
-      {/* Part type cards */}
+      {/* Part type tabs */}
       <div className="px-4 pt-6 sm:px-6 lg:px-8">
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           <div className="border-b border-slate-100 px-5 py-4">
@@ -643,60 +544,34 @@ export function PartStockView({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 px-5 py-5 sm:grid-cols-3 lg:grid-cols-6">
-            {partTypes.map((partType) => {
-              const quantity = stock
-                .filter(
-                  (item) =>
-                    String(
-                      item.part_type_id
-                    ) ===
-                    String(
-                      partType.part_type_id
-                    )
-                )
-                .reduce(
-                  (sum, item) =>
-                    sum +
-                    (Number(item.quantity) || 0),
-                  0
-                );
-
-              return (
-                <PartTypeCard
-                  key={
-                    partType.part_type_id
-                  }
-                  partType={partType}
-                  isSelected={
-                    String(
-                      partType.part_type_id
-                    ) ===
-                    String(
-                      selectedPartTypeId
-                    )
-                  }
-                  quantity={quantity}
-                  onSelect={onSelectPart}
-                  onEdit={onOpenEditPartType}
-                  onDelete={onOpenDeletePartType}
-                />
-              );
-            })}
-
-            <button
-              type="button"
-              onClick={onOpenAddPartType}
-              className="flex h-full min-h-[136px] flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 text-slate-500 outline-none transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-            >
-              <PlusCircle size={22} />
-              <span className="text-[13px] font-semibold">Add Part</span>
-            </button>
-          </div>
+          <CategoryTabs
+            options={partTypes.map((partType) => ({ value: partType.part_type_id, label: partType.part_name }))}
+            selected={selectedPartTypeId}
+            onSelect={onSelectPart}
+            trailing={
+              <RowActionsMenu
+                items={[
+                  ...(selectedPartType
+                    ? [
+                        { icon: Edit2, label: "Edit Part", onClick: () => onOpenEditPartType(selectedPartType) },
+                        {
+                          icon: Trash2,
+                          label: "Delete Part",
+                          onClick: () => onOpenDeletePartType(selectedPartType),
+                          destructive: true,
+                        },
+                        { divider: true },
+                      ]
+                    : []),
+                  { icon: PlusCircle, label: "New Part", onClick: onOpenAddPartType },
+                ]}
+              />
+            }
+          />
         </div>
       </div>
 
-      {/* Stock table — only once a part card is picked; no more mixed "All part stock" listing */}
+      {/* Stock table — only once a part is picked; no more mixed "All part stock" listing */}
       {selectedPartType ? (
         <RecordsTableView
           records={filteredStock}

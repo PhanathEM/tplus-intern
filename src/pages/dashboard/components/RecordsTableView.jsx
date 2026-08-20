@@ -58,6 +58,7 @@ export function RecordsTableView({
   renderCell,
   getRowClassName,
   renderRowActions,
+  actionsHeader,
   hideRefresh = false,
 }) {
   /*
@@ -167,7 +168,7 @@ export function RecordsTableView({
 
                     {renderRowActions && (
                       <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">
-                        Actions
+                        {actionsHeader || "Actions"}
                       </th>
                     )}
                   </tr>

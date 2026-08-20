@@ -4,7 +4,7 @@ import { fetchEquipmentByCategory } from "../../../../services/equipmentService"
 import { fetchPartTypes } from "../../../../services/partTypeService";
 import { fetchPartReplacements, submitPartReplacement } from "../../../../services/partReplacementService";
 import { addPartStock, fetchAvailablePartStock } from "../../../../services/partStockService";
-import { DEFAULT_PART_STOCK_STATUS, REPLACEMENT_FILTERS_INITIAL_VALUES } from "../../dashboard.config";
+import { DEFAULT_PART_STOCK_STATUS } from "../../dashboard.config";
 import { buildPartStockPayload, getRecordColumns } from "../../dashboard.utils";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 
@@ -24,6 +24,18 @@ function buildColumnOrderer(hiddenKeys, orderedKeys) {
       return aIndex - bIndex;
     });
   };
+}
+
+// Remark tends to be long free text — push it to the very end, after even
+// the extra columns buildColumnOrderer doesn't know about (device_model,
+// manufacturer, etc.), so it doesn't interrupt the more scannable columns.
+function moveRemarkToEnd(columns) {
+  const remarkIndex = columns.findIndex((column) => column.key === "remark");
+  if (remarkIndex === -1) return columns;
+  const reordered = [...columns];
+  const [remarkColumn] = reordered.splice(remarkIndex, 1);
+  reordered.push(remarkColumn);
+  return reordered;
 }
 
 // "Devices you can replace" — these have an owner, so it leads. The raw
@@ -89,9 +101,9 @@ export function useReplacements({ isActive, user }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [fetchToken, setFetchToken] = useState(0);
-  const [filters, setFilters] = useState(REPLACEMENT_FILTERS_INITIAL_VALUES);
 
-  // Category reference data — shared by both lists' category filters.
+  // Category reference data — used by the "Devices you can replace" list's
+  // category bar. History Replacement has no category filter anymore.
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
@@ -112,20 +124,12 @@ export function useReplacements({ isActive, user }) {
     };
   }, [isActive]);
 
-  // There's no "All categories" tab in the history filter either, so default
-  // to the first real category once the list loads rather than an explicit
-  // "All" sentinel.
-  const effectiveFilters = {
-    ...filters,
-    category: filters.category || categories[0]?.category_name || "",
-  };
-
   useEffect(() => {
     if (!isActive) return;
 
     let ignore = false;
 
-    fetchPartReplacements(effectiveFilters)
+    fetchPartReplacements()
       .then((data) => {
         if (!ignore) {
           setReplacements(Array.isArray(data?.replacements) ? data.replacements : Array.isArray(data) ? data : []);
@@ -142,8 +146,7 @@ export function useReplacements({ isActive, user }) {
     return () => {
       ignore = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, fetchToken, filters, categories]);
+  }, [isActive, fetchToken]);
 
   function handleRetry() {
     setIsLoading(true);
@@ -154,12 +157,6 @@ export function useReplacements({ isActive, user }) {
   function resetForEntry() {
     setIsLoading(true);
     setError(null);
-  }
-
-  function handleFilterChange(key, value) {
-    setIsLoading(true);
-    setError(null);
-    setFilters((current) => ({ ...current, [key]: value }));
   }
 
   // Page-level category selection — there's no "All categories" tab, so
@@ -197,7 +194,7 @@ export function useReplacements({ isActive, user }) {
         if (ignore) return;
         const owned = (Array.isArray(data) ? data : []).filter((item) => item.owner_id != null);
         setReplaceableDevices(owned);
-        setReplaceableColumns(orderReplaceableColumns(getRecordColumns(owned, [])));
+        setReplaceableColumns(moveRemarkToEnd(orderReplaceableColumns(getRecordColumns(owned, []))));
         setReplaceableError(null);
       })
       .catch((error) => {
@@ -313,14 +310,21 @@ export function useReplacements({ isActive, user }) {
   function handleSelectStock(stockId) {
     setSelectedStockId(stockId);
     // The picked stock line's own value *is* the new value being fitted —
-    // no separate free-text entry needed once a line is chosen. Stock stores
-    // it with a unit ("16 GB") for display, but the device's own field is a
-    // bare number ("4"), so strip the unit before it becomes new_value —
-    // otherwise "add" can't add "16 GB" to "4" server-side.
+    // no separate free-text entry needed once a line is chosen. A quantity
+    // part (RAM, HD) stores it with a unit ("16 GB") for display, but the
+    // device's own field is a bare number ("16"), so strip the unit —
+    // otherwise "add" can't add "16 GB" to "4" server-side. A model-based
+    // part (CPU, Bag, Mouse, Keyboard) has no part_value at all — its
+    // identity lives in model_name/model_number/etc. instead.
     const option = availableStock.find((item) => String(item.stock_id) === String(stockId));
     if (option?.part_value) {
       const numericValue = parseFloat(option.part_value);
       setPartNewValue(Number.isNaN(numericValue) ? option.part_value : String(numericValue));
+    } else {
+      const bits = [option?.ram_type, option?.model_name, option?.model_number, option?.disk_type, option?.disk_interface].filter(
+        (value) => value && String(value).trim()
+      );
+      setPartNewValue(bits.join(" · "));
     }
   }
 
@@ -443,7 +447,10 @@ export function useReplacements({ isActive, user }) {
       action: partAction,
       from_stock_id: Number(selectedStockId),
     };
-    if (needsValue) payload.new_value = partNewValue.trim();
+    // Send whatever value the picked stock line carries, even for parts that
+    // don't "track a value" (CPU, Bag, Mouse, Keyboard) — otherwise history
+    // records the swap happened but not what it changed to.
+    if (partNewValue.trim()) payload.new_value = partNewValue.trim();
     if (partAction === "replace") payload.old_part_status = oldPartStatus;
 
     const actionVerb = { replace: "replaced on", add: "added to" }[partAction];
@@ -483,8 +490,6 @@ export function useReplacements({ isActive, user }) {
     error,
     handleRetry,
     resetForEntry,
-    filters: effectiveFilters,
-    handleFilterChange,
 
     categories,
     selectedCategory,
