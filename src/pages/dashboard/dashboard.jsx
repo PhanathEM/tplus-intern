@@ -149,7 +149,7 @@ function Dashboard({ user, onLogout }) {
     // flips the loading spinner instantly, without this composition root
     // reaching into any hook's internal state directly.
     const resetMap = {
-      "All Equipment": equipment.resetForEntry,
+      Equipments: equipment.resetForEntry,
       "Device Replacement": replacements.resetForEntry,
       "History Replacement": replacements.resetForEntry,
       "Stock of Replace a Part": partStock.resetForEntry,
@@ -162,7 +162,7 @@ function Dashboard({ user, onLogout }) {
       "Cloud Usage": cloudUsage.resetForEntry,
       "Currently Borrowed": currentBorrows.resetForEntry,
       "Borrow History": borrowHistory.resetForEntry,
-      Employee: employees.resetForEntry,
+      Employees: employees.resetForEntry,
       Departments: departments.resetForEntry,
     };
 
@@ -203,9 +203,9 @@ function Dashboard({ user, onLogout }) {
   }, []);
 
   const activeNavItem = navItemsByLabel[activeView];
-  const isEmployeeView = activeView === "Employee" && hasActiveViewAccess;
+  const isEmployeeView = activeView === "Employees" && hasActiveViewAccess;
   const isDepartmentsView = activeView === "Departments" && hasActiveViewAccess;
-  const isEquipmentView = activeView === "All Equipment" && hasActiveViewAccess;
+  const isEquipmentView = activeView === "Equipments" && hasActiveViewAccess;
   const isReplacementView = activeView === "Device Replacement" && hasActiveViewAccess;
   const isReplacementHistoryView = activeView === "History Replacement" && hasActiveViewAccess;
   const isPartStockView = activeView === "Stock of Replace a Part" && hasActiveViewAccess;

@@ -21,6 +21,7 @@ export function CurrentBorrowsView({ loans, isLoading, error, onRetry, onReturn,
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}
+      hideRefresh
       renderRowActions={
         canManage &&
         ((loan) => (
@@ -53,24 +54,13 @@ export function BorrowHistoryView({
 return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-          <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">Borrow history</h2>
-            {!isLoading && !error && (
-              <p className="mt-0.5 text-[13px] text-slate-500">
-                {history.length} record{history.length === 1 ? "" : "s"}
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onRetry}
-            disabled={isLoading}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-            Refresh
-          </button>
+        <div className="border-b border-slate-100 px-5 py-4">
+          <h2 className="text-[15px] font-semibold text-slate-950">Borrow history</h2>
+          {!isLoading && !error && (
+            <p className="mt-0.5 text-[13px] text-slate-500">
+              {history.length} record{history.length === 1 ? "" : "s"}
+            </p>
+          )}
         </div>
 
 <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/60 px-5 py-4">

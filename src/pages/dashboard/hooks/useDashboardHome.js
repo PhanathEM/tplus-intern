@@ -15,9 +15,9 @@ import { fetchRecycleBin } from "../../../services/recycleBinService";
 import { normalizeRecordList } from "../dashboard.utils";
 
 const HOME_STAT_FETCHERS = {
-  Employee: () => fetchEmployees().then((data) => (Array.isArray(data) ? data.length : 0)),
+  Employees: () => fetchEmployees().then((data) => (Array.isArray(data) ? data.length : 0)),
   Departments: () => fetchDepartments().then((data) => (Array.isArray(data) ? data.length : 0)),
-  "All Equipment": () =>
+  Equipments: () =>
     fetchEquipmentCategorySummary().then((data) =>
       Array.isArray(data) ? data.reduce((sum, category) => sum + (category.total_items || 0), 0) : 0
     ),

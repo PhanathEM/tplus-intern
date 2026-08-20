@@ -6,10 +6,9 @@ export const DASHBOARD_DEFAULT_VIEW = "Dashboard";
 
 export const dashboardRouteByView = {
   Dashboard: "dashboard",
-  Employee: "employee",
+  Employees: "employee",
   Departments: "departments",
-  Equipment: "equipment",
-  "All Equipment": "equipment",
+  Equipments: "equipment",
   Assign: "assign",
   "Currently Borrowed": "currently-borrowed",
   "Borrow History": "borrow-history",

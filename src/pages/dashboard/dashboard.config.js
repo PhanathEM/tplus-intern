@@ -9,7 +9,7 @@ export const navSections = [
   {
     label: "Workforce",
     items: [
-      { label: "Employee", icon: Users, permission: PERMISSIONS.EMPLOYEE },
+      { label: "Employees", icon: Users, permission: PERMISSIONS.EMPLOYEE },
       { label: "Departments", icon: Layers, permission: PERMISSIONS.DEPARTMENTS },
     ],
   },
@@ -17,10 +17,10 @@ export const navSections = [
     label: "Hardware",
     items: [
       {
-        label: "Equipment",
+        label: "Equipments",
         icon: Box,
         children: [
-          { label: "All Equipment", icon: Box, permission: PERMISSIONS.EQUIPMENT },
+          { label: "Equipments", icon: Box, permission: PERMISSIONS.EQUIPMENT },
           { label: "Assign", icon: UserPlus, permission: PERMISSIONS.ASSIGN_EQUIPMENT, adminOnly: true },
           { label: "Currently Borrowed", icon: RefreshCw, permission: PERMISSIONS.CURRENTLY_BORROWED },
           { label: "Borrow History", icon: Search, permission: PERMISSIONS.BORROW_HISTORY },

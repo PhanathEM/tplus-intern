@@ -143,12 +143,12 @@ export function useGlobalSearch({ user, onSelectView, onSelectEmployee, onSelect
     setIsLoading(false);
 
     if (type === "employees") {
-      onSelectView?.("Employee");
+      onSelectView?.("Employees");
       onSelectEmployee?.(item);
     } else if (type === "departments") {
       onSelectView?.("Departments");
     } else if (type === "equipment") {
-      onSelectView?.("All Equipment");
+      onSelectView?.("Equipments");
       onSelectEquipmentCategory?.(item.category || item.category_name);
     } else if (type === "users") {
       onSelectView?.("Users");

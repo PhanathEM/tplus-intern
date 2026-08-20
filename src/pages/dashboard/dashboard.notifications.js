@@ -97,7 +97,7 @@ export function buildDashboardNotifications({ currentBorrows = [], availableStoc
       title: "Notification refresh failed",
       detail: error,
       time: "Just now",
-      targetView: "Employee",
+      targetView: "Employees",
       tone: "danger",
     });
   }
@@ -142,7 +142,7 @@ export function buildDashboardNotifications({ currentBorrows = [], availableStoc
       title: "No available stock",
       detail: "There is no unassigned equipment available.",
       time: "Stock alert",
-      targetView: "All Equipment",
+      targetView: "Equipments",
       tone: "danger",
     });
   } else {
@@ -155,7 +155,7 @@ export function buildDashboardNotifications({ currentBorrows = [], availableStoc
           title: "Low stock",
           detail: `${category} has ${count} available item${count === 1 ? "" : "s"} left.`,
           time: "Stock alert",
-          targetView: "All Equipment",
+          targetView: "Equipments",
           tone: count === 0 ? "danger" : "warning",
         });
       });

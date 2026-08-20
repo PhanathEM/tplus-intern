@@ -228,7 +228,7 @@ export function EmployeeDirectoryTable({
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
         <div>
-          <h2 className="text-[15px] font-semibold text-slate-950">Employee</h2>
+          <h2 className="text-[15px] font-semibold text-slate-950">Employees</h2>
           {!isLoading && !error && (
             <p className="mt-0.5 text-[13px] text-slate-500">{totalCount} employees</p>
           )}
