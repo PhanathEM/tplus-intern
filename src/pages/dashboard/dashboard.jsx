@@ -592,6 +592,10 @@ function Dashboard({ user, onLogout }) {
               onAddCategory={equipment.handleOpenAddCategory}
               onEditCategory={equipment.handleOpenEditCategory}
               onDeleteCategory={equipment.handleOpenDeleteCategory}
+              onDownloadAllExcel={equipment.handleDownloadAllEquipmentExcel}
+              onDownloadAllPdf={equipment.handleDownloadAllEquipmentPdf}
+              isDownloadingAllExcel={equipment.isDownloadingAllExcel}
+              isDownloadingAllPdf={equipment.isDownloadingAllPdf}
               statuses={equipment.statuses}
             />
           )}

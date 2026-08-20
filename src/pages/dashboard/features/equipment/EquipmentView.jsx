@@ -3,6 +3,8 @@ import {
   FiBox as Box,
   FiChevronDown as ChevronDown,
   FiEdit2 as Edit2,
+  FiFileText as FileText,
+  FiGrid as Grid,
   FiPlusCircle as PlusCircle,
   FiRepeat as Repeat,
   FiSearch as Search,
@@ -10,7 +12,7 @@ import {
   FiUserX as UserX,
   FiX as X,
 } from "react-icons/fi";
-import { getRecordColumns } from "../../dashboard.utils";
+import { buildEquipmentDisplayColumns } from "../../dashboard.utils";
 import { EmptyState, RowActionsMenu } from "../../components/SharedControls";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
@@ -40,29 +42,7 @@ export function EquipmentItemsTable({
     () => configuredColumns.map(({ key, label }) => ({ key, label })),
     [configuredColumns]
   );
-  const columns = useMemo(() => {
-    const filtered = getRecordColumns(items, baseColumns).filter(
-      // software_licenses is the raw array behind license_names/license_status/etc. —
-      // those flat fields already display fine as columns, the array itself doesn't.
-      // category is redundant here since the page title/tabs already show it.
-      // equipment_id isn't sequential (739, 740, 741...) — replaced below with a
-      // frontend-numbered "No." column, same pattern as other tables in the app.
-      (column) =>
-        !column.key.startsWith("__") &&
-        column.key !== "software_licenses" &&
-        column.key !== "category" &&
-        column.key !== "equipment_id"
-    );
-    // Remark tends to be long free text — push it to the end so it doesn't
-    // interrupt the more scannable columns.
-    const remarkIndex = filtered.findIndex((column) => column.key === "remark");
-    const reordered = [...filtered];
-    if (remarkIndex !== -1) {
-      const [remarkColumn] = reordered.splice(remarkIndex, 1);
-      reordered.push(remarkColumn);
-    }
-    return [{ key: "_row_number", label: "No." }, ...reordered];
-  }, [items, baseColumns]);
+  const columns = useMemo(() => buildEquipmentDisplayColumns(items, baseColumns), [items, baseColumns]);
 
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -181,8 +161,6 @@ return (
 
 export function EquipmentView({
   categories,
-  isLoading,
-  error,
   onRetry,
   selectedCategory,
   onSelectCategory,
@@ -199,6 +177,10 @@ export function EquipmentView({
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
+  onDownloadAllExcel,
+  onDownloadAllPdf,
+  isDownloadingAllExcel = false,
+  isDownloadingAllPdf = false,
   canManage = true,
   canCreate = true,
 }) {
@@ -227,11 +209,6 @@ export function EquipmentView({
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950">Equipment</h2>
-            {!isLoading && !error && (
-              <p className="mt-0.5 text-[13px] text-slate-500">
-                {items.length} item{items.length === 1 ? "" : "s"} · {selectedCategoryLabel}
-              </p>
-            )}
           </div>
         </div>
 
@@ -256,6 +233,17 @@ export function EquipmentView({
                       ]
                     : []),
                   { icon: PlusCircle, label: "New Category", onClick: onAddCategory },
+                  { divider: true },
+                  {
+                    icon: FileText,
+                    label: isDownloadingAllPdf ? "Preparing PDF..." : "Download All PDFs",
+                    onClick: onDownloadAllPdf,
+                  },
+                  {
+                    icon: Grid,
+                    label: isDownloadingAllExcel ? "Preparing Excel..." : "Download All Excel",
+                    onClick: onDownloadAllExcel,
+                  },
                 ]}
               />
             )

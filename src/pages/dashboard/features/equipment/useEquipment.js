@@ -36,10 +36,12 @@ import {
   getEquipmentFormFields,
   getEquipmentFormFieldsFromColumns,
   buildEquipmentFormValues,
+  buildEquipmentDisplayColumns,
   slugifyEquipmentView,
   getEquipmentDisplayName,
 } from "../../dashboard.utils";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
+import { exportAllEquipmentToExcel, exportAllEquipmentToPdf } from "./equipmentExport";
 
 function excludeBrokenStatuses(data) {
   const list = Array.isArray(data) ? data : [];
@@ -89,6 +91,9 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
   const [deleteCategoryError, setDeleteCategoryError] = useState(null);
+
+  const [isDownloadingAllExcel, setIsDownloadingAllExcel] = useState(false);
+  const [isDownloadingAllPdf, setIsDownloadingAllPdf] = useState(false);
 
   const [isColumnsPickerOpen, setIsColumnsPickerOpen] = useState(false);
   const [columnsPickerCategoryId, setColumnsPickerCategoryId] = useState(null);
@@ -224,6 +229,40 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
   function resetForEntry() {
     setIsLoading(true);
     setError(null);
+  }
+
+  // Bulk export — every category, each fetched fresh (the page only ever
+  // holds one category's items at a time). A category that fails to fetch
+  // just comes back empty rather than failing the whole batch.
+  function downloadAllCategoriesExport(setIsDownloading, exportFn) {
+    setIsDownloading(true);
+    const views = categories.length > 0 ? categories : EQUIPMENT_VIEWS;
+
+    Promise.all(
+      views.map((view) =>
+        fetchEquipmentByView(view.slug)
+          .then((data) => {
+            const categoryItems = extractEquipmentItems(data);
+            const baseColumns = normalizeEquipmentTableColumns(data);
+            return {
+              category: view.label,
+              columns: buildEquipmentDisplayColumns(categoryItems, baseColumns),
+              items: categoryItems,
+            };
+          })
+          .catch(() => ({ category: view.label, columns: [], items: [] }))
+      )
+    )
+      .then((entries) => exportFn(entries))
+      .finally(() => setIsDownloading(false));
+  }
+
+  function handleDownloadAllEquipmentExcel() {
+    downloadAllCategoriesExport(setIsDownloadingAllExcel, exportAllEquipmentToExcel);
+  }
+
+  function handleDownloadAllEquipmentPdf() {
+    downloadAllCategoriesExport(setIsDownloadingAllPdf, exportAllEquipmentToPdf);
   }
 
   // Updates the selected category AND fetches its items in one call. Used by
@@ -874,6 +913,10 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     handleOpenDeleteCategory,
     handleCloseDeleteCategory,
     handleConfirmDeleteCategory,
+    isDownloadingAllExcel,
+    isDownloadingAllPdf,
+    handleDownloadAllEquipmentExcel,
+    handleDownloadAllEquipmentPdf,
     isColumnsPickerOpen,
     columnsPickerCategoryLabel,
     availableViewFields,

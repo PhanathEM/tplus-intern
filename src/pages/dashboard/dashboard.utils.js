@@ -344,6 +344,27 @@ return [
   ];
 }
 
+// Same column shaping the Equipment items table uses for its own display:
+// auto-detect extra fields, drop internal/redundant ones, push remark to the
+// end, number the rows. Shared with the bulk category export so what's
+// downloaded always matches what's on screen for that category.
+export function buildEquipmentDisplayColumns(items, baseColumns) {
+  const filtered = getRecordColumns(items, baseColumns).filter(
+    (column) =>
+      !column.key.startsWith("__") &&
+      column.key !== "software_licenses" &&
+      column.key !== "category" &&
+      column.key !== "equipment_id"
+  );
+  const remarkIndex = filtered.findIndex((column) => column.key === "remark");
+  const reordered = [...filtered];
+  if (remarkIndex !== -1) {
+    const [remarkColumn] = reordered.splice(remarkIndex, 1);
+    reordered.push(remarkColumn);
+  }
+  return [{ key: "_row_number", label: "No." }, ...reordered];
+}
+
 export function groupEmployeeSearchResults(results) {
   const groups = new Map();
   results.forEach((item, index) => {

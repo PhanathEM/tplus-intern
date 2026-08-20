@@ -18,6 +18,7 @@ export function DynamicEquipmentTable({
   emptyTitle = "No equipment found",
   emptyDescription = "Equipment will appear here.",
   renderRowActions,
+  actionsHeader,
   getRowClassName,
   onRowClick,
   selectable,
@@ -61,7 +62,9 @@ export function DynamicEquipmentTable({
                 {column.label}
               </th>
             ))}
-            {renderRowActions && <th className="whitespace-nowrap px-4 py-3 font-semibold text-right">Actions</th>}
+            {renderRowActions && (
+              <th className="whitespace-nowrap px-4 py-3 font-semibold text-right">{actionsHeader || "Actions"}</th>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-50">
