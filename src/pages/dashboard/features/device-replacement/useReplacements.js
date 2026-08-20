@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { fetchReplacements } from "../../../../services/replacementService";
 import { fetchAssignFormData } from "../../../../services/assignService";
 import { fetchEquipmentByCategory } from "../../../../services/equipmentService";
 import { fetchPartTypes } from "../../../../services/partTypeService";
-import { submitPartReplacement } from "../../../../services/partReplacementService";
+import { fetchPartReplacements, submitPartReplacement } from "../../../../services/partReplacementService";
 import { addPartStock, fetchAvailablePartStock } from "../../../../services/partStockService";
 import { DEFAULT_PART_STOCK_STATUS, REPLACEMENT_FILTERS_INITIAL_VALUES } from "../../dashboard.config";
 import { buildPartStockPayload, getRecordColumns } from "../../dashboard.utils";
@@ -126,10 +125,10 @@ export function useReplacements({ isActive, user }) {
 
     let ignore = false;
 
-    fetchReplacements(effectiveFilters)
+    fetchPartReplacements(effectiveFilters)
       .then((data) => {
         if (!ignore) {
-          setReplacements(Array.isArray(data?.replacements) ? data.replacements : []);
+          setReplacements(Array.isArray(data?.replacements) ? data.replacements : Array.isArray(data) ? data : []);
           setError(null);
         }
       })

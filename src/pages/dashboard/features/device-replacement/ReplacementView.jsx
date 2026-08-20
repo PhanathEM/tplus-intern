@@ -253,39 +253,34 @@ export function ReplaceableDevicesView({
   );
 }
 
-// A whole-device swap is a different physical unit, so nearly every one of
-// these pairs differs — unlike a single-part swap (e.g. just a RAM upgrade),
-// there's no single "the thing that changed" column to isolate.
-const REPLACEMENT_FIELD_PAIRS = [
-  { label: "Device", oldKey: "old_device_name", newKey: "new_device_name" },
-  { label: "Computer Name", oldKey: "old_computer_name", newKey: "new_computer_name" },
-  { label: "Model", oldKey: "old_device_model", newKey: "new_device_model" },
-  { label: "Asset Code", oldKey: "old_asset_code", newKey: "new_asset_code" },
-  { label: "Service Tag", oldKey: "old_service_tag", newKey: "new_service_tag" },
-  { label: "Category", oldKey: "old_category", newKey: "new_category" },
-  { label: "Location", oldKey: "old_device_location", newKey: "new_owner_location" },
-];
-
+// Each row is now a single part swap (RAM, CPU, etc.) rather than a whole
+// device — one old/new value pair, not a batch of field pairs.
 function ReplacementHistoryRow({ replacement }) {
+  const deviceLabel =
+    replacement.computer_name || replacement.device_name || replacement.device_model || replacement.asset_code || "—";
+
   return (
     <tr className="transition hover:bg-slate-50/70">
       <td className="whitespace-nowrap px-4 py-3 align-top">
-        <p className="font-semibold text-slate-900">{replacement.employee_name || "—"}</p>
+        <p className="font-semibold text-slate-900">{replacement.owner_name || "—"}</p>
+      </td>
+      <td className="px-4 py-3 align-top">
+        <p className="font-medium text-slate-800">{deviceLabel}</p>
         <p className="text-xs text-slate-500">
-          {[replacement.employee_position, replacement.employee_department].filter(Boolean).join(" · ")}
+          {[replacement.category_name, replacement.asset_code].filter(Boolean).join(" · ")}
         </p>
+      </td>
+      <td className="whitespace-nowrap px-4 py-3 align-top text-slate-700">{replacement.part_name || "—"}</td>
+      <td className="whitespace-nowrap border-l border-slate-100 bg-rose-50/60 px-4 py-3 align-top text-rose-900">
+        {replacement.old_value ?? "—"}
+      </td>
+      <td className="whitespace-nowrap bg-emerald-50/60 px-4 py-3 align-top text-emerald-900">
+        {replacement.new_value ?? "—"}
       </td>
       <td className="whitespace-nowrap px-4 py-3 align-top text-slate-600">
         {formatReplacementDate(replacement.replacement_date)}
       </td>
-      {REPLACEMENT_FIELD_PAIRS.flatMap(({ oldKey, newKey }) => [
-        <td key={oldKey} className="whitespace-nowrap border-l border-slate-100 bg-rose-50/60 px-4 py-3 align-top text-rose-900">
-          {replacement[oldKey] ?? "—"}
-        </td>,
-        <td key={newKey} className="whitespace-nowrap bg-emerald-50/60 px-4 py-3 align-top text-emerald-900">
-          {replacement[newKey] ?? "—"}
-        </td>,
-      ])}
+      <td className="whitespace-nowrap px-4 py-3 align-top text-slate-600">{replacement.replaced_by || "—"}</td>
     </tr>
   );
 }
@@ -365,19 +360,15 @@ export function ReplacementHistoryView({
             <table className="min-w-full divide-y divide-slate-100 text-left text-[13px]">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Employee</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Owner</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Device</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Part</th>
+                  <th className="whitespace-nowrap border-l border-slate-200 bg-rose-50 px-4 py-3 font-semibold text-rose-600">
+                    Old Value
+                  </th>
+                  <th className="whitespace-nowrap bg-emerald-50 px-4 py-3 font-semibold text-emerald-700">New Value</th>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Date</th>
-                  {REPLACEMENT_FIELD_PAIRS.flatMap(({ label, oldKey, newKey }) => [
-                    <th
-                      key={oldKey}
-                      className="whitespace-nowrap border-l border-slate-200 bg-rose-50 px-4 py-3 font-semibold text-rose-600"
-                    >
-                      Old {label}
-                    </th>,
-                    <th key={newKey} className="whitespace-nowrap bg-emerald-50 px-4 py-3 font-semibold text-emerald-700">
-                      New {label}
-                    </th>,
-                  ])}
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Replaced By</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">

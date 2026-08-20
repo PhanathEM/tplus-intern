@@ -3,7 +3,7 @@ import { fetchEmployees } from "../../../services/employeeService";
 import { fetchDepartments } from "../../../services/departmentService";
 import { fetchEquipmentCategorySummary } from "../../../services/equipmentService";
 import { fetchBorrowHistory } from "../../../services/borrowService";
-import { fetchReplacements } from "../../../services/replacementService";
+import { fetchPartReplacements } from "../../../services/partReplacementService";
 import { fetchSsdUpgrades } from "../../../services/ssdUpgradeService";
 import { fetchSsdProcurement } from "../../../services/ssdProcurementService";
 import { fetchAntivirusInstalls } from "../../../services/antivirusService";
@@ -23,7 +23,10 @@ const HOME_STAT_FETCHERS = {
     ),
   "Borrow History": () =>
     fetchBorrowHistory({}).then((data) => (Array.isArray(data?.history) ? data.history.length : 0)),
-  "Device Replacement": () => fetchReplacements().then((data) => normalizeRecordList(data).length),
+  "Device Replacement": () =>
+    fetchPartReplacements().then((data) =>
+      typeof data?.count === "number" ? data.count : Array.isArray(data?.replacements) ? data.replacements.length : 0
+    ),
   "SSD Upgrade": () => fetchSsdUpgrades().then((data) => normalizeRecordList(data).length),
   "SSD Procurement": () => fetchSsdProcurement().then((data) => normalizeRecordList(data).length),
   "Antivirus Install": () => fetchAntivirusInstalls().then((data) => normalizeRecordList(data).length),
