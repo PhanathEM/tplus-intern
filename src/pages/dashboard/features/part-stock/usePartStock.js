@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import { addPartStock, deletePartStock, fetchPartStock, updatePartStock } from "../../../../services/partStockService";
 import {
+  attachPartCustomField,
+  createPartCustomField,
   createPartType,
   deletePartType,
+  detachPartCustomField,
+  fetchPartCustomFields,
+  fetchPartCustomFieldTypes,
   fetchPartTypeCategories,
-  fetchPartTypeColumns,
+  fetchPartTypeCustomFields,
   fetchPartTypes,
   updatePartType,
   updatePartTypeCategories,
@@ -12,7 +17,7 @@ import {
 import { fetchCategories } from "../../../../services/categoryService";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 import { DEFAULT_PART_STOCK_STATUS } from "../../dashboard.config";
-import { buildPartStockPayload } from "../../dashboard.utils";
+import { buildPartStockPayload, getDynamicPartFields, normalizeCustomFields, normalizeCustomFieldTypes } from "../../dashboard.utils";
 
 const PART_TYPE_FORM_INITIAL_VALUES = {
   part_name: "",
@@ -92,24 +97,14 @@ export function usePartStock({ isActive, user }) {
   }, [isActive, fetchToken]);
 
   // Reference data for the Add/Edit Part Type form — fetched once.
-  const [partTypeColumns, setPartTypeColumns] = useState([]);
-  const [partTypeColumnsNote, setPartTypeColumnsNote] = useState("");
   const [allCategories, setAllCategories] = useState([]);
+  const [partCustomFieldTypes, setPartCustomFieldTypes] = useState([]);
+  const [allPartCustomFields, setAllPartCustomFields] = useState([]);
 
   useEffect(() => {
     if (!isActive) return;
 
     let ignore = false;
-
-    fetchPartTypeColumns()
-      .then((data) => {
-        if (ignore) return;
-        setPartTypeColumns(Array.isArray(data?.columns) ? data.columns : []);
-        setPartTypeColumnsNote(data?.note || "");
-      })
-      .catch(() => {
-        if (!ignore) setPartTypeColumns([]);
-      });
 
     fetchCategories()
       .then((data) => {
@@ -117,6 +112,22 @@ export function usePartStock({ isActive, user }) {
       })
       .catch(() => {
         if (!ignore) setAllCategories([]);
+      });
+
+    fetchPartCustomFieldTypes()
+      .then((data) => {
+        if (!ignore) setPartCustomFieldTypes(normalizeCustomFieldTypes(data));
+      })
+      .catch(() => {
+        if (!ignore) setPartCustomFieldTypes([]);
+      });
+
+    fetchPartCustomFields()
+      .then((data) => {
+        if (!ignore) setAllPartCustomFields(normalizeCustomFields(data));
+      })
+      .catch(() => {
+        if (!ignore) setAllPartCustomFields([]);
       });
 
     return () => {
@@ -148,12 +159,17 @@ export function usePartStock({ isActive, user }) {
   const [isSavingPartType, setIsSavingPartType] = useState(false);
   const [partTypeFormError, setPartTypeFormError] = useState(null);
   const [isLoadingPartTypeCategories, setIsLoadingPartTypeCategories] = useState(false);
+  const [partTypeAttachedFields, setPartTypeAttachedFields] = useState([]);
+  const [isLoadingPartTypeFields, setIsLoadingPartTypeFields] = useState(false);
+  const [partTypeFieldsError, setPartTypeFieldsError] = useState(null);
 
   function handleOpenAddPartType() {
     setPartTypeFormMode("add");
     setPartTypeFormTarget(null);
     setPartTypeFormValues(PART_TYPE_FORM_INITIAL_VALUES);
     setPartTypeFormError(null);
+    setPartTypeAttachedFields([]);
+    setPartTypeFieldsError(null);
     setIsPartTypeFormOpen(true);
   }
 
@@ -171,6 +187,16 @@ export function usePartStock({ isActive, user }) {
     });
     setIsPartTypeFormOpen(true);
     setIsLoadingPartTypeCategories(true);
+    setPartTypeFieldsError(null);
+    setIsLoadingPartTypeFields(true);
+
+    fetchPartTypeCustomFields(partType.part_type_id)
+      .then((data) => setPartTypeAttachedFields(normalizeCustomFields(data)))
+      .catch((error) => {
+        setPartTypeAttachedFields([]);
+        setPartTypeFieldsError(error.message || "Could not load this part's custom fields.");
+      })
+      .finally(() => setIsLoadingPartTypeFields(false));
 
     fetchPartTypeCategories(partType.part_type_id)
       .then((data) => {
@@ -207,6 +233,61 @@ export function usePartStock({ isActive, user }) {
     });
   }
 
+  function slugifyFieldLabel(label) {
+    return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  }
+
+  // In edit mode the part type already has a real id, so a field is
+  // created/attached/removed against the API immediately. In add mode there
+  // is no id yet — fields are staged locally here and created for real once
+  // the part type itself is saved (see handleSubmitPartTypeForm below).
+  function handleAddPartTypeCustomField(label, type) {
+    if (partTypeFormMode === "edit" && partTypeFormTarget) {
+      return createPartCustomField({
+        field_label: label,
+        field_type: type,
+        part_type_id: partTypeFormTarget.part_type_id,
+      }).then((data) => {
+        const [normalized] = normalizeCustomFields([data?.field || data]);
+        if (normalized) {
+          setPartTypeAttachedFields((current) => [...current, normalized]);
+          setAllPartCustomFields((current) => [...current, normalized]);
+        }
+        handleRetry();
+      });
+    }
+
+    setPartTypeAttachedFields((current) => [
+      ...current,
+      { id: null, key: slugifyFieldLabel(label), label, type, rawType: type },
+    ]);
+    return Promise.resolve();
+  }
+
+  function handleReusePartTypeCustomField(field) {
+    if (partTypeFormMode === "edit" && partTypeFormTarget) {
+      return attachPartCustomField(partTypeFormTarget.part_type_id, field.id).then(() => {
+        setPartTypeAttachedFields((current) => [...current, field]);
+        handleRetry();
+      });
+    }
+
+    setPartTypeAttachedFields((current) => [...current, field]);
+    return Promise.resolve();
+  }
+
+  function handleRemovePartTypeCustomField(field) {
+    if (partTypeFormMode === "edit" && partTypeFormTarget) {
+      return detachPartCustomField(partTypeFormTarget.part_type_id, field.id).then(() => {
+        setPartTypeAttachedFields((current) => current.filter((item) => item.key !== field.key));
+        handleRetry();
+      });
+    }
+
+    setPartTypeAttachedFields((current) => current.filter((item) => item.key !== field.key));
+    return Promise.resolve();
+  }
+
   function handleSubmitPartTypeForm(event) {
     event.preventDefault();
 
@@ -233,7 +314,19 @@ export function usePartStock({ isActive, user }) {
       .then((data) => {
         // Both create and update wrap the record as { part_type: {...} }.
         const partTypeId = isEdit ? partTypeFormTarget.part_type_id : data?.part_type?.part_type_id;
-        return updatePartTypeCategories(partTypeId, partTypeFormValues.category_ids).then(() => data);
+        const categoriesPromise = updatePartTypeCategories(partTypeId, partTypeFormValues.category_ids);
+        // Fields staged while creating a brand-new part have no id yet —
+        // create/attach them for real now that the part type does.
+        const fieldsPromise = isEdit
+          ? Promise.resolve()
+          : Promise.all(
+              partTypeAttachedFields.map((field) =>
+                field.id
+                  ? attachPartCustomField(partTypeId, field.id)
+                  : createPartCustomField({ field_label: field.label, field_type: field.type, part_type_id: partTypeId })
+              )
+            );
+        return Promise.all([categoriesPromise, fieldsPromise]).then(() => data);
       })
       .then((data) => {
         logActivity({
@@ -247,7 +340,13 @@ export function usePartStock({ isActive, user }) {
         });
         setIsPartTypeFormOpen(false);
         setPartTypeFormTarget(null);
+        setPartTypeAttachedFields([]);
         handleRetry();
+        if (!isEdit && partTypeAttachedFields.length > 0) {
+          fetchPartCustomFields()
+            .then((refreshed) => setAllPartCustomFields(normalizeCustomFields(refreshed)))
+            .catch(() => {});
+        }
       })
       .catch((error) => {
         const data = error.response?.data;
@@ -293,12 +392,20 @@ export function usePartStock({ isActive, user }) {
         handleRetry();
       })
       .catch((error) => {
-        const blocked = error.status === 409 || error.status === 400;
+        // Backend doesn't yet clean up part_type_custom_field rows before
+        // deleting a part type, so a part with custom fields attached fails
+        // with a raw SQL foreign-key error instead of a clean 409 — treat
+        // that the same as the (already-handled) replacement-history block.
+        const rawMessage = error.response?.data?.error || error.message || "";
+        const isForeignKeyConflict = /REFERENCE constraint|FOREIGN KEY constraint/i.test(rawMessage);
+        const blocked = error.status === 409 || error.status === 400 || isForeignKeyConflict;
         setDeletePartTypeBlocked(blocked);
         setDeletePartTypeError(
           blocked
-            ? error.response?.data?.error || "This part has replacement history — deactivate it instead of deleting."
-            : error.response?.data?.error || error.message || "Could not delete this part type."
+            ? isForeignKeyConflict
+              ? "This part still has custom fields or replacement history linked to it — deactivate it instead of deleting."
+              : rawMessage || "This part has replacement history — deactivate it instead of deleting."
+            : rawMessage || "Could not delete this part type."
         );
       })
       .finally(() => setIsDeletingPartType(false));
@@ -331,6 +438,50 @@ export function usePartStock({ isActive, user }) {
         setDeletePartTypeError(error.response?.data?.error || error.message || "Could not deactivate this part type.");
       })
       .finally(() => setIsDeletingPartType(false));
+  }
+
+  // Standalone "Deactivate Part" action — a deliberate choice from the kebab
+  // menu, separate from the auto-offered fallback above when Delete is
+  // blocked by real history. Two distinct actions so it's never ambiguous
+  // which one an admin is doing.
+  const [partTypeToDeactivate, setPartTypeToDeactivate] = useState(null);
+  const [isDeactivatingPartType, setIsDeactivatingPartType] = useState(false);
+  const [deactivatePartTypeError, setDeactivatePartTypeError] = useState(null);
+
+  function handleOpenDeactivatePartType(partType) {
+    setPartTypeToDeactivate(partType);
+    setDeactivatePartTypeError(null);
+  }
+
+  function handleCloseDeactivatePartType() {
+    setPartTypeToDeactivate(null);
+    setDeactivatePartTypeError(null);
+  }
+
+  function handleConfirmDeactivatePartType() {
+    if (!partTypeToDeactivate) return;
+
+    setIsDeactivatingPartType(true);
+    setDeactivatePartTypeError(null);
+
+    updatePartType(partTypeToDeactivate.part_type_id, { is_active: false })
+      .then(() => {
+        logActivity({
+          actor: user,
+          action: "update",
+          module: ACTIVITY_MODULES.PART_STOCK,
+          entityId: partTypeToDeactivate.part_type_id,
+          entityLabel: partTypeToDeactivate.part_name,
+          before: partTypeToDeactivate,
+          after: { is_active: false },
+        });
+        setPartTypeToDeactivate(null);
+        handleRetry();
+      })
+      .catch((error) => {
+        setDeactivatePartTypeError(error.response?.data?.error || error.message || "Could not deactivate this part type.");
+      })
+      .finally(() => setIsDeactivatingPartType(false));
   }
 
   // --- Add to stock ---------------------------------------------------
@@ -406,6 +557,10 @@ export function usePartStock({ isActive, user }) {
     // part_type_id stripped for a cleaner table — look up the full record so
     // the dialog can tell what part this actually is (RAM, Hard Disk, ...).
     const fullRecord = stock.find((item) => item.stock_id === record.stock_id) || record;
+    const partType = partTypes.find((item) => String(item.part_type_id) === String(fullRecord.part_type_id));
+    const dynamicFieldValues = Object.fromEntries(
+      getDynamicPartFields(partType).map((field) => [field.field_key, fullRecord[field.field_key] ?? ""])
+    );
     setEditStockTarget(fullRecord);
     setEditError(null);
     setEditFormValues({
@@ -418,6 +573,7 @@ export function usePartStock({ isActive, user }) {
       quantity: String(fullRecord.quantity ?? ""),
       status: fullRecord.status || DEFAULT_PART_STOCK_STATUS,
       remark: fullRecord.remark || "",
+      ...dynamicFieldValues,
     });
   }
 
@@ -535,6 +691,10 @@ export function usePartStock({ isActive, user }) {
     runDeleteStock(true);
   }
 
+  const partTypeReusableFields = allPartCustomFields.filter(
+    (field) => !partTypeAttachedFields.some((attached) => attached.key === field.key)
+  );
+
   return {
     stock,
     isLoading,
@@ -545,8 +705,6 @@ export function usePartStock({ isActive, user }) {
     selectedPartTypeId,
     handleSelectPart,
 
-    partTypeColumns,
-    partTypeColumnsNote,
     allCategories,
     isPartTypeFormOpen,
     partTypeFormMode,
@@ -554,11 +712,19 @@ export function usePartStock({ isActive, user }) {
     isSavingPartType,
     partTypeFormError,
     isLoadingPartTypeCategories,
+    partTypeAttachedFields,
+    partTypeReusableFields,
+    partCustomFieldTypes,
+    isLoadingPartTypeFields,
+    partTypeFieldsError,
     handleOpenAddPartType,
     handleOpenEditPartType,
     handleClosePartTypeForm,
     handlePartTypeFormFieldChange,
     handleTogglePartTypeCategory,
+    handleAddPartTypeCustomField,
+    handleReusePartTypeCustomField,
+    handleRemovePartTypeCustomField,
     handleSubmitPartTypeForm,
 
     partTypeToDelete,
@@ -569,6 +735,13 @@ export function usePartStock({ isActive, user }) {
     handleCloseDeletePartType,
     handleConfirmDeletePartType,
     handleDeactivatePartTypeInstead,
+
+    partTypeToDeactivate,
+    isDeactivatingPartType,
+    deactivatePartTypeError,
+    handleOpenDeactivatePartType,
+    handleCloseDeactivatePartType,
+    handleConfirmDeactivatePartType,
 
     isAddDialogOpen,
     addFormValues,

@@ -8,6 +8,7 @@ import {
   RAM_CAPACITY_OPTIONS,
   RAM_TYPE_OPTIONS,
 } from "../dashboard.config";
+import { getDynamicPartFields } from "../dashboard.utils";
 import { FormField, formInputClass } from "./SharedControls";
 
 // Shared between the Part Stock page's "Add to stock" action and Device
@@ -20,15 +21,18 @@ export function AddStockDialog({ isOpen, values, partTypes, lockedPartTypeId, on
   const isPartLocked = Boolean(lockedPartTypeId);
   const normalizedName = selectedPartType?.part_name?.trim().toLowerCase();
   const isRam = normalizedName === "ram";
-  const isCpu = normalizedName === "cpu";
   const isHardDisk = normalizedName === "hard disk";
   const isBag = normalizedName === "bag";
   const isMouse = normalizedName === "mouse";
   const isKeyboard = normalizedName === "keyboard";
+  const isCpu = normalizedName === "cpu";
   const needsModelName = isCpu || isBag || isMouse || isKeyboard;
   const needsModelNumber = isBag || isMouse || isKeyboard;
   const needsValue = Boolean(selectedPartType?.tracks_value);
   const capacityOptions = isRam ? RAM_CAPACITY_OPTIONS : isHardDisk ? HD_CAPACITY_OPTIONS : null;
+  // Fields an admin attached to this part type via "+ Add field" — anything
+  // beyond RAM/Model/Disk, which already have dedicated inputs above.
+  const dynamicFields = getDynamicPartFields(selectedPartType);
 
   const canSubmit = Boolean(
     values.part_type_id &&
@@ -200,6 +204,34 @@ export function AddStockDialog({ isOpen, values, partTypes, lockedPartTypeId, on
                   />
                 )}
               </FormField>
+            )}
+
+            {dynamicFields.map((field) =>
+              field.field_type === "boolean" ? (
+                <label
+                  key={field.field_key}
+                  className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700"
+                >
+                  <input
+                    type="checkbox"
+                    checked={Boolean(values[field.field_key])}
+                    onChange={(e) => onChange(field.field_key, e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                  />
+                  {field.field_label}
+                </label>
+              ) : (
+                <FormField key={field.field_key} label={field.field_label} htmlFor={`add-stock-${field.field_key}`}>
+                  <input
+                    id={`add-stock-${field.field_key}`}
+                    type={field.field_type === "number" ? "number" : field.field_type === "date" ? "date" : "text"}
+                    autoComplete="off"
+                    value={values[field.field_key] || ""}
+                    onChange={(e) => onChange(field.field_key, e.target.value)}
+                    className={formInputClass}
+                  />
+                </FormField>
+              )
             )}
 
             <FormField label="Quantity" htmlFor="add-stock-quantity">

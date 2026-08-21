@@ -129,7 +129,7 @@ const FALLBACK_CUSTOM_FIELD_TYPES = [
   { value: "boolean", label: "Yes/No" },
 ];
 
-function AddCustomFieldControl({ onAdd, disabled, types }) {
+export function AddCustomFieldControl({ onAdd, disabled, types }) {
   const typeOptions = types && types.length > 0 ? types : FALLBACK_CUSTOM_FIELD_TYPES;
   const [isOpen, setIsOpen] = useState(false);
   const [label, setLabel] = useState("");

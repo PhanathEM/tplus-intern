@@ -248,12 +248,14 @@ function ReplacementHistoryRow({ replacement }) {
           <span className="font-semibold text-slate-900">{replacement.owner_name || "—"}</span>
         </div>
       </td>
+      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{replacement.staff_code || "—"}</td>
       <td className="whitespace-nowrap px-4 py-3">
         <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs text-slate-700">
           <Monitor size={12} className="shrink-0 text-slate-400" />
           {deviceLabel}
         </span>
       </td>
+      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{replacement.asset_code || "—"}</td>
       <td className="whitespace-nowrap px-4 py-3 text-slate-600">{replacement.category_name || "—"}</td>
       <td className="whitespace-nowrap px-4 py-3">
         <div className="inline-flex items-center gap-2 text-[13px]">
@@ -328,7 +330,9 @@ export function ReplacementHistoryView({
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Employee</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Staff Code</th>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Computer</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Asset Code</th>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Category</th>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Replacement</th>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Date</th>
@@ -385,6 +389,12 @@ export function ReplaceDeviceDialog({
   if (!device) return null;
 
   const selectedPartType = partTypes.find((item) => String(item.part_type_id) === String(selectedPartTypeId));
+  // A device has exactly one bag, mouse, or keyboard — there's nothing to
+  // "add" alongside it, only ever a swap.
+  const SINGLE_UNIT_PARTS = ["bag", "mouse", "keyboard"];
+  const availablePartActions = PART_ACTION_OPTIONS.filter(
+    (option) => !(option.value === "add" && SINGLE_UNIT_PARTS.includes(selectedPartType?.part_name?.trim().toLowerCase()))
+  );
   // "add" always needs a value; "replace" only when the part tracks one.
   // Both install a physical unit, so both need a stock pick; only "replace"
   // displaces an old part, so only it asks what happens to it.
@@ -460,27 +470,29 @@ export function ReplaceDeviceDialog({
               </div>
             ) : (
               <>
-                <div>
-                  <p className="mb-1.5 text-xs font-semibold text-slate-600">Action</p>
-                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1">
-                    {PART_ACTION_OPTIONS.map((option) => {
-                      const isSelected = partAction === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => onSelectPartAction(option.value)}
-                          className={`rounded-full px-4 py-1.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected
-                            ? "bg-white text-slate-900 shadow-sm"
-                            : "text-slate-500 hover:text-slate-700"
-                            }`}
-                        >
-                          {option.label}
-                        </button>
-                      );
-                    })}
+                {availablePartActions.length > 1 && (
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold text-slate-600">Action</p>
+                    <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1">
+                      {availablePartActions.map((option) => {
+                        const isSelected = partAction === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => onSelectPartAction(option.value)}
+                            className={`rounded-full px-4 py-1.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected
+                              ? "bg-white text-slate-900 shadow-sm"
+                              : "text-slate-500 hover:text-slate-700"
+                              }`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   {partAction === "replace" && (

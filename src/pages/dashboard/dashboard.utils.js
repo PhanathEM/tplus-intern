@@ -1,5 +1,38 @@
 import { FIELD_LABEL_OVERRIDES } from "./dashboard.config";
 
+// RAM/CPU/Hard Disk/Bag/Mouse/Keyboard each already render a dedicated,
+// hardcoded input for these keys — so a custom field an admin attaches with
+// a matching key is only redundant (and filtered out below) for those exact
+// parts. Any other part (e.g. a new "Webcam") gets no free pass — attaching
+// a "Model Name" custom field is the only way it gets that input at all.
+function getActiveLegacyFieldKeys(partType) {
+  const normalizedName = partType?.part_name?.trim().toLowerCase();
+  const isRam = normalizedName === "ram";
+  const isCpu = normalizedName === "cpu";
+  const isHardDisk = normalizedName === "hard disk";
+  const isBag = normalizedName === "bag";
+  const isMouse = normalizedName === "mouse";
+  const isKeyboard = normalizedName === "keyboard";
+
+  return [
+    ...(isCpu || isBag || isMouse || isKeyboard ? ["model_name"] : []),
+    ...(isBag || isMouse || isKeyboard ? ["model_number"] : []),
+    ...(isRam ? ["ram_type"] : []),
+    ...(isHardDisk ? ["disk_type", "disk_interface"] : []),
+    ...(partType?.tracks_value ? ["part_value"] : []),
+  ];
+}
+
+// Custom fields an admin has attached to this part type (via the Part Type
+// form's "+ Add field") beyond whichever legacy fixed fields already render
+// for it — rendered as dynamic inputs in the Add/Edit Stock dialogs and sent
+// as extra top-level keys in the POST/PUT /api/part-stock body, per
+// backend's contract.
+export function getDynamicPartFields(partType) {
+  const activeLegacyKeys = getActiveLegacyFieldKeys(partType);
+  return (partType?.custom_fields || []).filter((field) => !activeLegacyKeys.includes(field.field_key));
+}
+
 // Shared by the Part Stock page's Add/Edit dialogs and Device Replacement's
 // "add to stock" shortcut, so all three validate and shape the payload for
 // POST/PUT /api/part-stock identically.
@@ -13,6 +46,7 @@ export function buildPartStockPayload(partType, formValues) {
   const isKeyboard = normalizedPartName === "keyboard";
   const needsModelName = isCpu || isBag || isMouse || isKeyboard;
   const needsModelNumber = isBag || isMouse || isKeyboard;
+  const dynamicFields = getDynamicPartFields(partType);
 
   if (isRam && !formValues.ram_type?.trim()) {
     return { error: "Please select RAM Type." };
@@ -39,6 +73,15 @@ export function buildPartStockPayload(partType, formValues) {
     status: formValues.status,
     remark: (formValues.remark || "").trim(),
   };
+
+  dynamicFields.forEach((field) => {
+    if (field.field_type === "boolean") {
+      payload[field.field_key] = Boolean(formValues[field.field_key]);
+    } else {
+      const raw = (formValues[field.field_key] ?? "").toString().trim();
+      payload[field.field_key] = raw || null;
+    }
+  });
 
   return { payload };
 }

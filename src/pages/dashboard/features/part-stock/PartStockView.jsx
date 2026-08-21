@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
+  FiArchive as Archive,
   FiEdit2 as Edit2,
   FiPackage as Package,
   FiPlusCircle as PlusCircle,
@@ -17,6 +18,7 @@ import {
   RAM_CAPACITY_OPTIONS,
   RAM_TYPE_OPTIONS,
 } from "../../dashboard.config";
+import { getDynamicPartFields } from "../../dashboard.utils";
 
 import { RecordsTableView } from "../../components/RecordsTableView";
 import { CategoryTabs } from "../../components/CategoryTabs";
@@ -25,11 +27,11 @@ import {
   ConfirmDialog,
   FormField,
   formInputClass,
-  RadioSelect,
   RowActionsMenu,
 } from "../../components/SharedControls";
 
 import { AddStockDialog } from "../../components/AddStockDialog";
+import { AddCustomFieldControl } from "../equipment/EquipmentModals";
 
 const HIDDEN_STOCK_FIELDS = [
   "location",
@@ -56,16 +58,112 @@ function buildStockDetails(item) {
   return parts.length ? parts.join(" · ") : null;
 }
 
+function PartTypeCustomFieldsSection({
+  attachedFields,
+  reusableFields,
+  customFieldTypes,
+  isLoadingFields,
+  fieldsError,
+  onAddField,
+  onReuseField,
+  onRemoveField,
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      {fieldsError && <p className="text-[12px] font-medium text-rose-600">{fieldsError}</p>}
+      {isLoadingFields ? (
+        <p className="text-[13px] text-slate-500">Loading fields...</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {attachedFields.map((field) => (
+            <CustomFieldCheckboxItem key={field.key} field={field} onRemove={onRemoveField} />
+          ))}
+          {reusableFields.map((field) => (
+            <ReusableFieldCheckboxItem key={field.key} field={field} onReuse={onReuseField} />
+          ))}
+          <AddCustomFieldControl onAdd={onAddField} types={customFieldTypes} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CustomFieldCheckboxItem({ field, onRemove }) {
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [error, setError] = useState(null);
+
+  function handleChange() {
+    setIsRemoving(true);
+    setError(null);
+    onRemove(field)
+      .catch((err) => setError(err.message || "Could not remove field."))
+      .finally(() => setIsRemoving(false));
+  }
+
+  return (
+    <label
+      title="Uncheck to remove this field from the part"
+      className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] font-medium text-slate-700 transition hover:border-slate-300"
+    >
+      <input
+        type="checkbox"
+        checked
+        disabled={isRemoving}
+        onChange={handleChange}
+        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
+      />
+      {field.label}
+      {error && <span className="text-[11px] font-normal text-rose-600">{error}</span>}
+    </label>
+  );
+}
+
+function ReusableFieldCheckboxItem({ field, onReuse }) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  function handleChange() {
+    setIsSaving(true);
+    setError(null);
+    onReuse(field)
+      .catch((err) => setError(err.message || "Could not add field."))
+      .finally(() => setIsSaving(false));
+  }
+
+  return (
+    <label
+      title="Existing field from another part — check to reuse it here"
+      className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[13px] font-medium text-slate-500 transition hover:border-slate-400 hover:text-slate-700"
+    >
+      <input
+        type="checkbox"
+        checked={false}
+        disabled={isSaving}
+        onChange={handleChange}
+        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
+      />
+      {field.label}
+      {error && <span className="text-[11px] font-normal text-rose-600">{error}</span>}
+    </label>
+  );
+}
+
 function PartTypeFormModal({
   isOpen,
   mode,
   values,
-  columns,
-  columnsNote,
   categories,
   isLoadingCategories,
+  attachedFields,
+  reusableFields,
+  customFieldTypes,
+  isLoadingFields,
+  fieldsError,
   onChange,
   onToggleCategory,
+  onAddField,
+  onReuseField,
+  onRemoveField,
   onSubmit,
   onClose,
   isSubmitting,
@@ -138,21 +236,6 @@ function PartTypeFormModal({
                 />
               </FormField>
 
-              <FormField label="Equipment Column" htmlFor="part-type-equipment-column">
-                <RadioSelect
-                  id="part-type-equipment-column"
-                  options={[
-                    { value: "", label: "None (history only)" },
-                    ...columns.map((column) => ({ value: column, label: column })),
-                  ]}
-                  value={values.equipment_column}
-                  onSelect={(value) => onChange("equipment_column", value)}
-                  placeholder="Select column..."
-                  disabled={isSubmitting}
-                />
-                {columnsNote && <p className="mt-1.5 text-xs text-slate-400">{columnsNote}</p>}
-              </FormField>
-
               <div className="flex flex-wrap gap-4">
                 <label className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700">
                   <input
@@ -175,6 +258,19 @@ function PartTypeFormModal({
                   Countable in stock
                 </label>
               </div>
+
+              <FormField label="Custom fields">
+                <PartTypeCustomFieldsSection
+                  attachedFields={attachedFields}
+                  reusableFields={reusableFields}
+                  customFieldTypes={customFieldTypes}
+                  isLoadingFields={isLoadingFields}
+                  fieldsError={fieldsError}
+                  onAddField={onAddField}
+                  onReuseField={onReuseField}
+                  onRemoveField={onRemoveField}
+                />
+              </FormField>
 
               <FormField label="Applies to categories">
                 {isLoadingCategories ? (
@@ -241,6 +337,7 @@ function EditStockDialog({ target, values, partTypes, onChange, onSubmit, onClos
   const normalizedName = partType?.part_name?.trim().toLowerCase();
   const capacityOptions =
     normalizedName === "ram" ? RAM_CAPACITY_OPTIONS : normalizedName === "hard disk" ? HD_CAPACITY_OPTIONS : null;
+  const dynamicFields = getDynamicPartFields(partType);
   const canSubmit = Boolean(
     values.quantity &&
     (!needsValue || values.part_value?.trim()) &&
@@ -395,6 +492,34 @@ function EditStockDialog({ target, values, partTypes, onChange, onSubmit, onClos
               </FormField>
             )}
 
+            {dynamicFields.map((field) =>
+              field.field_type === "boolean" ? (
+                <label
+                  key={field.field_key}
+                  className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700"
+                >
+                  <input
+                    type="checkbox"
+                    checked={Boolean(values[field.field_key])}
+                    onChange={(e) => onChange(field.field_key, e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                  />
+                  {field.field_label}
+                </label>
+              ) : (
+                <FormField key={field.field_key} label={field.field_label} htmlFor={`edit-stock-${field.field_key}`}>
+                  <input
+                    id={`edit-stock-${field.field_key}`}
+                    type={field.field_type === "number" ? "number" : field.field_type === "date" ? "date" : "text"}
+                    autoComplete="off"
+                    value={values[field.field_key] || ""}
+                    onChange={(e) => onChange(field.field_key, e.target.value)}
+                    className={formInputClass}
+                  />
+                </FormField>
+              )
+            )}
+
             <FormField label="Quantity" htmlFor="edit-stock-quantity">
               <input
                 id="edit-stock-quantity"
@@ -451,8 +576,6 @@ export function PartStockView({
   selectedPartTypeId,
   onSelectPart,
 
-  partTypeColumns,
-  partTypeColumnsNote,
   allCategories,
   isPartTypeFormOpen,
   partTypeFormMode,
@@ -460,11 +583,19 @@ export function PartStockView({
   isSavingPartType,
   partTypeFormError,
   isLoadingPartTypeCategories,
+  partTypeAttachedFields,
+  partTypeReusableFields,
+  partCustomFieldTypes,
+  isLoadingPartTypeFields,
+  partTypeFieldsError,
   onOpenAddPartType,
   onOpenEditPartType,
   onClosePartTypeForm,
   onPartTypeFormFieldChange,
   onTogglePartTypeCategory,
+  onAddPartTypeCustomField,
+  onReusePartTypeCustomField,
+  onRemovePartTypeCustomField,
   onSubmitPartTypeForm,
 
   partTypeToDelete,
@@ -475,6 +606,13 @@ export function PartStockView({
   onCloseDeletePartType,
   onConfirmDeletePartType,
   onDeactivatePartTypeInstead,
+
+  partTypeToDeactivate,
+  isDeactivatingPartType,
+  deactivatePartTypeError,
+  onOpenDeactivatePartType,
+  onCloseDeactivatePartType,
+  onConfirmDeactivatePartType,
 
   isAddDialogOpen,
   addFormValues,
@@ -514,8 +652,30 @@ export function PartStockView({
       ?.trim()
       .toLowerCase();
 
+  const baseColumns = selectedPartType
+    ? PART_STOCK_COLUMNS[normalizedPartName] || [
+        { key: "part_name", label: "Part Name" },
+        ...(selectedPartType.tracks_value ? [{ key: "part_value", label: "Value" }] : []),
+        { key: "quantity", label: "Quantity" },
+        { key: "status", label: "Status" },
+        { key: "remark", label: "Remark" },
+        { key: "updated_at", label: "Last Updated" },
+      ]
+    : PART_STOCK_COLUMNS.default;
+
+  // Custom fields attached to this part (via "+ Add field") get their own
+  // columns too, inserted right before Quantity.
+  const knownColumnKeys = new Set(baseColumns.map((column) => column.key));
+  const extraColumns = getDynamicPartFields(selectedPartType)
+    .filter((field) => !knownColumnKeys.has(field.field_key))
+    .map((field) => ({ key: field.field_key, label: field.field_label }));
+  const quantityIndex = baseColumns.findIndex((column) => column.key === "quantity");
   const currentColumns =
-    PART_STOCK_COLUMNS[normalizedPartName] || PART_STOCK_COLUMNS.default;
+    extraColumns.length === 0
+      ? baseColumns
+      : quantityIndex === -1
+        ? [...baseColumns, ...extraColumns]
+        : [...baseColumns.slice(0, quantityIndex), ...extraColumns, ...baseColumns.slice(quantityIndex)];
 
   const filteredStock = stock
     .filter(
@@ -554,6 +714,11 @@ export function PartStockView({
                   ...(selectedPartType
                     ? [
                         { icon: Edit2, label: "Edit Part", onClick: () => onOpenEditPartType(selectedPartType) },
+                        {
+                          icon: Archive,
+                          label: "Deactivate Part",
+                          onClick: () => onOpenDeactivatePartType(selectedPartType),
+                        },
                         {
                           icon: Trash2,
                           label: "Delete Part",
@@ -685,12 +850,18 @@ export function PartStockView({
         isOpen={isPartTypeFormOpen}
         mode={partTypeFormMode}
         values={partTypeFormValues}
-        columns={partTypeColumns}
-        columnsNote={partTypeColumnsNote}
         categories={allCategories}
         isLoadingCategories={isLoadingPartTypeCategories}
+        attachedFields={partTypeAttachedFields}
+        reusableFields={partTypeReusableFields}
+        customFieldTypes={partCustomFieldTypes}
+        isLoadingFields={isLoadingPartTypeFields}
+        fieldsError={partTypeFieldsError}
         onChange={onPartTypeFormFieldChange}
         onToggleCategory={onTogglePartTypeCategory}
+        onAddField={onAddPartTypeCustomField}
+        onReuseField={onReusePartTypeCustomField}
+        onRemoveField={onRemovePartTypeCustomField}
         onSubmit={onSubmitPartTypeForm}
         onClose={onClosePartTypeForm}
         isSubmitting={isSavingPartType}
@@ -715,6 +886,24 @@ export function PartStockView({
         blocked={deletePartTypeBlocked}
         blockedActionLabel="Deactivate instead"
         onBlockedAction={onDeactivatePartTypeInstead}
+      />
+
+      {/* Deactivate part type confirmation — separate from Delete so it's
+          never ambiguous which action is happening. */}
+      <ConfirmDialog
+        isOpen={Boolean(partTypeToDeactivate)}
+        title="Deactivate this part?"
+        message={
+          partTypeToDeactivate
+            ? `Hide "${partTypeToDeactivate.part_name}" from the part catalog. Its stock and replacement history are kept — unlike Delete, this isn't permanent.`
+            : ""
+        }
+        confirmLabel="Deactivate"
+        confirmingLabel="Deactivating..."
+        onConfirm={onConfirmDeactivatePartType}
+        onCancel={onCloseDeactivatePartType}
+        isConfirming={isDeactivatingPartType}
+        error={deactivatePartTypeError}
       />
     </>
   );

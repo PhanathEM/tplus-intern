@@ -507,42 +507,74 @@ export function EmployeeDetailModal({
             />
           ) : (
             <div className="space-y-5">
-              {devices.map((device, idx) => (
-                <div key={device.equipment_id ?? idx} className="rounded-xl border border-slate-100">
-                  <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/60 px-4 py-2.5">
-                    <p className="text-[13px] font-semibold text-slate-800">
-                      Device {idx + 1}
-                    </p>
-                    {canManage && onUnassign && device.equipment_id && (
-                      <button
-                        type="button"
-                        onClick={() => onUnassign({ equipment_id: device.equipment_id, category: device.category, ...device.item })}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                      >
-                        Unassign
-                      </button>
-                    )}
+              {devices.map((device, idx) => {
+                const columns = device.columns || [];
+                const softwareColumns = columns.filter(
+                  ({ field, header }) => /license/i.test(field) || /license/i.test(header)
+                );
+                const hardwareColumns = columns.filter((column) => !softwareColumns.includes(column));
+                const hasSoftware = softwareColumns.length > 0 || device.licenses?.length > 0;
+
+                return (
+                  <div key={device.equipment_id ?? idx} className="rounded-xl border border-slate-100">
+                    <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/60 px-4 py-2.5">
+                      <p className="text-[13px] font-semibold text-slate-800">
+                        Device {idx + 1}
+                      </p>
+                      {canManage && onUnassign && device.equipment_id && (
+                        <button
+                          type="button"
+                          onClick={() => onUnassign({ equipment_id: device.equipment_id, category: device.category, ...device.item })}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                        >
+                          Unassign
+                        </button>
+                      )}
+                    </div>
+                    <div
+                      className={`grid grid-cols-1 gap-x-6 gap-y-4 p-4 ${hasSoftware ? "sm:grid-cols-2 sm:divide-x sm:divide-slate-100" : ""
+                        }`}
+                    >
+                      <div className={hasSoftware ? "sm:pr-6" : ""}>
+                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Hardware</p>
+                        <dl className="grid grid-cols-[max-content_1fr] items-baseline gap-x-4 gap-y-2 text-[13px] text-slate-700">
+                          {hardwareColumns.map(({ field, header }) => (
+                            <Fragment key={field}>
+                              <dt className="font-semibold text-slate-800">{header}</dt>
+                              <dd className="min-w-0 truncate" title={formatFieldValue(device.item?.[field])}>
+                                : {formatFieldValue(device.item?.[field])}
+                              </dd>
+                            </Fragment>
+                          ))}
+                        </dl>
+                      </div>
+                      {hasSoftware && (
+                        <div className="sm:pl-6">
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Software</p>
+                          <dl className="grid grid-cols-[max-content_1fr] items-baseline gap-x-4 gap-y-2 text-[13px] text-slate-700">
+                            {softwareColumns.map(({ field, header }) => (
+                              <Fragment key={field}>
+                                <dt className="font-semibold text-slate-800">{header}</dt>
+                                <dd className="min-w-0 truncate" title={formatFieldValue(device.item?.[field])}>
+                                  : {formatFieldValue(device.item?.[field])}
+                                </dd>
+                              </Fragment>
+                            ))}
+                            {device.licenses?.length > 0 && (
+                              <Fragment>
+                                <dt className="font-semibold text-slate-800">Software Licenses</dt>
+                                <dd className="min-w-0 truncate">
+                                  : {device.licenses.map((license) => license.product_name).filter(Boolean).join(", ")}
+                                </dd>
+                              </Fragment>
+                            )}
+                          </dl>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <dl className="grid grid-cols-1 gap-x-4 gap-y-2 p-4 text-[13px] text-slate-700 sm:grid-cols-[max-content_1fr_max-content_1fr] sm:items-baseline">
-                    {(device.columns || []).map(({ field, header }) => (
-                      <Fragment key={field}>
-                        <dt className="font-semibold text-slate-800">{header}</dt>
-                        <dd className="min-w-0 truncate" title={formatFieldValue(device.item?.[field])}>
-                          : {formatFieldValue(device.item?.[field])}
-                        </dd>
-                      </Fragment>
-                    ))}
-                    {device.licenses?.length > 0 && (
-                      <Fragment>
-                        <dt className="font-semibold text-slate-800">Software Licenses</dt>
-                        <dd className="min-w-0 truncate">
-                          : {device.licenses.map((license) => license.product_name).filter(Boolean).join(", ")}
-                        </dd>
-                      </Fragment>
-                    )}
-                  </dl>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

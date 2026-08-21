@@ -377,8 +377,8 @@ function Dashboard({ user, onLogout }) {
                     <h1 className="truncate text-[17px] font-semibold text-slate-950">
                       {activeViewParentLabel && (
                         <>
-                          <span className="text-slate-400">{activeViewParentLabel}</span>
-                          <span className="text-slate-300">/</span>
+                          <span className="text-[20px]">{activeViewParentLabel}</span>
+                          <span className="mx-1.5 text-[22px]">&rsaquo;</span>
                         </>
                       )}
                       {activeView}
@@ -650,8 +650,6 @@ function Dashboard({ user, onLogout }) {
               partTypes={partStock.partTypes}
               selectedPartTypeId={partStock.selectedPartTypeId}
               onSelectPart={partStock.handleSelectPart}
-              partTypeColumns={partStock.partTypeColumns}
-              partTypeColumnsNote={partStock.partTypeColumnsNote}
               allCategories={partStock.allCategories}
               isPartTypeFormOpen={partStock.isPartTypeFormOpen}
               partTypeFormMode={partStock.partTypeFormMode}
@@ -659,11 +657,19 @@ function Dashboard({ user, onLogout }) {
               isSavingPartType={partStock.isSavingPartType}
               partTypeFormError={partStock.partTypeFormError}
               isLoadingPartTypeCategories={partStock.isLoadingPartTypeCategories}
+              partTypeAttachedFields={partStock.partTypeAttachedFields}
+              partTypeReusableFields={partStock.partTypeReusableFields}
+              partCustomFieldTypes={partStock.partCustomFieldTypes}
+              isLoadingPartTypeFields={partStock.isLoadingPartTypeFields}
+              partTypeFieldsError={partStock.partTypeFieldsError}
               onOpenAddPartType={partStock.handleOpenAddPartType}
               onOpenEditPartType={partStock.handleOpenEditPartType}
               onClosePartTypeForm={partStock.handleClosePartTypeForm}
               onPartTypeFormFieldChange={partStock.handlePartTypeFormFieldChange}
               onTogglePartTypeCategory={partStock.handleTogglePartTypeCategory}
+              onAddPartTypeCustomField={partStock.handleAddPartTypeCustomField}
+              onReusePartTypeCustomField={partStock.handleReusePartTypeCustomField}
+              onRemovePartTypeCustomField={partStock.handleRemovePartTypeCustomField}
               onSubmitPartTypeForm={partStock.handleSubmitPartTypeForm}
               partTypeToDelete={partStock.partTypeToDelete}
               isDeletingPartType={partStock.isDeletingPartType}
@@ -673,6 +679,12 @@ function Dashboard({ user, onLogout }) {
               onCloseDeletePartType={partStock.handleCloseDeletePartType}
               onConfirmDeletePartType={partStock.handleConfirmDeletePartType}
               onDeactivatePartTypeInstead={partStock.handleDeactivatePartTypeInstead}
+              partTypeToDeactivate={partStock.partTypeToDeactivate}
+              isDeactivatingPartType={partStock.isDeactivatingPartType}
+              deactivatePartTypeError={partStock.deactivatePartTypeError}
+              onOpenDeactivatePartType={partStock.handleOpenDeactivatePartType}
+              onCloseDeactivatePartType={partStock.handleCloseDeactivatePartType}
+              onConfirmDeactivatePartType={partStock.handleConfirmDeactivatePartType}
               isAddDialogOpen={partStock.isAddDialogOpen}
               addFormValues={partStock.addFormValues}
               isSubmittingAdd={partStock.isSubmittingAdd}
