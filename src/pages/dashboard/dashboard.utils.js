@@ -1,54 +1,53 @@
 import { FIELD_LABEL_OVERRIDES } from "./dashboard.config";
 
-// RAM/CPU/Hard Disk/Bag/Mouse/Keyboard each already render a dedicated,
-// hardcoded input for these keys — so a custom field an admin attaches with
-// a matching key is only redundant (and filtered out below) for those exact
-// parts. Any other part (e.g. a new "Webcam") gets no free pass — attaching
-// a "Model Name" custom field is the only way it gets that input at all.
-function getActiveLegacyFieldKeys(partType) {
-  const normalizedName = partType?.part_name?.trim().toLowerCase();
-  const isRam = normalizedName === "ram";
-  const isCpu = normalizedName === "cpu";
-  const isHardDisk = normalizedName === "hard disk";
-  const isBag = normalizedName === "bag";
-  const isMouse = normalizedName === "mouse";
-  const isKeyboard = normalizedName === "keyboard";
+// Fields with a dedicated, purpose-built input (a dropdown with fixed
+// choices, or a capacity picker for RAM/Hard Disk's Value) — everything
+// else a part type's stock_columns lists renders as a plain generic input
+// instead, typed off the custom-fields catalog.
+const STOCK_COLUMN_WIDGETS = ["model_name", "model_number", "ram_type", "disk_type", "disk_interface", "part_value"];
 
-  return [
-    ...(isCpu || isBag || isMouse || isKeyboard ? ["model_name"] : []),
-    ...(isBag || isMouse || isKeyboard ? ["model_number"] : []),
-    ...(isRam ? ["ram_type"] : []),
-    ...(isHardDisk ? ["disk_type", "disk_interface"] : []),
-    ...(partType?.tracks_value ? ["part_value"] : []),
-  ];
+// A part type's configured stock-columns list — which fields show on its
+// Add/Edit Stock forms, set via the Part Type form's "Stock columns" picker
+// (PUT /api/part-types/:id/stock-columns). Replaces the old hardcoded-by-
+// part-name behavior; RAM/CPU/Hard Disk/Bag/Mouse/Keyboard are just the
+// first parts configured this way, not special-cased in code anymore.
+export function getStockColumns(partType) {
+  return partType?.stock_columns || [];
 }
 
-// Custom fields an admin has attached to this part type (via the Part Type
-// form's "+ Add field") beyond whichever legacy fixed fields already render
-// for it — rendered as dynamic inputs in the Add/Edit Stock dialogs and sent
-// as extra top-level keys in the POST/PUT /api/part-stock body, per
-// backend's contract.
-export function getDynamicPartFields(partType) {
-  const activeLegacyKeys = getActiveLegacyFieldKeys(partType);
-  return (partType?.custom_fields || []).filter((field) => !activeLegacyKeys.includes(field.field_key));
+export function hasStockColumn(partType, fieldName) {
+  return getStockColumns(partType).some((column) => column.field_name === fieldName);
+}
+
+// Columns beyond the ones with a dedicated widget above — genuine custom
+// fields (Color, Location, Storage...) rendered as generic text/number/
+// date/boolean inputs. Needs the stock-columns catalog's custom_fields list
+// to know each one's type, since the part type's own stock_columns entries
+// only carry a field name/header.
+export function getExtraStockColumns(partType, customFieldCatalog) {
+  const catalogByKey = new Map((customFieldCatalog || []).map((field) => [field.field_key, field]));
+  return getStockColumns(partType)
+    .filter((column) => !STOCK_COLUMN_WIDGETS.includes(column.field_name))
+    .map((column) => ({
+      field_key: column.field_name,
+      field_label: column.header_text,
+      field_type: catalogByKey.get(column.field_name)?.field_type || "text",
+    }));
 }
 
 // Shared by the Part Stock page's Add/Edit dialogs and Device Replacement's
 // "add to stock" shortcut, so all three validate and shape the payload for
 // POST/PUT /api/part-stock identically.
-export function buildPartStockPayload(partType, formValues) {
-  const normalizedPartName = partType?.part_name?.trim().toLowerCase();
-  const isRam = normalizedPartName === "ram";
-  const isCpu = normalizedPartName === "cpu";
-  const isHardDisk = normalizedPartName === "hard disk";
-  const isBag = normalizedPartName === "bag";
-  const isMouse = normalizedPartName === "mouse";
-  const isKeyboard = normalizedPartName === "keyboard";
-  const needsModelName = isCpu || isBag || isMouse || isKeyboard;
-  const needsModelNumber = isBag || isMouse || isKeyboard;
-  const dynamicFields = getDynamicPartFields(partType);
+export function buildPartStockPayload(partType, formValues, customFieldCatalog) {
+  const needsRamType = hasStockColumn(partType, "ram_type");
+  const needsModelName = hasStockColumn(partType, "model_name");
+  const needsModelNumber = hasStockColumn(partType, "model_number");
+  const needsDiskType = hasStockColumn(partType, "disk_type");
+  const needsDiskInterface = hasStockColumn(partType, "disk_interface");
+  const needsValue = hasStockColumn(partType, "part_value");
+  const extraColumns = getExtraStockColumns(partType, customFieldCatalog);
 
-  if (isRam && !formValues.ram_type?.trim()) {
+  if (needsRamType && !formValues.ram_type?.trim()) {
     return { error: "Please select RAM Type." };
   }
   if (needsModelName && !formValues.model_name?.trim()) {
@@ -57,24 +56,37 @@ export function buildPartStockPayload(partType, formValues) {
   if (needsModelNumber && !formValues.model_number?.trim()) {
     return { error: "Please enter Model Number." };
   }
-  if (isHardDisk && (!formValues.disk_type?.trim() || !formValues.disk_interface?.trim())) {
-    return { error: "Please enter Disk Type and Disk Interface." };
+  if (needsDiskType && !formValues.disk_type?.trim()) {
+    return { error: "Please enter Disk Type." };
+  }
+  if (needsDiskInterface && !formValues.disk_interface?.trim()) {
+    return { error: "Please enter Disk Interface." };
+  }
+  if (needsValue && !formValues.part_value?.trim()) {
+    return { error: "Please enter Value." };
+  }
+
+  const missingExtra = extraColumns.filter(
+    (field) => field.field_type !== "boolean" && !String(formValues[field.field_key] ?? "").trim()
+  );
+  if (missingExtra.length > 0) {
+    return { error: `Please enter ${missingExtra.map((field) => field.field_label).join(", ")}.` };
   }
 
   const payload = {
     part_type_id: Number(formValues.part_type_id),
-    ram_type: isRam ? formValues.ram_type.trim() : null,
+    ram_type: needsRamType ? formValues.ram_type.trim() : null,
     model_name: needsModelName ? formValues.model_name.trim() : null,
     model_number: needsModelNumber ? formValues.model_number.trim() : null,
-    disk_type: isHardDisk ? formValues.disk_type.trim() : null,
-    disk_interface: isHardDisk ? formValues.disk_interface.trim() : null,
-    part_value: partType?.tracks_value ? formValues.part_value.trim() : "",
+    disk_type: needsDiskType ? formValues.disk_type.trim() : null,
+    disk_interface: needsDiskInterface ? formValues.disk_interface.trim() : null,
+    part_value: needsValue ? formValues.part_value.trim() : "",
     quantity: Number(formValues.quantity),
     status: formValues.status,
     remark: (formValues.remark || "").trim(),
   };
 
-  dynamicFields.forEach((field) => {
+  extraColumns.forEach((field) => {
     if (field.field_type === "boolean") {
       payload[field.field_key] = Boolean(formValues[field.field_key]);
     } else {

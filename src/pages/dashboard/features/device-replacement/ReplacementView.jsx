@@ -357,6 +357,7 @@ export function ReplaceDeviceDialog({
 
   // "Replace a part" tab
   partTypes = [],
+  stockColumnCustomFieldOptions = [],
   selectedPartTypeId,
   onSelectPartType,
   partAction,
@@ -595,6 +596,7 @@ export function ReplaceDeviceDialog({
         isOpen={isQuickAddDialogOpen}
         values={quickAddFormValues}
         partTypes={partTypes}
+        customFieldCatalog={stockColumnCustomFieldOptions}
         lockedPartTypeId={selectedPartTypeId}
         onChange={onQuickAddFormChange}
         onSubmit={onSubmitQuickAdd}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchAssignFormData } from "../../../../services/assignService";
 import { fetchEquipmentByCategory } from "../../../../services/equipmentService";
-import { fetchPartTypes } from "../../../../services/partTypeService";
+import { fetchPartTypes, fetchStockColumnOptions } from "../../../../services/partTypeService";
 import { fetchPartReplacements, submitPartReplacement } from "../../../../services/partReplacementService";
 import { addPartStock, fetchAvailablePartStock } from "../../../../services/partStockService";
 import { DEFAULT_PART_STOCK_STATUS } from "../../dashboard.config";
@@ -238,6 +238,28 @@ export function useReplacements({ isActive, user }) {
   // Part types depend on the selected device's category — fetched fresh each
   // time the dialog opens for a device (the backend filters by category_id).
   const [partTypes, setPartTypes] = useState([]);
+  // The stock-columns catalog's custom_fields list — needed to know a
+  // configured column's type (text/number/date/boolean) when it's not one
+  // of the built-ins with a dedicated widget. Fetched once.
+  const [stockColumnCustomFieldOptions, setStockColumnCustomFieldOptions] = useState([]);
+
+  useEffect(() => {
+    if (!isActive) return;
+
+    let ignore = false;
+
+    fetchStockColumnOptions()
+      .then((data) => {
+        if (!ignore) setStockColumnCustomFieldOptions(Array.isArray(data?.custom_fields) ? data.custom_fields : []);
+      })
+      .catch(() => {
+        if (!ignore) setStockColumnCustomFieldOptions([]);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isActive]);
 
   useEffect(() => {
     const categoryId = replaceDialogTarget?.category_id;
@@ -347,7 +369,11 @@ export function useReplacements({ isActive, user }) {
     if (!quickAddFormValues.part_type_id || !quickAddFormValues.quantity) return;
 
     const partType = partTypes.find((item) => String(item.part_type_id) === String(quickAddFormValues.part_type_id));
-    const { payload, error: validationError } = buildPartStockPayload(partType, quickAddFormValues);
+    const { payload, error: validationError } = buildPartStockPayload(
+      partType,
+      quickAddFormValues,
+      stockColumnCustomFieldOptions
+    );
     if (validationError) {
       setQuickAddError(validationError);
       return;
@@ -495,6 +521,7 @@ export function useReplacements({ isActive, user }) {
     selectedCategory,
     handleSelectCategory,
     partTypes,
+    stockColumnCustomFieldOptions,
 
     replaceableDevices: filteredReplaceableDevices,
     replaceableColumns,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   FiArchive as Archive,
   FiEdit2 as Edit2,
@@ -18,7 +18,7 @@ import {
   RAM_CAPACITY_OPTIONS,
   RAM_TYPE_OPTIONS,
 } from "../../dashboard.config";
-import { getDynamicPartFields } from "../../dashboard.utils";
+import { getExtraStockColumns, getStockColumns, hasStockColumn } from "../../dashboard.utils";
 
 import { RecordsTableView } from "../../components/RecordsTableView";
 import { CategoryTabs } from "../../components/CategoryTabs";
@@ -27,6 +27,7 @@ import {
   ConfirmDialog,
   FormField,
   formInputClass,
+  RadioSelect,
   RowActionsMenu,
 } from "../../components/SharedControls";
 
@@ -58,93 +59,61 @@ function buildStockDetails(item) {
   return parts.length ? parts.join(" · ") : null;
 }
 
-function PartTypeCustomFieldsSection({
-  attachedFields,
-  reusableFields,
+// Which fields show up when adding/editing stock for this part — built-in
+// part_stock fields (Model Name, RAM Type, Location...) plus reusable
+// custom fields, ticked in one combined list and saved as a whole via
+// PUT /api/part-types/:id/stock-columns on submit.
+function PartTypeStockColumnsSection({
+  builtInOptions,
+  customFieldOptions,
   customFieldTypes,
-  isLoadingFields,
-  fieldsError,
+  selectedColumns,
+  isLoading,
+  error,
+  onToggle,
   onAddField,
-  onReuseField,
-  onRemoveField,
 }) {
+  const isSelected = (field) => selectedColumns.some((column) => column.field === field);
+
   return (
     <div className="flex flex-col gap-2">
-      {fieldsError && <p className="text-[12px] font-medium text-rose-600">{fieldsError}</p>}
-      {isLoadingFields ? (
+      {error && <p className="text-[12px] font-medium text-rose-600">{error}</p>}
+      {isLoading ? (
         <p className="text-[13px] text-slate-500">Loading fields...</p>
       ) : (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {attachedFields.map((field) => (
-            <CustomFieldCheckboxItem key={field.key} field={field} onRemove={onRemoveField} />
+          {builtInOptions.map((option) => (
+            <label
+              key={option.field}
+              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 transition hover:border-slate-300"
+            >
+              <input
+                type="checkbox"
+                checked={isSelected(option.field)}
+                onChange={() => onToggle(option.field, option.suggested_header)}
+                className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
+              />
+              {option.suggested_header}
+            </label>
           ))}
-          {reusableFields.map((field) => (
-            <ReusableFieldCheckboxItem key={field.key} field={field} onReuse={onReuseField} />
+          {customFieldOptions.map((option) => (
+            <label
+              key={option.field_key}
+              className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[13px] font-medium text-slate-600 transition hover:border-slate-400"
+            >
+              <input
+                type="checkbox"
+                checked={isSelected(option.field_key)}
+                onChange={() => onToggle(option.field_key, option.field_label)}
+                className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
+              />
+              {option.field_label}
+            </label>
           ))}
           <AddCustomFieldControl onAdd={onAddField} types={customFieldTypes} />
         </div>
       )}
     </div>
-  );
-}
-
-function CustomFieldCheckboxItem({ field, onRemove }) {
-  const [isRemoving, setIsRemoving] = useState(false);
-  const [error, setError] = useState(null);
-
-  function handleChange() {
-    setIsRemoving(true);
-    setError(null);
-    onRemove(field)
-      .catch((err) => setError(err.message || "Could not remove field."))
-      .finally(() => setIsRemoving(false));
-  }
-
-  return (
-    <label
-      title="Uncheck to remove this field from the part"
-      className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] font-medium text-slate-700 transition hover:border-slate-300"
-    >
-      <input
-        type="checkbox"
-        checked
-        disabled={isRemoving}
-        onChange={handleChange}
-        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
-      />
-      {field.label}
-      {error && <span className="text-[11px] font-normal text-rose-600">{error}</span>}
-    </label>
-  );
-}
-
-function ReusableFieldCheckboxItem({ field, onReuse }) {
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState(null);
-
-  function handleChange() {
-    setIsSaving(true);
-    setError(null);
-    onReuse(field)
-      .catch((err) => setError(err.message || "Could not add field."))
-      .finally(() => setIsSaving(false));
-  }
-
-  return (
-    <label
-      title="Existing field from another part — check to reuse it here"
-      className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[13px] font-medium text-slate-500 transition hover:border-slate-400 hover:text-slate-700"
-    >
-      <input
-        type="checkbox"
-        checked={false}
-        disabled={isSaving}
-        onChange={handleChange}
-        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
-      />
-      {field.label}
-      {error && <span className="text-[11px] font-normal text-rose-600">{error}</span>}
-    </label>
   );
 }
 
@@ -154,16 +123,17 @@ function PartTypeFormModal({
   values,
   categories,
   isLoadingCategories,
-  attachedFields,
-  reusableFields,
+  stockColumnBuiltInOptions,
+  stockColumnCustomFieldOptions,
   customFieldTypes,
-  isLoadingFields,
-  fieldsError,
+  selectedStockColumns,
+  isLoadingStockColumns,
+  stockColumnsError,
+  equipmentColumnFieldOptions,
   onChange,
   onToggleCategory,
-  onAddField,
-  onReuseField,
-  onRemoveField,
+  onToggleStockColumn,
+  onAddCustomField,
   onSubmit,
   onClose,
   isSubmitting,
@@ -236,6 +206,28 @@ function PartTypeFormModal({
                 />
               </FormField>
 
+              <FormField label="Equipment Column" htmlFor="part-type-equipment-column">
+                <RadioSelect
+                  id="part-type-equipment-column"
+                  options={[
+                    { value: "", label: "Auto (recommended)" },
+                    ...equipmentColumnFieldOptions.map((field) => ({ value: field.field_key, label: field.field_label })),
+                    ...(values.equipment_column &&
+                    !equipmentColumnFieldOptions.some((field) => field.field_key === values.equipment_column)
+                      ? [{ value: values.equipment_column, label: values.equipment_column }]
+                      : []),
+                  ]}
+                  value={values.equipment_column}
+                  onSelect={(value) => onChange("equipment_column", value)}
+                  placeholder="Select column..."
+                  disabled={isSubmitting}
+                />
+                <p className="mt-1.5 text-xs text-slate-400">
+                  Leave as Auto to let a new field get created for this part automatically, or reuse an existing one
+                  (e.g. "Mouse Model").
+                </p>
+              </FormField>
+
               <div className="flex flex-wrap gap-4">
                 <label className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700">
                   <input
@@ -259,16 +251,16 @@ function PartTypeFormModal({
                 </label>
               </div>
 
-              <FormField label="Custom fields">
-                <PartTypeCustomFieldsSection
-                  attachedFields={attachedFields}
-                  reusableFields={reusableFields}
+              <FormField label="Stock columns">
+                <PartTypeStockColumnsSection
+                  builtInOptions={stockColumnBuiltInOptions}
+                  customFieldOptions={stockColumnCustomFieldOptions}
                   customFieldTypes={customFieldTypes}
-                  isLoadingFields={isLoadingFields}
-                  fieldsError={fieldsError}
-                  onAddField={onAddField}
-                  onReuseField={onReuseField}
-                  onRemoveField={onRemoveField}
+                  selectedColumns={selectedStockColumns}
+                  isLoading={isLoadingStockColumns}
+                  error={stockColumnsError}
+                  onToggle={onToggleStockColumn}
+                  onAddField={onAddCustomField}
                 />
               </FormField>
 
@@ -321,30 +313,35 @@ function PartTypeFormModal({
   );
 }
 
-function EditStockDialog({ target, values, partTypes, onChange, onSubmit, onClose, isSubmitting, error }) {
+function EditStockDialog({ target, values, partTypes, customFieldCatalog, onChange, onSubmit, onClose, isSubmitting, error }) {
   if (!target || !values) return null;
 
   const partType = partTypes.find((item) => String(item.part_type_id) === String(target.part_type_id));
-  const isRam = partType?.part_name?.trim().toLowerCase() === "ram";
-  const isCpu = partType?.part_name?.trim().toLowerCase() === "cpu";
-  const isHardDisk = partType?.part_name?.trim().toLowerCase() === "hard disk";
-  const isBag = partType?.part_name?.trim().toLowerCase() === "bag";
-  const isMouse = partType?.part_name?.trim().toLowerCase() === "mouse";
-  const isKeyboard = partType?.part_name?.trim().toLowerCase() === "keyboard";
-  const needsModelName = isCpu || isBag || isMouse || isKeyboard;
-  const needsModelNumber = isBag || isMouse || isKeyboard;
-  const needsValue = Boolean(partType?.tracks_value);
   const normalizedName = partType?.part_name?.trim().toLowerCase();
-  const capacityOptions =
-    normalizedName === "ram" ? RAM_CAPACITY_OPTIONS : normalizedName === "hard disk" ? HD_CAPACITY_OPTIONS : null;
-  const dynamicFields = getDynamicPartFields(partType);
+  const isRam = normalizedName === "ram";
+  const isHardDisk = normalizedName === "hard disk";
+  // Which fields this part type is configured to show — set via the Part
+  // Type form's "Stock columns" picker, not hardcoded by part name.
+  const needsModelName = hasStockColumn(partType, "model_name");
+  const needsModelNumber = hasStockColumn(partType, "model_number");
+  const needsDiskType = hasStockColumn(partType, "disk_type");
+  const needsDiskInterface = hasStockColumn(partType, "disk_interface");
+  const needsRamType = hasStockColumn(partType, "ram_type");
+  const needsValue = hasStockColumn(partType, "part_value");
+  const capacityOptions = isRam ? RAM_CAPACITY_OPTIONS : isHardDisk ? HD_CAPACITY_OPTIONS : null;
+  const extraColumns = getExtraStockColumns(partType, customFieldCatalog);
+  const missingRequiredExtra = extraColumns.some(
+    (field) => field.field_type !== "boolean" && !String(values[field.field_key] || "").trim()
+  );
   const canSubmit = Boolean(
     values.quantity &&
     (!needsValue || values.part_value?.trim()) &&
-    (!isRam || values.ram_type?.trim()) &&
+    (!needsRamType || values.ram_type?.trim()) &&
     (!needsModelName || values.model_name?.trim()) &&
     (!needsModelNumber || values.model_number?.trim()) &&
-    (!isHardDisk || (values.disk_type?.trim() && values.disk_interface?.trim()))
+    (!needsDiskType || values.disk_type?.trim()) &&
+    (!needsDiskInterface || values.disk_interface?.trim()) &&
+    !missingRequiredExtra
   );
 
   return (
@@ -408,43 +405,43 @@ function EditStockDialog({ target, values, partTypes, onChange, onSubmit, onClos
               </FormField>
             )}
 
-            {isHardDisk && (
-              <>
-                <FormField label="Disk Type" htmlFor="edit-stock-disk-type">
-                  <select
-                    id="edit-stock-disk-type"
-                    value={values.disk_type || ""}
-                    onChange={(e) => onChange("disk_type", e.target.value)}
-                    className={formInputClass}
-                  >
-                    <option value="">Select disk type...</option>
-                    {DISK_TYPE_OPTIONS.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-
-                <FormField label="Disk Interface" htmlFor="edit-stock-disk-interface">
-                  <select
-                    id="edit-stock-disk-interface"
-                    value={values.disk_interface || ""}
-                    onChange={(e) => onChange("disk_interface", e.target.value)}
-                    className={formInputClass}
-                  >
-                    <option value="">Select disk interface...</option>
-                    {DISK_INTERFACE_OPTIONS.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-              </>
+            {needsDiskType && (
+              <FormField label="Disk Type" htmlFor="edit-stock-disk-type">
+                <select
+                  id="edit-stock-disk-type"
+                  value={values.disk_type || ""}
+                  onChange={(e) => onChange("disk_type", e.target.value)}
+                  className={formInputClass}
+                >
+                  <option value="">Select disk type...</option>
+                  {DISK_TYPE_OPTIONS.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
             )}
 
-            {isRam && (
+            {needsDiskInterface && (
+              <FormField label="Disk Interface" htmlFor="edit-stock-disk-interface">
+                <select
+                  id="edit-stock-disk-interface"
+                  value={values.disk_interface || ""}
+                  onChange={(e) => onChange("disk_interface", e.target.value)}
+                  className={formInputClass}
+                >
+                  <option value="">Select disk interface...</option>
+                  {DISK_INTERFACE_OPTIONS.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            )}
+
+            {needsRamType && (
               <FormField label="RAM Type" htmlFor="edit-stock-ram-type">
                 <select
                   id="edit-stock-ram-type"
@@ -492,7 +489,7 @@ function EditStockDialog({ target, values, partTypes, onChange, onSubmit, onClos
               </FormField>
             )}
 
-            {dynamicFields.map((field) =>
+            {extraColumns.map((field) =>
               field.field_type === "boolean" ? (
                 <label
                   key={field.field_key}
@@ -577,31 +574,33 @@ export function PartStockView({
   onSelectPart,
 
   allCategories,
+  equipmentColumnFieldOptions,
   isPartTypeFormOpen,
   partTypeFormMode,
   partTypeFormValues,
   isSavingPartType,
   partTypeFormError,
   isLoadingPartTypeCategories,
-  partTypeAttachedFields,
-  partTypeReusableFields,
+  stockColumnBuiltInOptions,
+  stockColumnCustomFieldOptions,
   partCustomFieldTypes,
-  isLoadingPartTypeFields,
-  partTypeFieldsError,
+  selectedStockColumns,
+  isLoadingStockColumns,
+  stockColumnsError,
   onOpenAddPartType,
   onOpenEditPartType,
   onClosePartTypeForm,
   onPartTypeFormFieldChange,
   onTogglePartTypeCategory,
-  onAddPartTypeCustomField,
-  onReusePartTypeCustomField,
-  onRemovePartTypeCustomField,
+  onToggleStockColumn,
+  onAddCustomField,
   onSubmitPartTypeForm,
 
   partTypeToDelete,
   isDeletingPartType,
   deletePartTypeError,
   deletePartTypeBlocked,
+  linkedEquipmentField,
   onOpenDeletePartType,
   onCloseDeletePartType,
   onConfirmDeletePartType,
@@ -647,35 +646,20 @@ export function PartStockView({
       String(selectedPartTypeId)
   );
 
-  const normalizedPartName =
-    selectedPartType?.part_name
-      ?.trim()
-      .toLowerCase();
-
-  const baseColumns = selectedPartType
-    ? PART_STOCK_COLUMNS[normalizedPartName] || [
+  // The part's configured stock_columns (from the Part Type form's "Stock
+  // columns" picker) already carries a human header for every field, in
+  // display order — that's the single source of truth for this table too,
+  // no separate per-part-name lookup needed.
+  const currentColumns = selectedPartType
+    ? [
         { key: "part_name", label: "Part Name" },
-        ...(selectedPartType.tracks_value ? [{ key: "part_value", label: "Value" }] : []),
+        ...getStockColumns(selectedPartType).map((column) => ({ key: column.field_name, label: column.header_text })),
         { key: "quantity", label: "Quantity" },
         { key: "status", label: "Status" },
         { key: "remark", label: "Remark" },
         { key: "updated_at", label: "Last Updated" },
       ]
     : PART_STOCK_COLUMNS.default;
-
-  // Custom fields attached to this part (via "+ Add field") get their own
-  // columns too, inserted right before Quantity.
-  const knownColumnKeys = new Set(baseColumns.map((column) => column.key));
-  const extraColumns = getDynamicPartFields(selectedPartType)
-    .filter((field) => !knownColumnKeys.has(field.field_key))
-    .map((field) => ({ key: field.field_key, label: field.field_label }));
-  const quantityIndex = baseColumns.findIndex((column) => column.key === "quantity");
-  const currentColumns =
-    extraColumns.length === 0
-      ? baseColumns
-      : quantityIndex === -1
-        ? [...baseColumns, ...extraColumns]
-        : [...baseColumns.slice(0, quantityIndex), ...extraColumns, ...baseColumns.slice(quantityIndex)];
 
   const filteredStock = stock
     .filter(
@@ -787,6 +771,7 @@ export function PartStockView({
         isOpen={isAddDialogOpen}
         values={addFormValues}
         partTypes={partTypes}
+        customFieldCatalog={stockColumnCustomFieldOptions}
         lockedPartTypeId={
           selectedPartTypeId
         }
@@ -802,6 +787,7 @@ export function PartStockView({
         target={editStockTarget}
         values={editFormValues}
         partTypes={partTypes}
+        customFieldCatalog={stockColumnCustomFieldOptions}
         onChange={onEditFormChange}
         onSubmit={onSubmitEdit}
         onClose={onCloseEditDialog}
@@ -852,16 +838,17 @@ export function PartStockView({
         values={partTypeFormValues}
         categories={allCategories}
         isLoadingCategories={isLoadingPartTypeCategories}
-        attachedFields={partTypeAttachedFields}
-        reusableFields={partTypeReusableFields}
+        equipmentColumnFieldOptions={equipmentColumnFieldOptions}
+        stockColumnBuiltInOptions={stockColumnBuiltInOptions}
+        stockColumnCustomFieldOptions={stockColumnCustomFieldOptions}
         customFieldTypes={partCustomFieldTypes}
-        isLoadingFields={isLoadingPartTypeFields}
-        fieldsError={partTypeFieldsError}
+        selectedStockColumns={selectedStockColumns}
+        isLoadingStockColumns={isLoadingStockColumns}
+        stockColumnsError={stockColumnsError}
         onChange={onPartTypeFormFieldChange}
         onToggleCategory={onTogglePartTypeCategory}
-        onAddField={onAddPartTypeCustomField}
-        onReuseField={onReusePartTypeCustomField}
-        onRemoveField={onRemovePartTypeCustomField}
+        onToggleStockColumn={onToggleStockColumn}
+        onAddCustomField={onAddCustomField}
         onSubmit={onSubmitPartTypeForm}
         onClose={onClosePartTypeForm}
         isSubmitting={isSavingPartType}
@@ -874,7 +861,11 @@ export function PartStockView({
         title="Delete this part?"
         message={
           partTypeToDelete
-            ? `Remove "${partTypeToDelete.part_name}" from the part catalog. This can't be undone.`
+            ? `Remove "${partTypeToDelete.part_name}" from the part catalog. This can't be undone.${
+                linkedEquipmentField
+                  ? ` It'll also delete the linked equipment field "${linkedEquipmentField.label}" everywhere it's used.`
+                  : ""
+              }`
             : ""
         }
         confirmLabel="Delete"

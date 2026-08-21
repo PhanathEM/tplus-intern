@@ -8,13 +8,24 @@ import {
   RAM_CAPACITY_OPTIONS,
   RAM_TYPE_OPTIONS,
 } from "../dashboard.config";
-import { getDynamicPartFields } from "../dashboard.utils";
+import { getExtraStockColumns, hasStockColumn } from "../dashboard.utils";
 import { FormField, formInputClass } from "./SharedControls";
 
 // Shared between the Part Stock page's "Add to stock" action and Device
 // Replacement's "add to stock" shortcut (shown inline when fitting a part
 // that has nothing available on the shelf).
-export function AddStockDialog({ isOpen, values, partTypes, lockedPartTypeId, onChange, onSubmit, onClose, isSubmitting, error }) {
+export function AddStockDialog({
+  isOpen,
+  values,
+  partTypes,
+  customFieldCatalog,
+  lockedPartTypeId,
+  onChange,
+  onSubmit,
+  onClose,
+  isSubmitting,
+  error,
+}) {
   if (!isOpen) return null;
 
   const selectedPartType = partTypes.find((item) => String(item.part_type_id) === String(values.part_type_id));
@@ -22,26 +33,31 @@ export function AddStockDialog({ isOpen, values, partTypes, lockedPartTypeId, on
   const normalizedName = selectedPartType?.part_name?.trim().toLowerCase();
   const isRam = normalizedName === "ram";
   const isHardDisk = normalizedName === "hard disk";
-  const isBag = normalizedName === "bag";
-  const isMouse = normalizedName === "mouse";
-  const isKeyboard = normalizedName === "keyboard";
-  const isCpu = normalizedName === "cpu";
-  const needsModelName = isCpu || isBag || isMouse || isKeyboard;
-  const needsModelNumber = isBag || isMouse || isKeyboard;
-  const needsValue = Boolean(selectedPartType?.tracks_value);
+  // Which fields this part type is configured to show — set via the Part
+  // Type form's "Stock columns" picker, not hardcoded by part name.
+  const needsModelName = hasStockColumn(selectedPartType, "model_name");
+  const needsModelNumber = hasStockColumn(selectedPartType, "model_number");
+  const needsDiskType = hasStockColumn(selectedPartType, "disk_type");
+  const needsDiskInterface = hasStockColumn(selectedPartType, "disk_interface");
+  const needsRamType = hasStockColumn(selectedPartType, "ram_type");
+  const needsValue = hasStockColumn(selectedPartType, "part_value");
   const capacityOptions = isRam ? RAM_CAPACITY_OPTIONS : isHardDisk ? HD_CAPACITY_OPTIONS : null;
-  // Fields an admin attached to this part type via "+ Add field" — anything
-  // beyond RAM/Model/Disk, which already have dedicated inputs above.
-  const dynamicFields = getDynamicPartFields(selectedPartType);
+  // Custom fields beyond the ones with a dedicated widget above.
+  const extraColumns = getExtraStockColumns(selectedPartType, customFieldCatalog);
+  const missingRequiredExtra = extraColumns.some(
+    (field) => field.field_type !== "boolean" && !String(values[field.field_key] || "").trim()
+  );
 
   const canSubmit = Boolean(
     values.part_type_id &&
       values.quantity &&
       (!needsValue || values.part_value?.trim()) &&
-      (!isRam || values.ram_type?.trim()) &&
+      (!needsRamType || values.ram_type?.trim()) &&
       (!needsModelName || values.model_name?.trim()) &&
       (!needsModelNumber || values.model_number?.trim()) &&
-      (!isHardDisk || (values.disk_type?.trim() && values.disk_interface?.trim()))
+      (!needsDiskType || values.disk_type?.trim()) &&
+      (!needsDiskInterface || values.disk_interface?.trim()) &&
+      !missingRequiredExtra
   );
 
   return (
@@ -122,43 +138,43 @@ export function AddStockDialog({ isOpen, values, partTypes, lockedPartTypeId, on
               </FormField>
             )}
 
-            {isHardDisk && (
-              <>
-                <FormField label="Disk Type" htmlFor="add-stock-disk-type">
-                  <select
-                    id="add-stock-disk-type"
-                    value={values.disk_type || ""}
-                    onChange={(e) => onChange("disk_type", e.target.value)}
-                    className={formInputClass}
-                  >
-                    <option value="">Select disk type...</option>
-                    {DISK_TYPE_OPTIONS.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-
-                <FormField label="Disk Interface" htmlFor="add-stock-disk-interface">
-                  <select
-                    id="add-stock-disk-interface"
-                    value={values.disk_interface || ""}
-                    onChange={(e) => onChange("disk_interface", e.target.value)}
-                    className={formInputClass}
-                  >
-                    <option value="">Select disk interface...</option>
-                    {DISK_INTERFACE_OPTIONS.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
-              </>
+            {needsDiskType && (
+              <FormField label="Disk Type" htmlFor="add-stock-disk-type">
+                <select
+                  id="add-stock-disk-type"
+                  value={values.disk_type || ""}
+                  onChange={(e) => onChange("disk_type", e.target.value)}
+                  className={formInputClass}
+                >
+                  <option value="">Select disk type...</option>
+                  {DISK_TYPE_OPTIONS.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
             )}
 
-            {isRam && (
+            {needsDiskInterface && (
+              <FormField label="Disk Interface" htmlFor="add-stock-disk-interface">
+                <select
+                  id="add-stock-disk-interface"
+                  value={values.disk_interface || ""}
+                  onChange={(e) => onChange("disk_interface", e.target.value)}
+                  className={formInputClass}
+                >
+                  <option value="">Select disk interface...</option>
+                  {DISK_INTERFACE_OPTIONS.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+            )}
+
+            {needsRamType && (
               <FormField label="RAM Type" htmlFor="add-stock-ram-type">
                 <select
                   id="add-stock-ram-type"
@@ -206,7 +222,7 @@ export function AddStockDialog({ isOpen, values, partTypes, lockedPartTypeId, on
               </FormField>
             )}
 
-            {dynamicFields.map((field) =>
+            {extraColumns.map((field) =>
               field.field_type === "boolean" ? (
                 <label
                   key={field.field_key}

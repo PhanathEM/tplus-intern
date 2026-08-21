@@ -1,23 +1,32 @@
 import { useEffect, useState } from "react";
 import { addPartStock, deletePartStock, fetchPartStock, updatePartStock } from "../../../../services/partStockService";
 import {
-  attachPartCustomField,
   createPartCustomField,
   createPartType,
   deletePartType,
-  detachPartCustomField,
-  fetchPartCustomFields,
   fetchPartCustomFieldTypes,
   fetchPartTypeCategories,
-  fetchPartTypeCustomFields,
+  fetchPartTypeColumns,
+  fetchPartTypeStockColumns,
   fetchPartTypes,
+  fetchStockColumnOptions,
   updatePartType,
   updatePartTypeCategories,
+  updatePartTypeStockColumns,
 } from "../../../../services/partTypeService";
 import { fetchCategories } from "../../../../services/categoryService";
+import { deleteCustomField, fetchAllCustomFields } from "../../../../services/equipmentService";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 import { DEFAULT_PART_STOCK_STATUS } from "../../dashboard.config";
-import { buildPartStockPayload, getDynamicPartFields, normalizeCustomFields, normalizeCustomFieldTypes } from "../../dashboard.utils";
+import { buildPartStockPayload, getExtraStockColumns, normalizeCustomFields, normalizeCustomFieldTypes } from "../../dashboard.utils";
+
+// Quantity/Status/Remark/Last Updated/Active are already always present on
+// the Add/Edit Stock forms — not offered again as tickable stock columns.
+const ALWAYS_PRESENT_STOCK_FIELDS = ["quantity", "status", "remark", "updated_at", "is_active"];
+
+function slugifyFieldLabel(label) {
+  return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
 
 const PART_TYPE_FORM_INITIAL_VALUES = {
   part_name: "",
@@ -99,7 +108,28 @@ export function usePartStock({ isActive, user }) {
   // Reference data for the Add/Edit Part Type form — fetched once.
   const [allCategories, setAllCategories] = useState([]);
   const [partCustomFieldTypes, setPartCustomFieldTypes] = useState([]);
-  const [allPartCustomFields, setAllPartCustomFields] = useState([]);
+  // The "Stock columns" picker's full catalog: built-in part_stock fields
+  // (model_name, location, ram_type...) plus reusable custom fields —
+  // combined, this is what an admin ticks to build a part's stock form.
+  const [stockColumnBuiltInOptions, setStockColumnBuiltInOptions] = useState([]);
+  const [stockColumnCustomFieldOptions, setStockColumnCustomFieldOptions] = useState([]);
+  // Equipment's own custom fields (a separate system) — looked up only to
+  // clean up whichever one a deleted part type's equipment_column pointed
+  // at (e.g. "Webcam"/"Mouse Model"). Real equipment table columns like
+  // "ram"/"cpu" simply won't be found in here, so nothing happens for those.
+  const [equipmentCustomFields, setEquipmentCustomFields] = useState([]);
+  // Existing equipment custom fields (e.g. "Mouse Model") a new part can
+  // reuse for its equipment_column — leaving it unset is fine, backend
+  // auto-creates a matching field once the part is linked to a category.
+  const [equipmentColumnFieldOptions, setEquipmentColumnFieldOptions] = useState([]);
+
+  function loadStockColumnOptions() {
+    return fetchStockColumnOptions().then((data) => {
+      const fields = Array.isArray(data?.fields) ? data.fields : [];
+      setStockColumnBuiltInOptions(fields.filter((field) => !ALWAYS_PRESENT_STOCK_FIELDS.includes(field.field)));
+      setStockColumnCustomFieldOptions(Array.isArray(data?.custom_fields) ? data.custom_fields : []);
+    });
+  }
 
   useEffect(() => {
     if (!isActive) return;
@@ -122,12 +152,27 @@ export function usePartStock({ isActive, user }) {
         if (!ignore) setPartCustomFieldTypes([]);
       });
 
-    fetchPartCustomFields()
+    loadStockColumnOptions().catch(() => {
+      if (!ignore) {
+        setStockColumnBuiltInOptions([]);
+        setStockColumnCustomFieldOptions([]);
+      }
+    });
+
+    fetchAllCustomFields()
       .then((data) => {
-        if (!ignore) setAllPartCustomFields(normalizeCustomFields(data));
+        if (!ignore) setEquipmentCustomFields(normalizeCustomFields(data));
       })
       .catch(() => {
-        if (!ignore) setAllPartCustomFields([]);
+        if (!ignore) setEquipmentCustomFields([]);
+      });
+
+    fetchPartTypeColumns()
+      .then((data) => {
+        if (!ignore) setEquipmentColumnFieldOptions(Array.isArray(data?.custom_fields) ? data.custom_fields : []);
+      })
+      .catch(() => {
+        if (!ignore) setEquipmentColumnFieldOptions([]);
       });
 
     return () => {
@@ -159,17 +204,20 @@ export function usePartStock({ isActive, user }) {
   const [isSavingPartType, setIsSavingPartType] = useState(false);
   const [partTypeFormError, setPartTypeFormError] = useState(null);
   const [isLoadingPartTypeCategories, setIsLoadingPartTypeCategories] = useState(false);
-  const [partTypeAttachedFields, setPartTypeAttachedFields] = useState([]);
-  const [isLoadingPartTypeFields, setIsLoadingPartTypeFields] = useState(false);
-  const [partTypeFieldsError, setPartTypeFieldsError] = useState(null);
+  // The currently-ticked stock columns for whichever part type is open in
+  // the form — {field, header} pairs, saved as a whole via
+  // PUT /api/part-types/:id/stock-columns on submit.
+  const [selectedStockColumns, setSelectedStockColumns] = useState([]);
+  const [isLoadingStockColumns, setIsLoadingStockColumns] = useState(false);
+  const [stockColumnsError, setStockColumnsError] = useState(null);
 
   function handleOpenAddPartType() {
     setPartTypeFormMode("add");
     setPartTypeFormTarget(null);
     setPartTypeFormValues(PART_TYPE_FORM_INITIAL_VALUES);
     setPartTypeFormError(null);
-    setPartTypeAttachedFields([]);
-    setPartTypeFieldsError(null);
+    setSelectedStockColumns([]);
+    setStockColumnsError(null);
     setIsPartTypeFormOpen(true);
   }
 
@@ -187,16 +235,19 @@ export function usePartStock({ isActive, user }) {
     });
     setIsPartTypeFormOpen(true);
     setIsLoadingPartTypeCategories(true);
-    setPartTypeFieldsError(null);
-    setIsLoadingPartTypeFields(true);
+    setStockColumnsError(null);
+    setIsLoadingStockColumns(true);
 
-    fetchPartTypeCustomFields(partType.part_type_id)
-      .then((data) => setPartTypeAttachedFields(normalizeCustomFields(data)))
-      .catch((error) => {
-        setPartTypeAttachedFields([]);
-        setPartTypeFieldsError(error.message || "Could not load this part's custom fields.");
+    fetchPartTypeStockColumns(partType.part_type_id)
+      .then((data) => {
+        const columns = Array.isArray(data?.columns) ? data.columns : [];
+        setSelectedStockColumns(columns.map((column) => ({ field: column.field_name, header: column.header_text })));
       })
-      .finally(() => setIsLoadingPartTypeFields(false));
+      .catch((error) => {
+        setSelectedStockColumns([]);
+        setStockColumnsError(error.message || "Could not load this part's stock columns.");
+      })
+      .finally(() => setIsLoadingStockColumns(false));
 
     fetchPartTypeCategories(partType.part_type_id)
       .then((data) => {
@@ -233,59 +284,36 @@ export function usePartStock({ isActive, user }) {
     });
   }
 
-  function slugifyFieldLabel(label) {
-    return label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  // Toggling a built-in or custom field on/off just updates the local
+  // selection — the whole list is saved in one PUT once the part type form
+  // is submitted (see handleSubmitPartTypeForm below), no per-field call.
+  function handleToggleStockColumn(field, header) {
+    setSelectedStockColumns((current) =>
+      current.some((column) => column.field === field)
+        ? current.filter((column) => column.field !== field)
+        : [...current, { field, header }]
+    );
   }
 
-  // In edit mode the part type already has a real id, so a field is
-  // created/attached/removed against the API immediately. In add mode there
-  // is no id yet — fields are staged locally here and created for real once
-  // the part type itself is saved (see handleSubmitPartTypeForm below).
-  function handleAddPartTypeCustomField(label, type) {
-    if (partTypeFormMode === "edit" && partTypeFormTarget) {
-      return createPartCustomField({
-        field_label: label,
-        field_type: type,
-        part_type_id: partTypeFormTarget.part_type_id,
-      }).then((data) => {
-        const [normalized] = normalizeCustomFields([data?.field || data]);
-        if (normalized) {
-          setPartTypeAttachedFields((current) => [...current, normalized]);
-          setAllPartCustomFields((current) => [...current, normalized]);
-        }
-        handleRetry();
-      });
+  // Creates a new shared custom field definition (visible to every part
+  // type going forward) and ticks it into this part's selection.
+  function handleAddCustomField(label, type) {
+    const key = slugifyFieldLabel(label);
+    if (stockColumnBuiltInOptions.some((option) => option.field === key)) {
+      return Promise.reject(new Error(`"${label}" is already a built-in field — no need to add it.`));
     }
 
-    setPartTypeAttachedFields((current) => [
-      ...current,
-      { id: null, key: slugifyFieldLabel(label), label, type, rawType: type },
-    ]);
-    return Promise.resolve();
-  }
-
-  function handleReusePartTypeCustomField(field) {
-    if (partTypeFormMode === "edit" && partTypeFormTarget) {
-      return attachPartCustomField(partTypeFormTarget.part_type_id, field.id).then(() => {
-        setPartTypeAttachedFields((current) => [...current, field]);
-        handleRetry();
-      });
-    }
-
-    setPartTypeAttachedFields((current) => [...current, field]);
-    return Promise.resolve();
-  }
-
-  function handleRemovePartTypeCustomField(field) {
-    if (partTypeFormMode === "edit" && partTypeFormTarget) {
-      return detachPartCustomField(partTypeFormTarget.part_type_id, field.id).then(() => {
-        setPartTypeAttachedFields((current) => current.filter((item) => item.key !== field.key));
-        handleRetry();
-      });
-    }
-
-    setPartTypeAttachedFields((current) => current.filter((item) => item.key !== field.key));
-    return Promise.resolve();
+    return createPartCustomField({ field_label: label, field_type: type }).then((data) => {
+      const field = data?.field || data;
+      const fieldKey = field?.field_key || key;
+      const fieldLabel = field?.field_label || label;
+      setStockColumnCustomFieldOptions((current) =>
+        current.some((option) => option.field_key === fieldKey)
+          ? current
+          : [...current, { field_key: fieldKey, field_label: fieldLabel, field_type: type }]
+      );
+      setSelectedStockColumns((current) => [...current, { field: fieldKey, header: fieldLabel }]);
+    });
   }
 
   function handleSubmitPartTypeForm(event) {
@@ -315,18 +343,11 @@ export function usePartStock({ isActive, user }) {
         // Both create and update wrap the record as { part_type: {...} }.
         const partTypeId = isEdit ? partTypeFormTarget.part_type_id : data?.part_type?.part_type_id;
         const categoriesPromise = updatePartTypeCategories(partTypeId, partTypeFormValues.category_ids);
-        // Fields staged while creating a brand-new part have no id yet —
-        // create/attach them for real now that the part type does.
-        const fieldsPromise = isEdit
-          ? Promise.resolve()
-          : Promise.all(
-              partTypeAttachedFields.map((field) =>
-                field.id
-                  ? attachPartCustomField(partTypeId, field.id)
-                  : createPartCustomField({ field_label: field.label, field_type: field.type, part_type_id: partTypeId })
-              )
-            );
-        return Promise.all([categoriesPromise, fieldsPromise]).then(() => data);
+        const columnsPromise = updatePartTypeStockColumns(
+          partTypeId,
+          selectedStockColumns.map((column) => ({ field: column.field, header: column.header }))
+        );
+        return Promise.all([categoriesPromise, columnsPromise]).then(() => data);
       })
       .then((data) => {
         logActivity({
@@ -340,13 +361,8 @@ export function usePartStock({ isActive, user }) {
         });
         setIsPartTypeFormOpen(false);
         setPartTypeFormTarget(null);
-        setPartTypeAttachedFields([]);
+        setSelectedStockColumns([]);
         handleRetry();
-        if (!isEdit && partTypeAttachedFields.length > 0) {
-          fetchPartCustomFields()
-            .then((refreshed) => setAllPartCustomFields(normalizeCustomFields(refreshed)))
-            .catch(() => {});
-        }
       })
       .catch((error) => {
         const data = error.response?.data;
@@ -372,11 +388,20 @@ export function usePartStock({ isActive, user }) {
     setDeletePartTypeBlocked(false);
   }
 
+  // If this part type's equipment_column points at an Equipment custom
+  // field (not a real table column like "ram"/"cpu"), deleting the part
+  // deletes that field too — otherwise it's left behind, orphaned, showing
+  // all-N/A columns on every device in categories that had it.
+  const linkedEquipmentField = partTypeToDelete
+    ? equipmentCustomFields.find((field) => field.key === partTypeToDelete.equipment_column)
+    : null;
+
   function handleConfirmDeletePartType() {
     if (!partTypeToDelete) return;
 
     setIsDeletingPartType(true);
     setDeletePartTypeError(null);
+    const fieldToClean = linkedEquipmentField;
 
     deletePartType(partTypeToDelete.part_type_id)
       .then(() => {
@@ -390,6 +415,13 @@ export function usePartStock({ isActive, user }) {
         });
         setPartTypeToDelete(null);
         handleRetry();
+
+        if (fieldToClean) {
+          deleteCustomField(fieldToClean.id, true).catch(() => {
+            // Best-effort cleanup — the part type itself is already gone,
+            // so a failure here just leaves the orphaned field behind.
+          });
+        }
       })
       .catch((error) => {
         // Backend doesn't yet clean up part_type_custom_field rows before
@@ -514,7 +546,7 @@ export function usePartStock({ isActive, user }) {
 
     const partType = partTypes.find((item) => String(item.part_type_id) === String(addFormValues.part_type_id));
 
-    const { payload, error: validationError } = buildPartStockPayload(partType, addFormValues);
+    const { payload, error: validationError } = buildPartStockPayload(partType, addFormValues, stockColumnCustomFieldOptions);
     if (validationError) {
       setAddError(validationError);
       return;
@@ -559,7 +591,10 @@ export function usePartStock({ isActive, user }) {
     const fullRecord = stock.find((item) => item.stock_id === record.stock_id) || record;
     const partType = partTypes.find((item) => String(item.part_type_id) === String(fullRecord.part_type_id));
     const dynamicFieldValues = Object.fromEntries(
-      getDynamicPartFields(partType).map((field) => [field.field_key, fullRecord[field.field_key] ?? ""])
+      getExtraStockColumns(partType, stockColumnCustomFieldOptions).map((field) => [
+        field.field_key,
+        fullRecord[field.field_key] ?? "",
+      ])
     );
     setEditStockTarget(fullRecord);
     setEditError(null);
@@ -592,10 +627,11 @@ export function usePartStock({ isActive, user }) {
 
     const partType = partTypes.find((item) => String(item.part_type_id) === String(editStockTarget.part_type_id));
 
-    const { payload, error: validationError } = buildPartStockPayload(partType, {
-      ...editFormValues,
-      part_type_id: editStockTarget.part_type_id,
-    });
+    const { payload, error: validationError } = buildPartStockPayload(
+      partType,
+      { ...editFormValues, part_type_id: editStockTarget.part_type_id },
+      stockColumnCustomFieldOptions
+    );
     if (validationError) {
       setEditError(validationError);
       return;
@@ -691,10 +727,6 @@ export function usePartStock({ isActive, user }) {
     runDeleteStock(true);
   }
 
-  const partTypeReusableFields = allPartCustomFields.filter(
-    (field) => !partTypeAttachedFields.some((attached) => attached.key === field.key)
-  );
-
   return {
     stock,
     isLoading,
@@ -706,31 +738,33 @@ export function usePartStock({ isActive, user }) {
     handleSelectPart,
 
     allCategories,
+    equipmentColumnFieldOptions,
     isPartTypeFormOpen,
     partTypeFormMode,
     partTypeFormValues,
     isSavingPartType,
     partTypeFormError,
     isLoadingPartTypeCategories,
-    partTypeAttachedFields,
-    partTypeReusableFields,
+    stockColumnBuiltInOptions,
+    stockColumnCustomFieldOptions,
     partCustomFieldTypes,
-    isLoadingPartTypeFields,
-    partTypeFieldsError,
+    selectedStockColumns,
+    isLoadingStockColumns,
+    stockColumnsError,
     handleOpenAddPartType,
     handleOpenEditPartType,
     handleClosePartTypeForm,
     handlePartTypeFormFieldChange,
     handleTogglePartTypeCategory,
-    handleAddPartTypeCustomField,
-    handleReusePartTypeCustomField,
-    handleRemovePartTypeCustomField,
+    handleToggleStockColumn,
+    handleAddCustomField,
     handleSubmitPartTypeForm,
 
     partTypeToDelete,
     isDeletingPartType,
     deletePartTypeError,
     deletePartTypeBlocked,
+    linkedEquipmentField,
     handleOpenDeletePartType,
     handleCloseDeletePartType,
     handleConfirmDeletePartType,

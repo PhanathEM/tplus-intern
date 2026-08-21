@@ -187,71 +187,13 @@ export const PART_STOCK_COLUMNS = {
   // Shown when no part card is selected — a mix of parts means part-specific
   // fields (RAM Type, Disk Type, Model...) don't all apply as their own
   // columns, so those are folded into one "Details" string by
-  // buildStockDetails() in PartStockView.jsx instead.
+  // buildStockDetails() in PartStockView.jsx instead. Any single part's own
+  // columns come from its configured stock_columns (see getStockColumns in
+  // dashboard.utils.js), not a per-part-name entry here.
   default: [
     { key: "part_name", label: "Part Name" },
     { key: "details", label: "Details" },
     { key: "part_value", label: "Value" },
-    { key: "quantity", label: "Quantity" },
-    { key: "status", label: "Status" },
-    { key: "remark", label: "Remark" },
-    { key: "updated_at", label: "Last Updated" },
-  ],
-
-  ram: [
-    { key: "part_name", label: "Part Name" },
-    { key: "ram_type", label: "RAM Type" },
-    { key: "part_value", label: "Value" },
-    { key: "quantity", label: "Quantity" },
-    { key: "status", label: "Status" },
-    { key: "remark", label: "Remark" },
-    { key: "updated_at", label: "Last Updated" },
-  ],
-
-  cpu: [
-    { key: "part_name", label: "Part Name" },
-    { key: "model_name", label: "Model Name" },
-    { key: "quantity", label: "Quantity" },
-    { key: "status", label: "Status" },
-    { key: "remark", label: "Remark" },
-    { key: "updated_at", label: "Last Updated" },
-  ],
-
-  "hard disk": [
-    { key: "part_name", label: "Part Name" },
-    { key: "part_value", label: "Value" },
-    { key: "disk_type", label: "Disk Type" },
-    { key: "quantity", label: "Quantity" },
-    { key: "disk_interface", label: "Disk Interface" },
-    { key: "status", label: "Status" },
-    { key: "remark", label: "Remark" },
-    { key: "updated_at", label: "Last Updated" },
-  ],
-
-  bag: [
-    { key: "part_name", label: "Part Name" },
-    { key: "model_name", label: "Model Name" },
-    { key: "model_number", label: "Model Number" },
-    { key: "quantity", label: "Quantity" },
-    { key: "status", label: "Status" },
-    { key: "remark", label: "Remark" },
-    { key: "updated_at", label: "Last Updated" },
-  ],
-
-  mouse: [
-    { key: "part_name", label: "Part Name" },
-    { key: "model_name", label: "Model Name" },
-    { key: "model_number", label: "Model Number" },
-    { key: "quantity", label: "Quantity" },
-    { key: "status", label: "Status" },
-    { key: "remark", label: "Remark" },
-    { key: "updated_at", label: "Last Updated" },
-  ],
-
-  keyboard: [
-    { key: "part_name", label: "Part Name" },
-    { key: "model_name", label: "Model Name" },
-    { key: "model_number", label: "Model Number" },
     { key: "quantity", label: "Quantity" },
     { key: "status", label: "Status" },
     { key: "remark", label: "Remark" },
