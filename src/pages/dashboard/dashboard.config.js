@@ -92,6 +92,19 @@ export const navItemsByLabel = navSections
   .flatMap((item) => (item.children ? [item, ...item.children] : [item]))
   .reduce((acc, item) => ({ ...acc, [item.label]: item }), {});
 
+// A child view's page header reads "Parent/Child" (e.g. "Equipments/Assign")
+// instead of just its own label, so it's clear which group it's nested
+// under — top-level views (no parent) keep their plain label.
+export const parentLabelByChildLabel = navSections
+  .flatMap((section) => section.items)
+  .filter((item) => item.children?.length)
+  .reduce((acc, parent) => {
+    parent.children.forEach((child) => {
+      acc[child.label] = parent.label;
+    });
+    return acc;
+  }, {});
+
 export const userPermissionSections = navSections
   .map((section) => ({
     label: section.label,

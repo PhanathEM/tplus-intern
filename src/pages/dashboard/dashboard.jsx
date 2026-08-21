@@ -23,7 +23,7 @@ import { useStatuses } from "./features/statuses/useStatuses";
 import { useDashboardNotifications } from "./hooks/useDashboardNotifications";
 import { useDashboardRouting } from "./hooks/useDashboardRouting";
 import { useDashboardHome } from "./hooks/useDashboardHome";
-import { EMPLOYEES_PAGE_SIZE, navItemsByLabel } from "./dashboard.config";
+import { EMPLOYEES_PAGE_SIZE, navItemsByLabel, parentLabelByChildLabel } from "./dashboard.config";
 import { getEquipmentDisplayName } from "./dashboard.utils";
 import { ConfirmDialog, EmptyState } from "./components/SharedControls";
 import { SidebarBrand, SidebarNavigation } from "./components/Sidebar";
@@ -203,6 +203,7 @@ function Dashboard({ user, onLogout }) {
   }, []);
 
   const activeNavItem = navItemsByLabel[activeView];
+  const activeViewParentLabel = parentLabelByChildLabel[activeView];
   const isEmployeeView = activeView === "Employees" && hasActiveViewAccess;
   const isDepartmentsView = activeView === "Departments" && hasActiveViewAccess;
   const isEquipmentView = activeView === "Equipments" && hasActiveViewAccess;
@@ -373,7 +374,15 @@ function Dashboard({ user, onLogout }) {
                   </button>
 
                   <div className="min-w-0 flex-1">
-                    <h1 className="truncate text-[17px] font-semibold text-slate-950">{activeView}</h1>
+                    <h1 className="truncate text-[17px] font-semibold text-slate-950">
+                      {activeViewParentLabel && (
+                        <>
+                          <span className="text-slate-400">{activeViewParentLabel}</span>
+                          <span className="text-slate-300">/</span>
+                        </>
+                      )}
+                      {activeView}
+                    </h1>
                   </div>
 
                   <GlobalSearch
