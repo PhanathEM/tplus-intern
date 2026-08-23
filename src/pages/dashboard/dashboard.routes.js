@@ -22,11 +22,11 @@ export const dashboardRouteByView = {
   "Cloud Rate": "cloud-rate",
   "Cloud Usage": "cloud-usage",
   "Service Usage": "service-usage",
+  Statuses: "statuses",
   Users: "users",
   "My Activity": "my-activity",
   "Activity Log": "activity-log",
   "Recycle Bin": "recycle-bin",
-  Status: "status",
 };
 
 const dashboardViewByRoute = Object.fromEntries(

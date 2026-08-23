@@ -6,7 +6,6 @@ import {
   deletePartType,
   fetchPartCustomFieldTypes,
   fetchPartTypeCategories,
-  fetchPartTypeColumns,
   fetchPartTypeStockColumns,
   fetchPartTypes,
   fetchStockColumnOptions,
@@ -118,10 +117,6 @@ export function usePartStock({ isActive, user }) {
   // at (e.g. "Webcam"/"Mouse Model"). Real equipment table columns like
   // "ram"/"cpu" simply won't be found in here, so nothing happens for those.
   const [equipmentCustomFields, setEquipmentCustomFields] = useState([]);
-  // Existing equipment custom fields (e.g. "Mouse Model") a new part can
-  // reuse for its equipment_column — leaving it unset is fine, backend
-  // auto-creates a matching field once the part is linked to a category.
-  const [equipmentColumnFieldOptions, setEquipmentColumnFieldOptions] = useState([]);
 
   function loadStockColumnOptions() {
     return fetchStockColumnOptions().then((data) => {
@@ -165,14 +160,6 @@ export function usePartStock({ isActive, user }) {
       })
       .catch(() => {
         if (!ignore) setEquipmentCustomFields([]);
-      });
-
-    fetchPartTypeColumns()
-      .then((data) => {
-        if (!ignore) setEquipmentColumnFieldOptions(Array.isArray(data?.custom_fields) ? data.custom_fields : []);
-      })
-      .catch(() => {
-        if (!ignore) setEquipmentColumnFieldOptions([]);
       });
 
     return () => {
@@ -238,13 +225,29 @@ export function usePartStock({ isActive, user }) {
     setStockColumnsError(null);
     setIsLoadingStockColumns(true);
 
+    // A field can be attached via either list server-side — custom_fields is
+    // already on the part type object passed in (no extra fetch needed) —
+    // stock_columns comes back from its own endpoint and gets merged in.
+    const attachedCustomFields = (partType.custom_fields || []).map((field) => ({
+      field: field.field_key,
+      header: field.field_label,
+    }));
+    setSelectedStockColumns(attachedCustomFields);
+
     fetchPartTypeStockColumns(partType.part_type_id)
       .then((data) => {
         const columns = Array.isArray(data?.columns) ? data.columns : [];
-        setSelectedStockColumns(columns.map((column) => ({ field: column.field_name, header: column.header_text })));
+        setSelectedStockColumns((current) => {
+          const merged = [...current];
+          columns.forEach((column) => {
+            if (!merged.some((existing) => existing.field === column.field_name)) {
+              merged.push({ field: column.field_name, header: column.header_text });
+            }
+          });
+          return merged;
+        });
       })
       .catch((error) => {
-        setSelectedStockColumns([]);
         setStockColumnsError(error.message || "Could not load this part's stock columns.");
       })
       .finally(() => setIsLoadingStockColumns(false));
@@ -674,57 +677,29 @@ export function usePartStock({ isActive, user }) {
 
   // --- Delete -------------------------------------------------------------
 
-  const [stockToDelete, setStockToDelete] = useState(null);
-  const [isDeletingStock, setIsDeletingStock] = useState(false);
-  const [deleteStockError, setDeleteStockError] = useState(null);
-  const [deleteStockBlocked, setDeleteStockBlocked] = useState(false);
+  const [deletingStockId, setDeletingStockId] = useState(null);
 
-  function handleOpenDeleteStock(record) {
-    setStockToDelete(record);
-    setDeleteStockError(null);
-    setDeleteStockBlocked(false);
-  }
+  // No confirmation step — clicking Delete on a stock line deletes it right
+  // away, quantity-in-stock included (confirm: true always).
+  function handleDeleteStock(record) {
+    setDeletingStockId(record.stock_id);
 
-  function handleCloseDeleteStock() {
-    setStockToDelete(null);
-    setDeleteStockError(null);
-    setDeleteStockBlocked(false);
-  }
-
-  function runDeleteStock(confirm) {
-    if (!stockToDelete) return;
-
-    setIsDeletingStock(true);
-    setDeleteStockError(null);
-
-    deletePartStock(stockToDelete.stock_id, { confirm })
+    deletePartStock(record.stock_id, { confirm: true })
       .then(() => {
         logActivity({
           actor: user,
           action: "delete",
           module: ACTIVITY_MODULES.PART_STOCK,
-          entityId: stockToDelete.stock_id,
-          entityLabel: `${stockToDelete.part_name || "Part"}${stockToDelete.part_value ? ` (${stockToDelete.part_value})` : ""}`,
-          before: stockToDelete,
+          entityId: record.stock_id,
+          entityLabel: `${record.part_name || "Part"}${record.part_value ? ` (${record.part_value})` : ""}`,
+          before: record,
         });
-        setStockToDelete(null);
-        setDeleteStockBlocked(false);
         handleRetry();
       })
       .catch((error) => {
-        const blocked = error.status === 409;
-        setDeleteStockBlocked(blocked);
-        setDeleteStockError(blocked ? error.response?.data?.error || "This line still has stock. Set the quantity to zero instead, or delete it anyway." : error.response?.data?.error || error.message || "Could not delete this stock line.");
+        window.alert(error.response?.data?.error || error.message || "Could not delete this stock line.");
       })
-      .finally(() => setIsDeletingStock(false));
-  }
-
-  function handleConfirmDeleteStock() {
-    runDeleteStock(false);
-  }
-
-  function handleDeleteStockAnyway() {
-    runDeleteStock(true);
+      .finally(() => setDeletingStockId(null));
   }
 
   return {
@@ -738,7 +713,6 @@ export function usePartStock({ isActive, user }) {
     handleSelectPart,
 
     allCategories,
-    equipmentColumnFieldOptions,
     isPartTypeFormOpen,
     partTypeFormMode,
     partTypeFormValues,
@@ -795,13 +769,7 @@ export function usePartStock({ isActive, user }) {
     handleEditFormChange,
     handleSubmitEdit,
 
-    stockToDelete,
-    isDeletingStock,
-    deleteStockError,
-    deleteStockBlocked,
-    handleOpenDeleteStock,
-    handleCloseDeleteStock,
-    handleConfirmDeleteStock,
-    handleDeleteStockAnyway,
+    deletingStockId,
+    handleDeleteStock,
   };
 }

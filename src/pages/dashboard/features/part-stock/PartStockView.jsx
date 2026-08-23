@@ -27,7 +27,6 @@ import {
   ConfirmDialog,
   FormField,
   formInputClass,
-  RadioSelect,
   RowActionsMenu,
 } from "../../components/SharedControls";
 
@@ -129,7 +128,6 @@ function PartTypeFormModal({
   selectedStockColumns,
   isLoadingStockColumns,
   stockColumnsError,
-  equipmentColumnFieldOptions,
   onChange,
   onToggleCategory,
   onToggleStockColumn,
@@ -204,28 +202,6 @@ function PartTypeFormModal({
                   className={formInputClass}
                   disabled={isSubmitting}
                 />
-              </FormField>
-
-              <FormField label="Equipment Column" htmlFor="part-type-equipment-column">
-                <RadioSelect
-                  id="part-type-equipment-column"
-                  options={[
-                    { value: "", label: "Auto (recommended)" },
-                    ...equipmentColumnFieldOptions.map((field) => ({ value: field.field_key, label: field.field_label })),
-                    ...(values.equipment_column &&
-                    !equipmentColumnFieldOptions.some((field) => field.field_key === values.equipment_column)
-                      ? [{ value: values.equipment_column, label: values.equipment_column }]
-                      : []),
-                  ]}
-                  value={values.equipment_column}
-                  onSelect={(value) => onChange("equipment_column", value)}
-                  placeholder="Select column..."
-                  disabled={isSubmitting}
-                />
-                <p className="mt-1.5 text-xs text-slate-400">
-                  Leave as Auto to let a new field get created for this part automatically, or reuse an existing one
-                  (e.g. "Mouse Model").
-                </p>
               </FormField>
 
               <div className="flex flex-wrap gap-4">
@@ -574,7 +550,6 @@ export function PartStockView({
   onSelectPart,
 
   allCategories,
-  equipmentColumnFieldOptions,
   isPartTypeFormOpen,
   partTypeFormMode,
   partTypeFormValues,
@@ -631,14 +606,8 @@ export function PartStockView({
   onEditFormChange,
   onSubmitEdit,
 
-  stockToDelete,
-  isDeletingStock,
-  deleteStockError,
-  deleteStockBlocked,
-  onOpenDeleteStock,
-  onCloseDeleteStock,
-  onConfirmDeleteStock,
-  onDeleteStockAnyway,
+  deletingStockId,
+  onDeleteStock,
 }) {
   const selectedPartType = partTypes.find(
     (item) =>
@@ -646,14 +615,18 @@ export function PartStockView({
       String(selectedPartTypeId)
   );
 
-  // The part's configured stock_columns (from the Part Type form's "Stock
-  // columns" picker) already carries a human header for every field, in
-  // display order — that's the single source of truth for this table too,
-  // no separate per-part-name lookup needed.
+  // A part's fields can land in either of two separate lists — stock_columns
+  // (built-ins, set via the Stock columns picker) and custom_fields (custom
+  // fields actually attached server-side) — both get shown here, de-duped.
+  const partStockColumns = getStockColumns(selectedPartType);
+  const knownFieldNames = new Set(partStockColumns.map((column) => column.field_name));
   const currentColumns = selectedPartType
     ? [
         { key: "part_name", label: "Part Name" },
-        ...getStockColumns(selectedPartType).map((column) => ({ key: column.field_name, label: column.header_text })),
+        ...partStockColumns.map((column) => ({ key: column.field_name, label: column.header_text })),
+        ...(selectedPartType.custom_fields || [])
+          .filter((field) => !knownFieldNames.has(field.field_key))
+          .map((field) => ({ key: field.field_key, label: field.field_label })),
         { key: "quantity", label: "Quantity" },
         { key: "status", label: "Status" },
         { key: "remark", label: "Remark" },
@@ -758,7 +731,12 @@ export function PartStockView({
               <RowActionsMenu
                 items={[
                   { icon: Edit2, label: "Edit", onClick: () => onOpenEditDialog(record) },
-                  { icon: Trash2, label: "Delete", onClick: () => onOpenDeleteStock(record), destructive: true },
+                  {
+                    icon: Trash2,
+                    label: deletingStockId === record.stock_id ? "Deleting..." : "Delete",
+                    onClick: () => onDeleteStock(record),
+                    destructive: true,
+                  },
                 ]}
               />
             </div>
@@ -795,42 +773,6 @@ export function PartStockView({
         error={editError}
       />
 
-      {/* Delete confirmation */}
-      <ConfirmDialog
-        isOpen={Boolean(
-          stockToDelete
-        )}
-        title="Delete stock line?"
-        message={
-          stockToDelete
-            ? `Remove ${stockToDelete.part_name
-            }${stockToDelete.part_value
-              ? ` (${stockToDelete.part_value})`
-              : ""
-            } from stock. This can't be undone.`
-            : ""
-        }
-        confirmLabel="Delete"
-        confirmingLabel="Deleting..."
-        onConfirm={
-          onConfirmDeleteStock
-        }
-        onCancel={
-          onCloseDeleteStock
-        }
-        isConfirming={
-          isDeletingStock
-        }
-        error={deleteStockError}
-        blocked={
-          deleteStockBlocked
-        }
-        blockedActionLabel="Delete anyway"
-        onBlockedAction={
-          onDeleteStockAnyway
-        }
-      />
-
       {/* Add/edit part type */}
       <PartTypeFormModal
         isOpen={isPartTypeFormOpen}
@@ -838,7 +780,6 @@ export function PartStockView({
         values={partTypeFormValues}
         categories={allCategories}
         isLoadingCategories={isLoadingPartTypeCategories}
-        equipmentColumnFieldOptions={equipmentColumnFieldOptions}
         stockColumnBuiltInOptions={stockColumnBuiltInOptions}
         stockColumnCustomFieldOptions={stockColumnCustomFieldOptions}
         customFieldTypes={partCustomFieldTypes}

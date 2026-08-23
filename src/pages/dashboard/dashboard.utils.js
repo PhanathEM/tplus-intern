@@ -21,18 +21,35 @@ export function hasStockColumn(partType, fieldName) {
 
 // Columns beyond the ones with a dedicated widget above — genuine custom
 // fields (Color, Location, Storage...) rendered as generic text/number/
-// date/boolean inputs. Needs the stock-columns catalog's custom_fields list
-// to know each one's type, since the part type's own stock_columns entries
-// only carry a field name/header.
+// date/boolean inputs. A part type carries these two separate lists:
+// stock_columns (built-ins it's configured to show, plus any custom field
+// that happened to save through that same endpoint) and custom_fields
+// (custom fields actually attached server-side) — real data can land in
+// either depending on how it was saved, so both are merged here, de-duped
+// by key. The stock-columns catalog's custom_fields list fills in a type
+// for anything only found via stock_columns (which carries no type itself).
 export function getExtraStockColumns(partType, customFieldCatalog) {
   const catalogByKey = new Map((customFieldCatalog || []).map((field) => [field.field_key, field]));
-  return getStockColumns(partType)
+  const fromStockColumns = getStockColumns(partType)
     .filter((column) => !STOCK_COLUMN_WIDGETS.includes(column.field_name))
     .map((column) => ({
       field_key: column.field_name,
       field_label: column.header_text,
       field_type: catalogByKey.get(column.field_name)?.field_type || "text",
     }));
+  const fromCustomFields = (partType?.custom_fields || []).map((field) => ({
+    field_key: field.field_key,
+    field_label: field.field_label,
+    field_type: field.field_type || "text",
+  }));
+
+  const merged = [...fromStockColumns];
+  fromCustomFields.forEach((field) => {
+    if (!merged.some((existing) => existing.field_key === field.field_key)) {
+      merged.push(field);
+    }
+  });
+  return merged;
 }
 
 // Shared by the Part Stock page's Add/Edit dialogs and Device Replacement's

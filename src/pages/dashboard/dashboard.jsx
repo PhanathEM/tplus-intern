@@ -159,6 +159,7 @@ function Dashboard({ user, onLogout }) {
       "Software License": licenses.resetForEntry,
       "Cloud Rate": cloudRates.resetForEntry,
       "Service Usage": serverUsage.resetForEntry,
+      Statuses: statuses.resetForEntry,
       "Cloud Usage": cloudUsage.resetForEntry,
       "Currently Borrowed": currentBorrows.resetForEntry,
       "Borrow History": borrowHistory.resetForEntry,
@@ -221,7 +222,7 @@ function Dashboard({ user, onLogout }) {
   const isCurrentBorrowsView = activeView === "Currently Borrowed" && hasActiveViewAccess;
   const isBorrowHistoryView = activeView === "Borrow History" && hasActiveViewAccess;
   const isUsersView = activeView === "Users" && hasActiveViewAccess;
-  const isStatusView = activeView === "Status" && hasActiveViewAccess;
+  const isStatusView = activeView === "Statuses" && hasActiveViewAccess;
   const isMyActivityView = activeView === "My Activity" && hasActiveViewAccess;
   const isActivityLogView = activeView === "Activity Log" && hasActiveViewAccess;
   const isRecycleBinView = activeView === "Recycle Bin" && hasActiveViewAccess;
@@ -651,7 +652,6 @@ function Dashboard({ user, onLogout }) {
               selectedPartTypeId={partStock.selectedPartTypeId}
               onSelectPart={partStock.handleSelectPart}
               allCategories={partStock.allCategories}
-              equipmentColumnFieldOptions={partStock.equipmentColumnFieldOptions}
               isPartTypeFormOpen={partStock.isPartTypeFormOpen}
               partTypeFormMode={partStock.partTypeFormMode}
               partTypeFormValues={partStock.partTypeFormValues}
@@ -703,14 +703,8 @@ function Dashboard({ user, onLogout }) {
               onCloseEditDialog={partStock.handleCloseEditDialog}
               onEditFormChange={partStock.handleEditFormChange}
               onSubmitEdit={partStock.handleSubmitEdit}
-              stockToDelete={partStock.stockToDelete}
-              isDeletingStock={partStock.isDeletingStock}
-              deleteStockError={partStock.deleteStockError}
-              deleteStockBlocked={partStock.deleteStockBlocked}
-              onOpenDeleteStock={partStock.handleOpenDeleteStock}
-              onCloseDeleteStock={partStock.handleCloseDeleteStock}
-              onConfirmDeleteStock={partStock.handleConfirmDeleteStock}
-              onDeleteStockAnyway={partStock.handleDeleteStockAnyway}
+              deletingStockId={partStock.deletingStockId}
+              onDeleteStock={partStock.handleDeleteStock}
             />
           )}
 
@@ -932,8 +926,6 @@ function Dashboard({ user, onLogout }) {
                 isLoading={statuses.isLoading}
                 error={statuses.error}
                 onRetry={statuses.handleRetry}
-                showInactive={statuses.showInactive}
-                onToggleShowInactive={statuses.handleToggleShowInactive}
                 onAddNew={statuses.handleOpenAdd}
                 onEdit={statuses.handleOpenEdit}
                 onDelete={statuses.handleOpenDelete}

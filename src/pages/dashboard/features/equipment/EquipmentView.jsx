@@ -13,7 +13,7 @@ import {
   FiX as X,
 } from "react-icons/fi";
 import { buildEquipmentDisplayColumns } from "../../dashboard.utils";
-import { EmptyState, RowActionsMenu } from "../../components/SharedControls";
+import { EmptyState, RadioSelect, RowActionsMenu } from "../../components/SharedControls";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
 import { exportAllEquipmentToExcel, exportAllEquipmentToPdf } from "./equipmentExport";
@@ -38,6 +38,7 @@ export function EquipmentItemsTable({
   showBackButton = true,
 }) {
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const baseColumns = useMemo(
     () => configuredColumns.map(({ key, label }) => ({ key, label })),
@@ -45,13 +46,23 @@ export function EquipmentItemsTable({
   );
   const columns = useMemo(() => buildEquipmentDisplayColumns(items, baseColumns), [items, baseColumns]);
 
+  // Whichever status values actually appear on this category's items —
+  // statuses are admin-configurable, so this stays in sync automatically
+  // instead of hardcoding a fixed list.
+  const statusOptions = useMemo(() => {
+    const values = new Set(items.map((item) => item.status).filter((value) => value && String(value).trim()));
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  }, [items]);
+
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const matches = !term
-      ? items
-      : items.filter((item) => columns.some((column) => String(item[column.key] ?? "").toLowerCase().includes(term)));
+    const matches = items
+      .filter((item) => !statusFilter || item.status === statusFilter)
+      .filter(
+        (item) => !term || columns.some((column) => String(item[column.key] ?? "").toLowerCase().includes(term))
+      );
     return matches.map((item, index) => ({ ...item, _row_number: index + 1 }));
-  }, [items, columns, search]);
+  }, [items, columns, search, statusFilter]);
 
 return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -96,6 +107,18 @@ return (
                   <X size={13} />
                 </button>
               )}
+            </div>
+            <div className="w-56">
+              <RadioSelect
+                id="equipment-status-filter"
+                options={[
+                  { value: "", label: "All Statuses" },
+                  ...statusOptions.map((status) => ({ value: status, label: status })),
+                ]}
+                value={statusFilter}
+                onSelect={setStatusFilter}
+                placeholder="All Statuses"
+              />
             </div>
             {canCreate && onAddNew && (
               <button

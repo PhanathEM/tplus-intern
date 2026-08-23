@@ -17,7 +17,6 @@ export function useStatuses({ isActive, user }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [fetchToken, setFetchToken] = useState(0);
-  const [showInactive, setShowInactive] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState("add");
   const [formTarget, setFormTarget] = useState(null);
@@ -34,7 +33,7 @@ export function useStatuses({ isActive, user }) {
 
     let ignore = false;
 
-    fetchStatuses(showInactive)
+    fetchStatuses()
       .then((data) => {
         if (ignore) return;
         const list = Array.isArray(data) ? data : data?.statuses;
@@ -51,7 +50,7 @@ export function useStatuses({ isActive, user }) {
     return () => {
       ignore = true;
     };
-  }, [isActive, fetchToken, showInactive]);
+  }, [isActive, fetchToken]);
 
   function handleRetry() {
     setIsLoading(true);
@@ -62,11 +61,6 @@ export function useStatuses({ isActive, user }) {
   function resetForEntry() {
     setIsLoading(true);
     setError(null);
-  }
-
-  function handleToggleShowInactive(checked) {
-    setIsLoading(true);
-    setShowInactive(checked);
   }
 
   function handleOpenAdd() {
@@ -221,8 +215,6 @@ export function useStatuses({ isActive, user }) {
     error,
     handleRetry,
     resetForEntry,
-    showInactive,
-    handleToggleShowInactive,
     isFormOpen,
     formMode,
     formValues,

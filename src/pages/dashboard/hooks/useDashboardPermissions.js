@@ -24,7 +24,7 @@ export function useDashboardPermissions({ user }) {
   );
   const firstAccessibleDashboardView = accessibleDashboardViews[0] || null;
   const canManageUsers = canAccessDashboardView(user, "Users", navItemsByLabel);
-  const canManageStatuses = canAccessDashboardView(user, "Status", navItemsByLabel);
+  const canManageStatuses = canAccessDashboardView(user, "Statuses", navItemsByLabel);
   const canManageAssign = canAccessDashboardView(user, "Assign", navItemsByLabel);
 
   const visibleHomeNavSections = useMemo(
