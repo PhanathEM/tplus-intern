@@ -40,14 +40,14 @@ function StatCard({ item, count, isLoading, onSelect, colorIndex }) {
     <button
       type="button"
       onClick={() => onSelect(item.label)}
-      className="group flex items-center gap-5 rounded-2xl border border-slate-200 bg-white px-6 py-6 text-left outline-none transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+      className="group flex items-center gap-5 rounded-2xl border border-slate-200 bg-white px-6 py-6 text-left outline-none transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-900 dark:hover:shadow-black/30 dark:focus-visible:ring-offset-slate-900"
     >
       <div className={`grid h-16 w-16 shrink-0 place-items-center rounded-xl ${color.bg} text-white`}>
         <Icon size={30} />
       </div>
       <div className="min-w-0">
-        <p className={`text-[15px] font-medium leading-tight ${color.text}`}>{item.label}</p>
-        <p className="mt-1 text-3xl font-bold tabular-nums text-slate-950">
+        <p className={`text-[15px] font-medium leading-tight ${color.text} dark:brightness-125`}>{item.label}</p>
+        <p className="mt-1 text-3xl font-bold tabular-nums text-slate-950 dark:text-white">
           {hasCount ? count.toLocaleString() : isLoading ? "…" : "—"}
         </p>
       </div>
@@ -57,23 +57,23 @@ function StatCard({ item, count, isLoading, onSelect, colorIndex }) {
 
 function NotificationsPanel({ notifications, onOpenNotification }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-        <h3 className="text-[15px] font-semibold text-slate-950">Notifications</h3>
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+        <h3 className="text-[15px] font-semibold text-slate-950 dark:text-white">Notifications</h3>
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
           {notifications.length}
         </span>
       </div>
       {notifications.length === 0 ? (
         <EmptyState icon={Bell} title="All clear" description="No alerts need your attention right now." />
       ) : (
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-slate-50 dark:divide-slate-800">
           {notifications.slice(0, 6).map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => onOpenNotification(item)}
-              className="flex w-full items-start gap-3 px-5 py-3 text-left outline-none transition hover:bg-slate-50 focus-visible:bg-slate-50"
+              className="flex w-full items-start gap-3 px-5 py-3 text-left outline-none transition hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-800/60 dark:focus-visible:bg-slate-800/60"
             >
               <span
                 className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
@@ -81,8 +81,8 @@ function NotificationsPanel({ notifications, onOpenNotification }) {
                 }`}
               />
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-slate-950">{item.title}</p>
-                <p className="mt-0.5 truncate text-[13px] text-slate-500">{item.detail}</p>
+                <p className="text-[13px] font-semibold text-slate-950 dark:text-white">{item.title}</p>
+                <p className="mt-0.5 truncate text-[13px] text-slate-500 dark:text-slate-400">{item.detail}</p>
               </div>
             </button>
           ))}
@@ -108,9 +108,9 @@ function formatRelativeTime(value) {
 
 function RecentActivityPanel({ entries }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-        <h3 className="text-[15px] font-semibold text-slate-950">Your recent activity</h3>
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+        <h3 className="text-[15px] font-semibold text-slate-950 dark:text-white">Your recent activity</h3>
       </div>
       {entries.length === 0 ? (
         <EmptyState
@@ -119,16 +119,16 @@ function RecentActivityPanel({ entries }) {
           description="Things you add, edit, or delete will show up here."
         />
       ) : (
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-slate-50 dark:divide-slate-800">
           {entries.slice(0, 6).map((entry) => (
             <div key={entry.id} className="flex items-center justify-between gap-3 px-5 py-3">
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-medium text-slate-800">
-                  <span className="font-semibold text-slate-950">{ACTION_LABELS[entry.action] || entry.action}</span>{" "}
+                <p className="truncate text-[13px] font-medium text-slate-800 dark:text-slate-200">
+                  <span className="font-semibold text-slate-950 dark:text-white">{ACTION_LABELS[entry.action] || entry.action}</span>{" "}
                   {entry.module} · {entry.entityLabel || `#${entry.entityId ?? "—"}`}
                 </p>
               </div>
-              <span className="shrink-0 text-xs text-slate-400">{formatRelativeTime(entry.timestamp)}</span>
+              <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">{formatRelativeTime(entry.timestamp)}</span>
             </div>
           ))}
         </div>
@@ -153,7 +153,7 @@ export function DashboardHomeView({
   return (
     <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       {cards.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-white">
+        <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
           <EmptyState
             icon={ActivityIcon}
             title="No pages assigned"

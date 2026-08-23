@@ -5,12 +5,14 @@ import {
   FiChevronDown as ChevronDown,
   FiLogOut as LogOut,
   FiMenu as Menu,
+  FiMoon as Moon,
   FiRefreshCw as RefreshCw,
   FiSearch as Search,
   FiSettings as Settings,
   FiUser as UserIcon,
   FiX as X,
 } from "react-icons/fi";
+import { ThemeToggle } from "../../components/ThemeToggle";
 import { useEmployees } from "./features/employees/useEmployees";
 import { useEquipment } from "./features/equipment/useEquipment";
 import { useAssign } from "./features/assign/useAssign";
@@ -99,7 +101,7 @@ function readStoredSidebarWidth() {
   return stored >= MIN_SIDEBAR_WIDTH && stored <= MAX_SIDEBAR_WIDTH ? stored : DEFAULT_SIDEBAR_WIDTH;
 }
 
-function Dashboard({ user, onLogout }) {
+function Dashboard({ user, onLogout, theme, onToggleTheme }) {
   const permissions = useDashboardPermissions({ user });
   const {
     canCreateRecords,
@@ -346,7 +348,7 @@ function Dashboard({ user, onLogout }) {
   const borrowHistory = useBorrowHistory({ isActive: isBorrowHistoryView });
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-950 antialiased">
+    <div className="min-h-screen bg-slate-100 text-slate-950 antialiased dark:bg-slate-950 dark:text-slate-100">
       <div className="flex min-h-screen">
         {/* Mobile sidebar */}
         {isMobileSidebarOpen && (
@@ -357,13 +359,13 @@ function Dashboard({ user, onLogout }) {
               onClick={() => setIsMobileSidebarOpen(false)}
               aria-label="Close navigation"
             />
-            <aside className="relative flex h-full w-72 flex-col border-r border-slate-200 bg-white shadow-2xl">
-              <div className="flex items-center justify-between border-b border-slate-100 pr-3">
+            <aside className="relative flex h-full w-72 flex-col border-r border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center justify-between border-b border-slate-100 pr-3 dark:border-slate-800">
                 <SidebarBrand collapsed={false} />
                 <button
                   type="button"
                   onClick={() => setIsMobileSidebarOpen(false)}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white dark:focus-visible:ring-offset-slate-900"
                   aria-label="Close sidebar"
                 >
                   <X />
@@ -376,7 +378,7 @@ function Dashboard({ user, onLogout }) {
 
         {/* Desktop sidebar */}
         <aside
-          className={`sticky top-0 hidden h-screen min-h-0 shrink-0 flex-col border-r border-slate-200 bg-white xl:flex ${isResizingSidebar ? "" : "transition-[width] duration-200"
+          className={`sticky top-0 hidden h-screen min-h-0 shrink-0 flex-col border-r border-slate-200 bg-white xl:flex dark:border-slate-800 dark:bg-slate-900 ${isResizingSidebar ? "" : "transition-[width] duration-200"
             } ${isSidebarCollapsed ? "w-19" : "relative"}`}
           style={isSidebarCollapsed ? undefined : { width: sidebarWidth }}
         >
@@ -405,7 +407,7 @@ function Dashboard({ user, onLogout }) {
 
         {/* Main content */}
         <main className="min-w-0 flex-1">
-          <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+          <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
             <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
               {isMobileSearchOpen ? (
                 <div className="flex flex-1 items-center gap-2">
@@ -421,7 +423,7 @@ function Dashboard({ user, onLogout }) {
                   <button
                     type="button"
                     onClick={() => setIsMobileSearchOpen(false)}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-400 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900"
                     aria-label="Close search"
                   >
                     <X size={18} />
@@ -432,14 +434,14 @@ function Dashboard({ user, onLogout }) {
                   <button
                     type="button"
                     onClick={() => setIsMobileSidebarOpen(true)}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-600 outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white xl:hidden"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-600 outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:text-slate-300 dark:focus-visible:ring-offset-slate-900 xl:hidden"
                     aria-label="Open navigation"
                   >
                     <Menu className="text-lg" />
                   </button>
 
                   <div className="min-w-0 flex-1">
-                    <h1 className="truncate text-[17px] font-semibold text-slate-950">
+                    <h1 className="truncate text-[17px] font-semibold text-slate-950 dark:text-white">
                       {activeViewParentLabel && (
                         <>
                           <span className="text-[20px]">{activeViewParentLabel}</span>
@@ -462,11 +464,13 @@ function Dashboard({ user, onLogout }) {
                   <button
                     type="button"
                     onClick={() => setIsMobileSearchOpen(true)}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white lg:hidden"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-400 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 lg:hidden"
                     aria-label="Open search"
                   >
                     <Search size={18} />
                   </button>
+
+                  <ThemeToggle theme={theme} onToggle={onToggleTheme} className="hidden sm:inline-flex" />
 
                   <div className="relative" ref={notificationsRef}>
                     <button
@@ -475,25 +479,25 @@ function Dashboard({ user, onLogout }) {
                         notifications.setIsOpen((value) => !value);
                         setIsProfileMenuOpen(false);
                       }}
-                      className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                      className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-400 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900"
                       aria-label="Notifications"
                       aria-haspopup="true"
                       aria-expanded={notifications.isOpen}
                     >
                       <Bell size={18} />
                       {notifications.hasUnread && (
-                        <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
+                        <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white dark:ring-slate-900">
                           {notifications.unreadCount > 9 ? "9+" : notifications.unreadCount}
                         </span>
                       )}
                     </button>
 
                     {notifications.isOpen && (
-                      <div className="absolute right-0 top-full z-30 mt-2 w-80 rounded-xl border border-slate-200 bg-white shadow-lg">
-                        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                      <div className="absolute right-0 top-full z-30 mt-2 w-80 rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-700">
                           <div>
-                            <p className="text-sm font-semibold text-slate-950">Notifications</p>
-                            <p className="mt-0.5 text-[11px] text-slate-400">
+                            <p className="text-sm font-semibold text-slate-950 dark:text-white">Notifications</p>
+                            <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
                               {notifications.unreadCount} unread
                             </p>
                           </div>
@@ -502,7 +506,7 @@ function Dashboard({ user, onLogout }) {
                               type="button"
                               onClick={notifications.handleRetry}
                               disabled={notifications.isLoading}
-                              className="grid h-7 w-7 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="grid h-7 w-7 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-700"
                               aria-label="Refresh notifications"
                               title="Refresh notifications"
                             >
@@ -520,7 +524,7 @@ function Dashboard({ user, onLogout }) {
                         </div>
                         <div className="max-h-80 overflow-y-auto">
                           {notifications.isLoading && notifications.visibleNotifications.length === 0 ? (
-                            <div className="px-4 py-8 text-center text-[13px] text-slate-500">
+                            <div className="px-4 py-8 text-center text-[13px] text-slate-500 dark:text-slate-400">
                               Loading notifications...
                             </div>
                           ) : notifications.visibleNotifications.length === 0 ? (
@@ -531,7 +535,7 @@ function Dashboard({ user, onLogout }) {
                                 key={item.id}
                                 type="button"
                                 onClick={() => notifications.handleOpen(item)}
-                                className="flex w-full gap-3 border-b border-slate-50 px-4 py-3 text-left outline-none transition last:border-b-0 hover:bg-slate-50 focus-visible:bg-slate-50"
+                                className="flex w-full gap-3 border-b border-slate-50 px-4 py-3 text-left outline-none transition last:border-b-0 hover:bg-slate-50 focus-visible:bg-slate-50 dark:border-slate-700/60 dark:hover:bg-slate-700/60 dark:focus-visible:bg-slate-700/60"
                               >
                                 <span
                                   className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.unread
@@ -542,9 +546,9 @@ function Dashboard({ user, onLogout }) {
                                     }`}
                                 />
                                 <div className="min-w-0">
-                                  <p className="text-[13px] font-semibold text-slate-950">{item.title}</p>
-                                  <p className="mt-0.5 text-[13px] text-slate-500">{item.detail}</p>
-                                  <p className="mt-1 text-[11px] text-slate-400">{item.time}</p>
+                                  <p className="text-[13px] font-semibold text-slate-950 dark:text-white">{item.title}</p>
+                                  <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">{item.detail}</p>
+                                  <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{item.time}</p>
                                 </div>
                               </button>
                             ))
@@ -576,14 +580,14 @@ function Dashboard({ user, onLogout }) {
                         setIsProfileMenuOpen((value) => !value);
                         notifications.setIsOpen(false);
                       }}
-                      className="flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-2 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                      className="flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-2 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900"
                       aria-haspopup="true"
                       aria-expanded={isProfileMenuOpen}
                     >
-                      <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-950 text-xs font-semibold text-white">
+                      <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-950 text-xs font-semibold text-white dark:bg-white dark:text-slate-900">
                         {initials}
                       </div>
-                      <span className="text-sm font-medium text-slate-700">{displayName}</span>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{displayName}</span>
                       <ChevronDown
                         size={14}
                         className={`text-slate-400 transition-transform ${isProfileMenuOpen ? "rotate-180" : ""}`}
@@ -591,21 +595,28 @@ function Dashboard({ user, onLogout }) {
                     </button>
 
                     {isProfileMenuOpen && (
-                      <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
-                        <div className="border-b border-slate-100 px-3 py-2">
-                          <p className="truncate text-sm font-semibold text-slate-950">{displayName}</p>
-                          <p className="truncate text-xs text-slate-500">{getAccessProfileLabel(user)}</p>
+                      <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                        <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-700">
+                          <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{displayName}</p>
+                          <p className="truncate text-xs text-slate-500 dark:text-slate-400">{getAccessProfileLabel(user)}</p>
+                        </div>
+                        <div className="flex items-center justify-between gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-300 sm:hidden">
+                          <span className="flex items-center gap-2.5">
+                            <Moon size={15} />
+                            Dark mode
+                          </span>
+                          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
                         </div>
                         <button
                           type="button"
-                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400"
+                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-300 dark:hover:bg-slate-700"
                         >
                           <UserIcon size={15} />
                           View profile
                         </button>
                         <button
                           type="button"
-                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400"
+                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-300 dark:hover:bg-slate-700"
                         >
                           <Settings size={15} />
                           Account settings
@@ -613,7 +624,7 @@ function Dashboard({ user, onLogout }) {
                         <button
                           type="button"
                           onClick={onLogout}
-                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-rose-600 outline-none transition hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-orange-400"
+                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-rose-600 outline-none transition hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-rose-400 dark:hover:bg-rose-950/40"
                         >
                           <LogOut size={15} />
                           Sign out
@@ -897,7 +908,7 @@ function Dashboard({ user, onLogout }) {
 
           {!hasActiveViewAccess && !firstAccessibleDashboardView && (
             <div className="px-4 py-6 sm:px-6 lg:px-8">
-              <div className="rounded-xl border border-slate-200 bg-white">
+              <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
                 <EmptyState
                   icon={Box}
                   title="No pages assigned"
@@ -932,7 +943,7 @@ function Dashboard({ user, onLogout }) {
             !isActivityLogView &&
             !isRecycleBinView && (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
-                <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
                   <EmptyState
                     icon={activeNavItem?.icon || Box}
                     title={`${activeView} module`}
@@ -987,7 +998,7 @@ function Dashboard({ user, onLogout }) {
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
-                <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
                   <EmptyState
                     icon={Box}
                     title="Not available"
@@ -1010,7 +1021,7 @@ function Dashboard({ user, onLogout }) {
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
-                <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
                   <EmptyState
                     icon={Box}
                     title="Not available"
@@ -1064,7 +1075,7 @@ function Dashboard({ user, onLogout }) {
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
-                <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
                   <EmptyState icon={Box} title="Not available" description="This page is admin-only." />
                 </div>
               </div>
@@ -1084,7 +1095,7 @@ function Dashboard({ user, onLogout }) {
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
-                <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
                   <EmptyState icon={Box} title="Not available" description="This page is admin-only." />
                 </div>
               </div>
@@ -1110,7 +1121,7 @@ function Dashboard({ user, onLogout }) {
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
-                <div className="rounded-xl border border-slate-200 bg-white">
+                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
                   <EmptyState icon={Box} title="Not available" description="This page is admin-only." />
                 </div>
               </div>

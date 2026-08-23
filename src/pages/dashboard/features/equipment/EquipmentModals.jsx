@@ -24,7 +24,7 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
 
   const label = (
     <div className="mb-1.5 flex items-center justify-between gap-2">
-      <label className="text-xs font-semibold text-slate-600" htmlFor={id}>
+      <label className="text-xs font-semibold text-slate-600 dark:text-slate-400" htmlFor={id}>
         {field.label}
       </label>
       {canRemove && (
@@ -33,7 +33,7 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
           onClick={handleRemove}
           disabled={isSubmitting || isRemoving}
           title="Remove field"
-          className="text-slate-400 outline-none transition hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="text-slate-400 outline-none transition hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-500 dark:hover:text-rose-400"
         >
           <X size={13} />
         </button>
@@ -143,7 +143,7 @@ export function AddCustomFieldControl({ onAdd, disabled, types }) {
         type="button"
         onClick={() => setIsOpen(true)}
         disabled={disabled}
-        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[13px] font-semibold text-slate-600 outline-none transition hover:border-slate-400 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[13px] font-semibold text-slate-600 outline-none transition hover:border-slate-400 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-white"
       >
         <PlusCircle size={15} />
         Add field
@@ -169,7 +169,7 @@ export function AddCustomFieldControl({ onAdd, disabled, types }) {
   }
 
   return (
-    <div className="col-span-full rounded-lg border border-slate-200 bg-slate-50 p-3">
+    <div className="col-span-full rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
       {error && <p className="mb-2 text-[12px] font-medium text-rose-600">{error}</p>}
       <div className="flex flex-wrap items-center gap-2">
         <input
@@ -197,7 +197,7 @@ export function AddCustomFieldControl({ onAdd, disabled, types }) {
           type="button"
           onClick={handleAdd}
           disabled={isSaving}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
         >
           {isSaving ? "Adding..." : "Add"}
         </button>
@@ -208,7 +208,7 @@ export function AddCustomFieldControl({ onAdd, disabled, types }) {
             setError(null);
           }}
           disabled={isSaving}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
         >
           Cancel
         </button>
@@ -231,14 +231,14 @@ function CustomFieldCheckboxItem({ field, onRemove, onError }) {
   return (
     <label
       title="Custom field — uncheck to remove it from this category"
-      className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] font-medium text-slate-700 transition hover:border-slate-300"
+      className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] font-medium text-slate-700 transition hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600"
     >
       <input
         type="checkbox"
         checked
         disabled={isRemoving}
         onChange={handleChange}
-        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
+        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400 dark:border-slate-600 dark:bg-slate-700"
       />
       {field.label}
     </label>
@@ -259,14 +259,14 @@ function ReusableFieldCheckboxItem({ field, onReuse, onError }) {
   return (
     <label
       title="Existing custom field from another category — check to reuse it here"
-      className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[13px] font-medium text-slate-500 transition hover:border-slate-400 hover:text-slate-700"
+      className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[13px] font-medium text-slate-500 transition hover:border-slate-400 hover:text-slate-700 dark:border-slate-600 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-200"
     >
       <input
         type="checkbox"
         checked={false}
         disabled={isSaving}
         onChange={handleChange}
-        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
+        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400 dark:border-slate-600 dark:bg-slate-700"
       />
       {field.label}
     </label>
@@ -312,20 +312,20 @@ return (
         onClick={onClose}
         aria-label="Close"
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">
               {isEdit ? "Edit equipment" : "Add new equipment"}
             </h2>
-            <p className="mt-0.5 text-[13px] text-slate-500">
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
               {isEdit ? "Update this item's details." : "New items start unassigned in stock."}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Close"
           >
             <X size={16} />
@@ -335,7 +335,7 @@ return (
 <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
           <div className="overflow-y-auto px-6 py-5">
             {error && (
-              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
                 {error}
               </div>
             )}
@@ -406,13 +406,13 @@ return (
             </div>
           </div>
 
-<div className="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-4">
+<div className="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
             {onOpenSoftwareLicense ? (
               <button
                 type="button"
                 onClick={onOpenSoftwareLicense}
                 disabled={isSubmitting}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
               >
                 {softwareLicenseCount > 0 ? `Software License (${softwareLicenseCount})` : "Software License"}
               </button>
@@ -425,7 +425,7 @@ return (
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
               >
                 Cancel
               </button>
@@ -434,7 +434,7 @@ return (
                   type="button"
                   onClick={onOpenColumnsPicker}
                   disabled={isSubmitting || !values.category}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
                 >
                   Add Columns
                 </button>
@@ -442,7 +442,7 @@ return (
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
               >
                 {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add equipment"}
               </button>
@@ -491,18 +491,18 @@ export function ColumnsPickerModal({
         onClick={onClose}
         aria-label="Close"
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">Configure columns</h2>
-            <p className="mt-0.5 text-[13px] text-slate-500">
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Configure columns</h2>
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
               Choose which fields appear for {categoryLabel || "this category"}.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Close"
           >
             <X size={16} />
@@ -510,28 +510,28 @@ export function ColumnsPickerModal({
         </div>
 
         {error && (
-          <div className="mx-6 mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+          <div className="mx-6 mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
             {error}
           </div>
         )}
 
         <div className="overflow-y-auto px-6 py-5">
           {isLoading ? (
-            <div className="py-8 text-center text-[13px] text-slate-500">Loading fields...</div>
+            <div className="py-8 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading fields...</div>
           ) : fields.length === 0 && customFields.length === 0 && reusableFields.length === 0 && !onAddField ? (
-            <div className="py-8 text-center text-[13px] text-slate-500">No fields available.</div>
+            <div className="py-8 text-center text-[13px] text-slate-500 dark:text-slate-400">No fields available.</div>
           ) : (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {fields.map((field) => (
                 <label
                   key={field.key}
-                  className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 transition hover:border-slate-300"
+                  className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 transition hover:border-slate-300 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600"
                 >
                   <input
                     type="checkbox"
                     checked={selectedKeys.includes(field.key)}
                     onChange={() => onToggle(field.key)}
-                    className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
+                    className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400 dark:border-slate-600 dark:bg-slate-800"
                   />
                   {field.label}
                 </label>
@@ -551,7 +551,7 @@ export function ColumnsPickerModal({
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-4">
+        <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
           <p className="text-[12px] text-amber-600">
             {!isLoading && selectedKeys.length === 0
               ? "Tick at least one field above (any one) to save."
@@ -562,7 +562,7 @@ export function ColumnsPickerModal({
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               Cancel
             </button>
@@ -571,7 +571,7 @@ export function ColumnsPickerModal({
               onClick={onSave}
               disabled={isSaving || isLoading || selectedKeys.length === 0}
               title={selectedKeys.length === 0 ? "Tick at least one field above to save" : undefined}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               {isSaving ? "Saving..." : "Save columns"}
             </button>
@@ -609,18 +609,18 @@ export function SoftwareLicensePickerModal({
         onClick={onClose}
         aria-label="Close"
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">Software License</h2>
-            <p className="mt-0.5 text-[13px] text-slate-500">
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Software License</h2>
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
               Choose one or more licenses to link to this equipment.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Close"
           >
             <X size={16} />
@@ -628,16 +628,16 @@ export function SoftwareLicensePickerModal({
         </div>
 
         {error && (
-          <div className="mx-6 mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+          <div className="mx-6 mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
             {error}
           </div>
         )}
 
         <div className="overflow-y-auto px-6 py-5">
           {isLoading ? (
-            <div className="py-8 text-center text-[13px] text-slate-500">Loading licenses...</div>
+            <div className="py-8 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading licenses...</div>
           ) : licenses.length === 0 ? (
-            <div className="py-8 text-center text-[13px] text-slate-500">
+            <div className="py-8 text-center text-[13px] text-slate-500 dark:text-slate-400">
               No licenses found. Add one from the License page first.
             </div>
           ) : (
@@ -647,29 +647,29 @@ export function SoftwareLicensePickerModal({
                 return (
                   <label
                     key={license.license_id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2.5 text-[13px] font-medium text-slate-700 transition hover:border-slate-300"
+                    className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2.5 text-[13px] font-medium text-slate-700 transition hover:border-slate-300 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600"
                   >
                     <span className="flex items-center gap-2.5">
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => onToggle(license.license_id)}
-                        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
+                        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400 dark:border-slate-600 dark:bg-slate-800"
                       />
                       <span>
-                        <span className="block text-slate-950">{license.product_name}</span>
-                        <span className="block text-xs font-normal text-slate-500">
+                        <span className="block text-slate-950 dark:text-white">{license.product_name}</span>
+                        <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
                           {[license.product_type, license.license_type].filter(Boolean).join(" · ") || "—"}
                         </span>
                       </span>
                     </span>
                     {license.install_count != null ? (
-                      <span className="shrink-0 text-xs font-normal text-slate-400">
+                      <span className="shrink-0 text-xs font-normal text-slate-400 dark:text-slate-500">
                         {license.install_count} installed
                       </span>
                     ) : (
                       license.status && (
-                        <span className="shrink-0 text-xs font-normal text-slate-400">{license.status}</span>
+                        <span className="shrink-0 text-xs font-normal text-slate-400 dark:text-slate-500">{license.status}</span>
                       )
                     )}
                   </label>
@@ -679,11 +679,11 @@ export function SoftwareLicensePickerModal({
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
           >
             Done
           </button>
@@ -723,11 +723,11 @@ return (
         onClick={onClose}
         aria-label="Close"
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">Borrow equipment</h2>
-            <p className="mt-0.5 text-[13px] text-slate-500">
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Borrow equipment</h2>
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
               {[equipment.category, equipment.device_type, equipment.device_model].filter(Boolean).join(" · ") ||
                 `Equipment ${equipment.equipment_id}`}
             </p>
@@ -735,7 +735,7 @@ return (
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Close"
           >
             <X size={16} />
@@ -745,7 +745,7 @@ return (
 <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
           <div className="overflow-y-auto px-6 py-5">
             {error && (
-              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
                 {error}
               </div>
             )}
@@ -817,19 +817,19 @@ return (
             </div>
           </div>
 
-<div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+<div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting ? "Borrowing..." : "Borrow equipment"}
             </button>
@@ -859,11 +859,11 @@ return (
         onClick={onClose}
         aria-label="Close"
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">Return equipment</h2>
-            <p className="mt-0.5 text-[13px] text-slate-500">
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Return equipment</h2>
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
               {[loan.category_name, loan.device_model, loan.computer_name].filter(Boolean).join(" · ") ||
                 `Equipment ${loan.equipment_id}`}{" "}
               · borrowed by {loan.borrower_name || `#${loan.borrower_id}`}
@@ -872,7 +872,7 @@ return (
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Close"
           >
             <X size={16} />
@@ -882,7 +882,7 @@ return (
 <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
           <div className="overflow-y-auto px-6 py-5">
             {error && (
-              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
                 {error}
               </div>
             )}
@@ -915,19 +915,19 @@ return (
             </div>
           </div>
 
-<div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+<div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting ? "Returning..." : "Mark as returned"}
             </button>

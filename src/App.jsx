@@ -4,6 +4,7 @@ import Dashboard from "./pages/dashboard/dashboard";
 import Login from "./pages/auth/login";
 import { setAuthToken } from "./lib/apiClient";
 import { mergeStoredPermissionsForUser } from "./lib/permissions";
+import { useTheme } from "./hooks/useTheme";
 
 const SESSION_STORAGE_KEY = "tplus_session";
 
@@ -19,6 +20,7 @@ function loadStoredSession() {
 
 function App() {
   const [session, setSession] = useState(loadStoredSession);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (!session) {
@@ -44,13 +46,19 @@ function App() {
     <Routes>
       <Route
         path="/login"
-        element={session ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />}
+        element={
+          session ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <Login onLogin={handleLogin} theme={theme} onToggleTheme={toggleTheme} />
+          )
+        }
       />
       <Route
         path="/dashboard/*"
         element={
           session ? (
-            <Dashboard user={session.user} onLogout={handleLogout} />
+            <Dashboard user={session.user} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} />
           ) : (
             <Navigate to="/login" replace />
           )

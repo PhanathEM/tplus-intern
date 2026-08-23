@@ -64,18 +64,18 @@ export function AddStockDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label="Close" />
 
-      <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">
               {isPartLocked && selectedPartType ? `Add New ${selectedPartType.part_name}` : "Add to stock"}
             </h2>
-            <p className="mt-0.5 text-xs text-slate-500">Add a new part to stock.</p>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Add a new part to stock.</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Close"
           >
             <X size={16} />
@@ -85,12 +85,12 @@ export function AddStockDialog({
         <form onSubmit={onSubmit} autoComplete="off">
           <div className="flex flex-col gap-4 px-6 py-5">
             {error && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">{error}</div>
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">{error}</div>
             )}
 
             <FormField label="Part Name" htmlFor="add-stock-part">
               {isPartLocked ? (
-                <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700">
+                <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                   {selectedPartType?.part_name || "—"}
                 </div>
               ) : (
@@ -226,13 +226,13 @@ export function AddStockDialog({
               field.field_type === "boolean" ? (
                 <label
                   key={field.field_key}
-                  className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700"
+                  className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700 dark:text-slate-300"
                 >
                   <input
                     type="checkbox"
                     checked={Boolean(values[field.field_key])}
                     onChange={(e) => onChange(field.field_key, e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400 dark:border-slate-600 dark:bg-slate-800"
                   />
                   {field.field_label}
                 </label>
@@ -274,19 +274,19 @@ export function AddStockDialog({
             </FormField>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!canSubmit || isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting ? "Adding..." : isRam ? "Add RAM" : "Add"}
             </button>

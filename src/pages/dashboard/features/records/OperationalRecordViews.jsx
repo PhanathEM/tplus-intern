@@ -28,18 +28,18 @@ import { FormField, formInputClass, RadioSelect, RowActionsMenu } from "../../co
 function LicenseStatusCell({ license }) {
   const status = String(license.status || "").toLowerCase();
 
-  if (!status) return <span className="text-slate-400">N/A</span>;
+  if (!status) return <span className="text-slate-400 dark:text-slate-500">N/A</span>;
 
   if (status.includes("expired")) {
-    return <span className="font-semibold text-rose-600">{license.status}</span>;
+    return <span className="font-semibold text-rose-600 dark:text-rose-400">{license.status}</span>;
   }
 
   if (status.includes("near expire") || status.includes("expiring")) {
-    return <span className="font-semibold text-amber-600">{license.status}</span>;
+    return <span className="font-semibold text-amber-600 dark:text-amber-400">{license.status}</span>;
   }
 
   if (status.includes("active")) {
-    return <span className="font-semibold text-emerald-600">{license.status}</span>;
+    return <span className="font-semibold text-emerald-600 dark:text-emerald-400">{license.status}</span>;
   }
 
   return <span>{license.status}</span>;
@@ -76,20 +76,20 @@ export function LicenseFormModal({
         onClick={onClose}
         aria-label="Close"
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">
               {isEdit ? "Edit software license" : "Add software license"}
             </h2>
-            <p className="mt-0.5 text-[13px] text-slate-500">
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
               {isEdit ? "Update this software license's details." : "Create a new software license renewal record."}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Close"
           >
             <X size={16} />
@@ -99,7 +99,7 @@ export function LicenseFormModal({
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
           <div className="overflow-y-auto px-6 py-5">
             {error && (
-              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
                 {error}
               </div>
             )}
@@ -172,7 +172,7 @@ export function LicenseFormModal({
               </FormField>
 
               {!requiresExpiry && (
-                <div className="sm:col-span-2 -mt-2 text-xs text-slate-500">
+                <div className="sm:col-span-2 -mt-2 text-xs text-slate-500 dark:text-slate-400">
                   {values.license_type === "Perpetual"
                     ? "Perpetual licenses are bought once and never expire, so no expiry date is needed."
                     : "Free licenses are always active, so no expiry date is needed."}
@@ -194,19 +194,19 @@ export function LicenseFormModal({
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add software license"}
             </button>
@@ -328,20 +328,20 @@ export function LicensesView({
       hideRefresh
       headerActions={
         <>
-          <span className="rounded-full bg-rose-50 px-3 py-1 text-[13px] font-semibold text-rose-700">
+          <span className="rounded-full bg-rose-50 px-3 py-1 text-[13px] font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
             {statusCounts.expired} expired
           </span>
-          <span className="rounded-full bg-amber-50 px-3 py-1 text-[13px] font-semibold text-amber-700">
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-[13px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
             {statusCounts.nearExpire} near expire
           </span>
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-700">
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-[13px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
             {statusCounts.active} active
           </span>
           {canCreate && (
             <button
               type="button"
               onClick={onAddNew}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               <PlusCircle size={15} />
               Add Software License
@@ -351,8 +351,8 @@ export function LicensesView({
       }
       getRowClassName={(license) => {
         const info = getLicenseExpiryInfo(license);
-        if (info?.isExpired) return "bg-rose-50/50 hover:bg-rose-50";
-        if (info) return "bg-amber-50/50 hover:bg-amber-50";
+        if (info?.isExpired) return "bg-rose-50/50 hover:bg-rose-50 dark:bg-rose-950/20 dark:hover:bg-rose-950/30";
+        if (info) return "bg-amber-50/50 hover:bg-amber-50 dark:bg-amber-950/20 dark:hover:bg-amber-950/30";
         return "";
       }}
       renderCell={(license, column) => {

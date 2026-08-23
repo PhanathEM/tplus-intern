@@ -69,7 +69,7 @@ export function PartBorrowView({
           <button
             type="button"
             onClick={onAddBorrow}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
           >
             <Plus size={14} />
             Borrow a Part
@@ -78,7 +78,7 @@ export function PartBorrowView({
       }
       renderCell={(record, column) =>
         column.key === "borrowed_item" ? (
-          <span className="font-medium text-slate-900">{getBorrowedItemLabel(record)}</span>
+          <span className="font-medium text-slate-900 dark:text-slate-100">{getBorrowedItemLabel(record)}</span>
         ) : (
           <RecordCellValue value={record[column.key]} />
         )
@@ -133,16 +133,16 @@ export function BorrowPartDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label="Close" />
-      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">Borrow a part</h2>
-            <p className="mt-0.5 text-[13px] text-slate-500">Pick a stock line and who's borrowing it.</p>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Borrow a part</h2>
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">Pick a stock line and who's borrowing it.</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Close"
           >
             <X size={16} />
@@ -152,7 +152,7 @@ export function BorrowPartDialog({
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
           <div className="overflow-y-auto px-6 py-5">
             {error && (
-              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">{error}</div>
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">{error}</div>
             )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -172,13 +172,13 @@ export function BorrowPartDialog({
               <div className="sm:col-span-2">
                 <FormField label="Stock line *" htmlFor="part-borrow-stock_id">
                   {isAvailableStockLoading ? (
-                    <p className="text-[13px] text-slate-500">Loading stock...</p>
+                    <p className="text-[13px] text-slate-500 dark:text-slate-400">Loading stock...</p>
                   ) : availableStockError ? (
-                    <p className="text-[13px] text-rose-600">{availableStockError}</p>
+                    <p className="text-[13px] text-rose-600 dark:text-rose-400">{availableStockError}</p>
                   ) : !values.part_type_id ? (
-                    <p className="text-[13px] text-slate-400">Pick a part first.</p>
+                    <p className="text-[13px] text-slate-400 dark:text-slate-500">Pick a part first.</p>
                   ) : stockOptions.length === 0 ? (
-                    <p className="text-[13px] text-slate-400">Nothing left in stock for this part.</p>
+                    <p className="text-[13px] text-slate-400 dark:text-slate-500">Nothing left in stock for this part.</p>
                   ) : (
                     <RadioSelect
                       id="part-borrow-stock_id"
@@ -246,19 +246,19 @@ export function BorrowPartDialog({
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting ? "Borrowing..." : "Borrow"}
             </button>
@@ -283,18 +283,18 @@ export function ReturnPartDialog({ borrow, values, onChange, onSubmit, onClose, 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label="Close" />
-      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">Return part</h2>
-            <p className="mt-0.5 text-[13px] text-slate-500">
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Return part</h2>
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
               {getBorrowedItemLabel(borrow)} · borrowed by {borrow.borrower_name || `#${borrow.borrower_id}`}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Close"
           >
             <X size={16} />
@@ -304,7 +304,7 @@ export function ReturnPartDialog({ borrow, values, onChange, onSubmit, onClose, 
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
           <div className="overflow-y-auto px-6 py-5">
             {error && (
-              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">{error}</div>
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">{error}</div>
             )}
 
             <div className="grid grid-cols-1 gap-4">
@@ -333,32 +333,32 @@ export function ReturnPartDialog({ borrow, values, onChange, onSubmit, onClose, 
                 />
               </FormField>
 
-              <label className="flex items-center gap-2 text-[13px] text-slate-700">
+              <label className="flex items-center gap-2 text-[13px] text-slate-700 dark:text-slate-300">
                 <input
                   type="checkbox"
                   checked={values.returned_broken}
                   onChange={(e) => onChange("returned_broken", e.target.checked)}
                   disabled={isSubmitting}
-                  className="h-4 w-4 rounded border-slate-300"
+                  className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 dark:bg-slate-800"
                 />
                 Came back broken — send to broken stock instead of the working pool
               </label>
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting ? "Returning..." : "Return"}
             </button>

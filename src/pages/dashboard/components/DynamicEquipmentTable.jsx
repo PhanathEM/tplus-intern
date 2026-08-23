@@ -24,21 +24,21 @@ export function DynamicEquipmentTable({
   selectable,
 }) {
   if (isLoading) {
-    return <div className="px-5 py-10 text-center text-[13px] text-slate-500">{loadingText}</div>;
+    return <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">{loadingText}</div>;
   }
 
   if (error) {
     return (
       <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
-        <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500">
+        <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
           <AlertTriangle size={18} />
         </div>
-        <p className="text-[13px] font-semibold text-slate-700">{errorTitle}</p>
-        <p className="text-xs text-slate-500">{error}</p>
+        <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">{errorTitle}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
         <button
           type="button"
           onClick={onRetry}
-          className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+          className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
         >
           <RefreshCw size={13} />
           Retry
@@ -53,8 +53,8 @@ export function DynamicEquipmentTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-100 text-left text-[13px]">
-        <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+      <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
+        <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
           <tr>
             {selectable && <th className="w-10 px-4 py-3" />}
             {columns.map((column) => (
@@ -67,12 +67,12 @@ export function DynamicEquipmentTable({
             )}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-50">
+        <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
           {records.map((record, index) => (
             <tr
               key={rowKey(record, index)}
               onClick={onRowClick ? () => onRowClick(record) : undefined}
-              className={`transition hover:bg-slate-50/70 ${onRowClick ? "cursor-pointer" : ""} ${getRowClassName?.(record) || ""}`}
+              className={`transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40 ${onRowClick ? "cursor-pointer" : ""} ${getRowClassName?.(record) || ""}`}
             >
               {selectable && (
                 <td className="whitespace-nowrap px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -80,14 +80,14 @@ export function DynamicEquipmentTable({
                     type="checkbox"
                     checked={selectable.isSelected(record)}
                     onChange={() => selectable.onSelect(record)}
-                    className="h-4 w-4 rounded border-slate-300 text-orange-500 outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+                    className="h-4 w-4 rounded border-slate-300 text-orange-500 outline-none focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-600 dark:bg-slate-800"
                   />
                 </td>
               )}
               {columns.map((column) => (
                 <td
                   key={column.key}
-                  className={`px-4 py-3 text-slate-600 ${column.key === "remark" ? "min-w-72 whitespace-normal" : "whitespace-nowrap"
+                  className={`px-4 py-3 text-slate-600 dark:text-slate-300 ${column.key === "remark" ? "min-w-72 whitespace-normal" : "whitespace-nowrap"
                     }`}
                 >
                   <RecordCellValue value={record[column.key]} />

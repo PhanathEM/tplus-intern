@@ -80,7 +80,7 @@ export function RowActionsMenu({ items }) {
         aria-label="Row actions"
         aria-haspopup="true"
         aria-expanded={isOpen}
-        className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400"
+        className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
       >
         <MoreVertical size={16} />
       </button>
@@ -91,11 +91,11 @@ export function RowActionsMenu({ items }) {
           <div
             ref={menuRef}
             style={{ position: "fixed", ...menuStyle }}
-            className="z-50 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+            className="z-50 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800"
           >
             {items.map((item, index) =>
               item.divider ? (
-                <div key={`divider-${index}`} className="my-1 border-t border-slate-100" />
+                <div key={`divider-${index}`} className="my-1 border-t border-slate-100 dark:border-slate-700" />
               ) : (
                 <button
                   key={item.label}
@@ -105,7 +105,7 @@ export function RowActionsMenu({ items }) {
                     setIsOpen(false);
                     item.onClick();
                   }}
-                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] font-medium outline-none transition ${item.destructive ? "text-rose-600 hover:bg-rose-50" : "text-slate-700 hover:bg-slate-50"
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] font-medium outline-none transition ${item.destructive ? "text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40" : "text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
                     }`}
                 >
                   <item.icon size={14} />
@@ -123,11 +123,11 @@ export function RowActionsMenu({ items }) {
 export function EmptyState({ icon: Icon = Search, title, description }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 px-5 py-10 text-center">
-      <div className="grid h-10 w-10 place-items-center rounded-full bg-slate-50 text-slate-400">
+      <div className="grid h-10 w-10 place-items-center rounded-full bg-slate-50 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
         <Icon size={18} />
       </div>
-      <p className="text-[13px] font-semibold text-slate-700">{title}</p>
-      <p className="text-xs text-slate-500">{description}</p>
+      <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">{title}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">{description}</p>
     </div>
   );
 }
@@ -158,21 +158,21 @@ export function CategoryDropdown({ options, selected, onSelect, label = "Select"
       <button
         type="button"
         onClick={() => setIsOpen((value) => !value)}
-        className="inline-flex h-9 min-w-44 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+        className="inline-flex h-9 min-w-44 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
         <span className="truncate">{selected === "All" ? `All ${label}` : selected}</span>
         <ChevronDown
           size={14}
-          className={`shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          className={`shrink-0 text-slate-400 transition-transform dark:text-slate-500 ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 
       {isOpen && (
         <div
           role="listbox"
-          className="absolute right-0 top-full z-30 mt-2 min-w-52 max-w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+          className="absolute right-0 top-full z-30 mt-2 min-w-52 max-w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-700 dark:bg-slate-800"
         >
           {options.map((option) => (
             <button
@@ -184,7 +184,7 @@ export function CategoryDropdown({ options, selected, onSelect, label = "Select"
                 onSelect(option);
                 setIsOpen(false);
               }}
-              className={`flex w-full items-center rounded-lg px-3 py-2 text-left text-[13px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${option === selected ? "bg-orange-50 text-orange-700" : "text-slate-600 hover:bg-slate-50"
+              className={`flex w-full items-center rounded-lg px-3 py-2 text-left text-[13px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${option === selected ? "bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400" : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
                 }`}
             >
               {option}
@@ -199,7 +199,7 @@ export function CategoryDropdown({ options, selected, onSelect, label = "Select"
 export function FormField({ label, htmlFor, children }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-semibold text-slate-600" htmlFor={htmlFor}>
+      <label className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-400" htmlFor={htmlFor}>
         {label}
       </label>
       {children}
@@ -208,7 +208,7 @@ export function FormField({ label, htmlFor, children }) {
 }
 
 export const formInputClass =
-  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100";
+  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:ring-slate-700";
 
 export function ConfirmDialog({
   isOpen,
@@ -242,26 +242,26 @@ export function ConfirmDialog({
         onClick={onCancel}
         aria-label="Close"
       />
-      <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl">
+      <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="px-6 py-5">
-          <div className="mb-3 grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-600">
+          <div className="mb-3 grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
             <AlertTriangle size={18} />
           </div>
-          <h2 className="text-[15px] font-semibold text-slate-950">{title}</h2>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">{message}</p>
+          <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{title}</h2>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">{message}</p>
           {error && (
-            <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700">
+            <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
               {error}
             </div>
           )}
         </div>
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
           {blocked ? (
             <>
               <button
                 type="button"
                 onClick={onCancel}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
               >
                 Close
               </button>
@@ -269,7 +269,7 @@ export function ConfirmDialog({
                 <button
                   type="button"
                   onClick={onBlockedAction}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
                 >
                   {blockedActionLabel}
                 </button>
@@ -281,7 +281,7 @@ export function ConfirmDialog({
                 type="button"
                 onClick={onCancel}
                 disabled={isConfirming}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
               >
                 Cancel
               </button>
@@ -289,7 +289,7 @@ export function ConfirmDialog({
                 type="button"
                 onClick={onConfirm}
                 disabled={isConfirming}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-rose-600 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-rose-700 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-rose-600 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-rose-700 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-slate-900"
               >
                 {isConfirming ? confirmingLabel : confirmLabel}
               </button>
@@ -359,12 +359,12 @@ export function RadioSelect({ id, options, value, onSelect, placeholder = "Selec
         id={id}
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
-        className="flex h-10 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 text-left text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-10 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 text-left text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:focus:border-slate-500 dark:focus:ring-slate-700"
       >
-        <span className={`truncate ${selectedOption ? "text-slate-900" : "text-slate-400"}`}>
+        <span className={`truncate ${selectedOption ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"}`}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <ChevronDown size={14} className={`shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown size={14} className={`shrink-0 text-slate-400 transition-transform dark:text-slate-500 ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
       {isOpen &&
@@ -373,7 +373,7 @@ export function RadioSelect({ id, options, value, onSelect, placeholder = "Selec
           <div
             ref={menuRef}
             style={{ position: "fixed", top: menuRect.top, left: menuRect.left, width: menuRect.width }}
-            className="z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
+            className="z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="max-h-56 overflow-y-auto p-1.5">
               {options.map((option) => {
@@ -386,14 +386,14 @@ export function RadioSelect({ id, options, value, onSelect, placeholder = "Selec
                       onSelect(option.value);
                       setIsOpen(false);
                     }}
-                    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-slate-400 ${isSelected ? "text-slate-900" : "text-slate-700 hover:bg-slate-50"
+                    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-slate-400 ${isSelected ? "text-slate-900 dark:text-white" : "text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
                       }`}
                   >
                     <span
-                      className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border-2 ${isSelected ? "border-slate-900" : "border-slate-300"
+                      className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border-2 ${isSelected ? "border-slate-900 dark:border-white" : "border-slate-300 dark:border-slate-600"
                         }`}
                     >
-                      {isSelected && <span className="h-2 w-2 rounded-full bg-slate-900" />}
+                      {isSelected && <span className="h-2 w-2 rounded-full bg-slate-900 dark:bg-white" />}
                     </span>
                     <span className="truncate">{option.label}</span>
                   </button>
@@ -447,23 +447,23 @@ export function EmployeeSelectDropdown({ employees, selectedId, onSelect, disabl
         disabled={disabled}
         className={`${formInputClass} flex items-center justify-between text-left disabled:cursor-not-allowed disabled:opacity-50`}
       >
-        <span className={`truncate ${selectedEmployee ? "text-slate-900" : "text-slate-400"}`}>
+        <span className={`truncate ${selectedEmployee ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"}`}>
           {selectedEmployee
             ? `${selectedEmployee.full_name}${selectedEmployee.position ? ` · ${selectedEmployee.position}` : ""}`
             : placeholder}
         </span>
         <ChevronDown
           size={14}
-          className={`shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          className={`shrink-0 text-slate-400 transition-transform dark:text-slate-500 ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-30 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-          <div className="border-b border-slate-100 p-2">
+        <div className="absolute left-0 top-full z-30 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+          <div className="border-b border-slate-100 p-2 dark:border-slate-700">
             <div className="relative">
               <Search
-                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500"
                 size={14}
               />
               <input
@@ -473,13 +473,13 @@ export function EmployeeSelectDropdown({ employees, selectedId, onSelect, disabl
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search employee name"
-                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:bg-slate-900 dark:focus:ring-slate-700"
               />
             </div>
           </div>
           <div className="max-h-56 overflow-y-auto p-1.5">
             {filteredEmployees.length === 0 ? (
-              <p className="px-3 py-4 text-center text-xs text-slate-400">No employees found</p>
+              <p className="px-3 py-4 text-center text-xs text-slate-400 dark:text-slate-500">No employees found</p>
             ) : (
               filteredEmployees.map((employee) => {
                 const isSelected = String(employee.employee_id) === String(selectedId);
@@ -492,12 +492,12 @@ export function EmployeeSelectDropdown({ employees, selectedId, onSelect, disabl
                       setQuery("");
                       setIsOpen(false);
                     }}
-                    className={`flex w-full flex-col items-start rounded-lg px-3 py-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected ? "bg-orange-50 text-orange-700" : "text-slate-700 hover:bg-slate-50"
+                    className={`flex w-full flex-col items-start rounded-lg px-3 py-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected ? "bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400" : "text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
                       }`}
                   >
                     <span className="text-[13px] font-medium">{employee.full_name}</span>
                     {(employee.position || getEmployeeDepartmentCode(employee)) && (
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-slate-400 dark:text-slate-500">
                         {[employee.position, getEmployeeDepartmentCode(employee)].filter(Boolean).join(" · ")}
                       </span>
                     )}

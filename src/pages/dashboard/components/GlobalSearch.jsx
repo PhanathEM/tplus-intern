@@ -119,7 +119,7 @@ export function GlobalSearch({
     <div className={`relative ${className}`} ref={containerRef}>
       <label className="relative block">
         <span className="sr-only">Search</span>
-        <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+        <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
         <input
           autoFocus={autoFocus}
           type="search"
@@ -129,24 +129,24 @@ export function GlobalSearch({
           placeholder={placeholder}
           className={
             inputClassName ||
-            "h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100"
+            "h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
           }
         />
       </label>
 
       {showDropdown && (
-        <div className="absolute left-0 right-0 top-full z-30 mt-2 max-h-96 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-30 mt-2 max-h-96 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
           {isLoading && !hasAnyResults ? (
-            <div className="px-4 py-6 text-center text-[13px] text-slate-500">Searching...</div>
+            <div className="px-4 py-6 text-center text-[13px] text-slate-500 dark:text-slate-400">Searching...</div>
           ) : !hasAnyResults ? (
-            <div className="px-4 py-6 text-center text-[13px] text-slate-500">No results for "{term}"</div>
+            <div className="px-4 py-6 text-center text-[13px] text-slate-500 dark:text-slate-400">No results for "{term}"</div>
           ) : (
             sectionKeys.map((key) => {
               const meta = SECTION_META[key];
               const Icon = meta.icon;
               return (
-                <div key={key} className="border-b border-slate-50 py-1.5 last:border-b-0">
-                  <p className="px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                <div key={key} className="border-b border-slate-50 py-1.5 last:border-b-0 dark:border-slate-700/60">
+                  <p className="px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                     {meta.label}
                   </p>
                   {safeResults[key].map((item, index) => {
@@ -159,16 +159,16 @@ export function GlobalSearch({
                           setIsFocused(false);
                           onSelect(key, item);
                         }}
-                        className="flex w-full items-center gap-3 px-4 py-2 text-left outline-none transition hover:bg-slate-50 focus-visible:bg-slate-50"
+                        className="flex w-full items-center gap-3 px-4 py-2 text-left outline-none transition hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/60 dark:focus-visible:bg-slate-700/60"
                       >
-                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-orange-50 text-orange-600">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
                           <Icon size={14} />
                         </span>
                         <span className="min-w-0">
-                          <span className="block truncate text-[13px] font-medium text-slate-900">
+                          <span className="block truncate text-[13px] font-medium text-slate-900 dark:text-slate-100">
                             {getResultLabel(key, item)}
                           </span>
-                          {detail && <span className="block truncate text-[12px] text-slate-500">{detail}</span>}
+                          {detail && <span className="block truncate text-[12px] text-slate-500 dark:text-slate-400">{detail}</span>}
                         </span>
                       </button>
                     );

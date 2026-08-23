@@ -90,18 +90,18 @@ function RecycleBinRow({ entry, onRestore, onDeleteForever, isRestoring, isDelet
 
   return (
     <>
-      <tr className="transition hover:bg-slate-50/70">
-        <td className="whitespace-nowrap px-4 py-3 text-slate-500">{formatTimestamp(getEntryTimestamp(entry))}</td>
-        <td className="whitespace-nowrap px-4 py-3 text-slate-600">{getEntryType(entry)}</td>
-        <td className="px-4 py-3 font-medium text-slate-800">{getEntryLabel(entry)}</td>
-        <td className="whitespace-nowrap px-4 py-3 text-slate-500">{getEntryDeletedBy(entry) || "—"}</td>
+      <tr className="transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
+        <td className="whitespace-nowrap px-4 py-3 text-slate-500 dark:text-slate-400">{formatTimestamp(getEntryTimestamp(entry))}</td>
+        <td className="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">{getEntryType(entry)}</td>
+        <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{getEntryLabel(entry)}</td>
+        <td className="whitespace-nowrap px-4 py-3 text-slate-500 dark:text-slate-400">{getEntryDeletedBy(entry) || "—"}</td>
         <td className="whitespace-nowrap px-4 py-3 text-right">
           <div className="flex items-center justify-end gap-2">
             {entries.length > 0 && (
               <button
                 type="button"
                 onClick={() => setExpanded((value) => !value)}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
               >
                 Details
                 <ChevronDown size={12} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
@@ -111,7 +111,7 @@ function RecycleBinRow({ entry, onRestore, onDeleteForever, isRestoring, isDelet
               type="button"
               onClick={() => onRestore(entry)}
               disabled={isBusy}
-              className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-emerald-700 outline-none transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-emerald-700 outline-none transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:bg-slate-800 dark:text-emerald-300 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40 dark:focus-visible:ring-offset-slate-900"
             >
               <RotateCcw size={12} className={isRestoring ? "animate-spin" : ""} />
               {isRestoring ? "Restoring..." : "Restore"}
@@ -120,7 +120,7 @@ function RecycleBinRow({ entry, onRestore, onDeleteForever, isRestoring, isDelet
               type="button"
               onClick={() => onDeleteForever(entry)}
               disabled={isBusy}
-              className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-800 dark:bg-slate-800 dark:text-rose-400 dark:hover:border-rose-700 dark:hover:bg-rose-950/40 dark:focus-visible:ring-offset-slate-900"
             >
               <Trash2 size={12} />
               {isDeleting ? "Deleting..." : "Delete Forever"}
@@ -129,15 +129,15 @@ function RecycleBinRow({ entry, onRestore, onDeleteForever, isRestoring, isDelet
         </td>
       </tr>
       {expanded && entries.length > 0 && (
-        <tr className="bg-slate-50/60">
+        <tr className="bg-slate-50/60 dark:bg-slate-800/40">
           <td colSpan={5} className="px-4 py-3">
             <dl className="grid gap-x-4 gap-y-1.5 sm:grid-cols-3">
               {entries.map(([key, value]) => (
                 <div key={key} className="min-w-0">
-                  <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                  <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
                     {humanizeFieldKey(key)}
                   </dt>
-                  <dd className="truncate text-xs text-slate-700" title={formatFieldValue(value)}>
+                  <dd className="truncate text-xs text-slate-700 dark:text-slate-300" title={formatFieldValue(value)}>
                     {formatFieldValue(value)}
                   </dd>
                 </div>
@@ -151,7 +151,7 @@ function RecycleBinRow({ entry, onRestore, onDeleteForever, isRestoring, isDelet
 }
 
 const selectClass =
-  "h-9 rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-700 outline-none transition hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white";
+  "h-9 rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-medium text-slate-700 outline-none transition hover:border-slate-300 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:focus-visible:ring-offset-slate-900";
 
 export function RecycleBinView({
   entries,
@@ -171,12 +171,12 @@ export function RecycleBinView({
 }) {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">Recycle bin</h2>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Recycle bin</h2>
             {!isLoading && !error && (
-              <p className="mt-0.5 text-[13px] text-slate-500">
+              <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
                 {entries.length} item{entries.length === 1 ? "" : "s"} pending restore or permanent deletion
               </p>
             )}
@@ -198,7 +198,7 @@ export function RecycleBinView({
               type="button"
               onClick={onRetry}
               disabled={isLoading}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
               Refresh
@@ -208,7 +208,7 @@ export function RecycleBinView({
                 type="button"
                 onClick={onPurgeAll}
                 disabled={isPurging}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3.5 text-[13px] font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3.5 text-[13px] font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-800 dark:bg-slate-800 dark:text-rose-400 dark:hover:border-rose-700 dark:hover:bg-rose-950/40 dark:focus-visible:ring-offset-slate-900"
               >
                 <Trash2 size={14} />
                 {isPurging ? "Purging..." : "Purge All"}
@@ -218,25 +218,25 @@ export function RecycleBinView({
         </div>
 
         {actionError && (
-          <div className="mx-5 mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700">
+          <div className="mx-5 mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
             <AlertTriangle size={14} />
             {actionError}
           </div>
         )}
 
         {isLoading ? (
-          <div className="px-5 py-10 text-center text-[13px] text-slate-500">Loading recycle bin...</div>
+          <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading recycle bin...</div>
         ) : error ? (
           <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
-            <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500">
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
               <AlertTriangle size={18} />
             </div>
-            <p className="text-[13px] font-semibold text-slate-700">Couldn&apos;t load the recycle bin</p>
-            <p className="text-xs text-slate-500">{error}</p>
+            <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Couldn&apos;t load the recycle bin</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
             <button
               type="button"
               onClick={onRetry}
-              className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               <RefreshCw size={13} />
               Retry
@@ -246,8 +246,8 @@ export function RecycleBinView({
           <EmptyState icon={Trash2} title="Recycle bin is empty" description="Deleted records will show up here." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px]">
-              <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
+              <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Deleted</th>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Type</th>
@@ -256,7 +256,7 @@ export function RecycleBinView({
                   <th className="whitespace-nowrap px-4 py-3 font-semibold text-right">&nbsp;</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
                 {entries.map((entry) => {
                   const id = getEntryId(entry);
                   return (

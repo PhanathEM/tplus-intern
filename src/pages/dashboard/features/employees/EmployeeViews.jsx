@@ -50,17 +50,17 @@ export function EmployeeFormModal({
         onClick={onClose}
         aria-label="Close"
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h3 className="text-[15px] font-semibold text-slate-600">
+            <h3 className="text-[15px] font-semibold text-slate-600 dark:text-slate-300">
               {isEdit ? "Edit Employee" : "Add New Employee"}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Close"
           >
             <X size={16} />
@@ -70,7 +70,7 @@ export function EmployeeFormModal({
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
           <div className="overflow-y-auto px-6 py-5">
             {error && (
-              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
                 {error}
               </div>
             )}
@@ -166,19 +166,19 @@ export function EmployeeFormModal({
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Create"}
             </button>
@@ -225,18 +225,18 @@ export function EmployeeDirectoryTable({
   ];
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
         <div>
-          <h2 className="text-[15px] font-semibold text-slate-950">Employees</h2>
+          <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Employees</h2>
           {!isLoading && !error && (
-            <p className="mt-0.5 text-[13px] text-slate-500">{totalCount} employees</p>
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">{totalCount} employees</p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {onSearchChange && (
             <div className="relative w-56">
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={14} />
               <input
                 id="employee-directory-search"
                 type="text"
@@ -244,14 +244,14 @@ export function EmployeeDirectoryTable({
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Search Employee"
-                className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:ring-slate-700"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => onSearchChange("")}
                   aria-label="Clear search"
-                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400"
+                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                 >
                   <X size={13} />
                 </button>
@@ -263,7 +263,7 @@ export function EmployeeDirectoryTable({
             <button
               type="button"
               onClick={onAddNew}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               <PlusCircle size={15} />
               New Employee
@@ -273,18 +273,18 @@ export function EmployeeDirectoryTable({
       </div>
 
       {isLoading ? (
-        <div className="px-5 py-10 text-center text-[13px] text-slate-500">Loading employees...</div>
+        <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading employees...</div>
       ) : error ? (
         <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
-          <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500">
+          <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
             <AlertTriangle size={18} />
           </div>
-          <p className="text-[13px] font-semibold text-slate-700">Couldn&apos;t load employees</p>
-          <p className="text-xs text-slate-500">{error}</p>
+          <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Couldn&apos;t load employees</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
           <button
             type="button"
             onClick={onRetry}
-            className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+            className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
           >
             <RefreshCw size={13} />
             Retry
@@ -299,8 +299,8 @@ export function EmployeeDirectoryTable({
       ) : (
         <>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px]">
-              <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
+              <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
                   {columns.map((column) => (
                     <th key={column.key} className="px-5 py-3 font-semibold uppercase tracking-wide">
@@ -325,29 +325,29 @@ export function EmployeeDirectoryTable({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
                 {employees.map((employee) => (
                   <tr
                     key={employee.employee_id}
                     onClick={() => onViewDetail(employee)}
-                    className="cursor-pointer transition hover:bg-slate-50/70"
+                    className="cursor-pointer transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40"
                   >
-                    <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-950">
+                    <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-950 dark:text-white">
                       <div className="flex items-center gap-2.5">
-                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-400">
+                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
                           <UserIcon size={15} />
                         </div>
                         {employee.full_name || "—"}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{employee.position || "—"}</td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">
+                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">{employee.position || "—"}</td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">
                       {getEmployeeDepartmentCode(employee) || "—"}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{employee.sex || "—"}</td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{employee.staff_code || "—"}</td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{employee.phone || "—"}</td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600">{employee.location || "—"}</td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">{employee.sex || "—"}</td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">{employee.staff_code || "—"}</td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">{employee.phone || "—"}</td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">{employee.location || "—"}</td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end">
                         {canManage && (
@@ -370,7 +370,7 @@ export function EmployeeDirectoryTable({
           </div>
 
           {totalCount > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
               <span>
                 Showing {(page - 1) * pageSize + 1}
                 {"–"}
@@ -381,18 +381,18 @@ export function EmployeeDirectoryTable({
                   type="button"
                   disabled={page === 1}
                   onClick={() => onPageChange(Math.max(1, page - 1))}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent"
+                  className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
                 >
                   Previous
                 </button>
-                <span className="tabular-nums text-slate-400">
+                <span className="tabular-nums text-slate-400 dark:text-slate-500">
                   {page} / {pageCount}
                 </span>
                 <button
                   type="button"
                   disabled={page === pageCount}
                   onClick={() => onPageChange(Math.min(pageCount, page + 1))}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent"
+                  className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
                 >
                   Next
                 </button>
@@ -433,18 +433,18 @@ export function EmployeeDetailModal({
         onClick={onClose}
         aria-label="Close detail"
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-[15px] font-semibold text-slate-950">{employee.full_name || "Employee"}</h2>
+              <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{employee.full_name || "Employee"}</h2>
               {employee.is_active === false && (
-                <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-600">
+                <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
                   Inactive
                 </span>
               )}
               {employee.left_date && (
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                   Left {formatFieldValue(employee.left_date)}
                 </span>
               )}
@@ -454,7 +454,7 @@ export function EmployeeDetailModal({
             <button
               type="button"
               onClick={onClose}
-              className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+              className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
               aria-label="Close"
             >
               <X size={16} />
@@ -462,8 +462,8 @@ export function EmployeeDetailModal({
           </div>
         </div>
 
-        <div className="border-b border-slate-100 bg-slate-50/40 px-6 py-4">
-          <dl className="grid grid-cols-[max-content_1fr_max-content_1fr] items-baseline gap-x-4 gap-y-2 pl-4 text-[13px] text-slate-700">
+        <div className="border-b border-slate-100 bg-slate-50/40 px-6 py-4 dark:border-slate-800 dark:bg-slate-800/40">
+          <dl className="grid grid-cols-[max-content_1fr_max-content_1fr] items-baseline gap-x-4 gap-y-2 pl-4 text-[13px] text-slate-700 dark:text-slate-300">
             {[
               ["Position", employee.position],
               ["Department", getEmployeeDepartmentCode(employee)],
@@ -473,7 +473,7 @@ export function EmployeeDetailModal({
               ["Sex", employee.sex],
             ].map(([label, value]) => (
               <Fragment key={label}>
-                <dt className="font-semibold text-slate-800">{label}</dt>
+                <dt className="font-semibold text-slate-800 dark:text-slate-200">{label}</dt>
                 <dd className="min-w-0 truncate">: {formatFieldValue(value)}</dd>
               </Fragment>
             ))}
@@ -482,18 +482,18 @@ export function EmployeeDetailModal({
 
         <div className="overflow-y-auto px-6 py-5">
           {isLoading ? (
-            <div className="py-10 text-center text-[13px] text-slate-500">Loading details...</div>
+            <div className="py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading details...</div>
           ) : error ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
-              <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500">
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
                 <AlertTriangle size={18} />
               </div>
-              <p className="text-[13px] font-semibold text-slate-700">Couldn&apos;t load details</p>
-              <p className="text-xs text-slate-500">{error}</p>
+              <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Couldn&apos;t load details</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
               <button
                 type="button"
                 onClick={onRetry}
-                className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
               >
                 <RefreshCw size={13} />
                 Retry
@@ -516,31 +516,31 @@ export function EmployeeDetailModal({
                 const hasSoftware = softwareColumns.length > 0 || device.licenses?.length > 0;
 
                 return (
-                  <div key={device.equipment_id ?? idx} className="rounded-xl border border-slate-100">
-                    <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/60 px-4 py-2.5">
-                      <p className="text-[13px] font-semibold text-slate-800">
+                  <div key={device.equipment_id ?? idx} className="rounded-xl border border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/60 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-800/40">
+                      <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-200">
                         Device {idx + 1}
                       </p>
                       {canManage && onUnassign && device.equipment_id && (
                         <button
                           type="button"
                           onClick={() => onUnassign({ equipment_id: device.equipment_id, category: device.category, ...device.item })}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
                         >
                           Unassign
                         </button>
                       )}
                     </div>
                     <div
-                      className={`grid grid-cols-1 gap-x-6 gap-y-4 p-4 ${hasSoftware ? "sm:grid-cols-2 sm:divide-x sm:divide-slate-100" : ""
+                      className={`grid grid-cols-1 gap-x-6 gap-y-4 p-4 ${hasSoftware ? "sm:grid-cols-2 sm:divide-x sm:divide-slate-100 dark:sm:divide-slate-800" : ""
                         }`}
                     >
                       <div className={hasSoftware ? "sm:pr-6" : ""}>
-                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Hardware</p>
-                        <dl className="grid grid-cols-[max-content_1fr] items-baseline gap-x-4 gap-y-2 text-[13px] text-slate-700">
+                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Hardware</p>
+                        <dl className="grid grid-cols-[max-content_1fr] items-baseline gap-x-4 gap-y-2 text-[13px] text-slate-700 dark:text-slate-300">
                           {hardwareColumns.map(({ field, header }) => (
                             <Fragment key={field}>
-                              <dt className="font-semibold text-slate-800">{header}</dt>
+                              <dt className="font-semibold text-slate-800 dark:text-slate-200">{header}</dt>
                               <dd className="min-w-0 truncate" title={formatFieldValue(device.item?.[field])}>
                                 : {formatFieldValue(device.item?.[field])}
                               </dd>
@@ -550,11 +550,11 @@ export function EmployeeDetailModal({
                       </div>
                       {hasSoftware && (
                         <div className="sm:pl-6">
-                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Software</p>
-                          <dl className="grid grid-cols-[max-content_1fr] items-baseline gap-x-4 gap-y-2 text-[13px] text-slate-700">
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Software</p>
+                          <dl className="grid grid-cols-[max-content_1fr] items-baseline gap-x-4 gap-y-2 text-[13px] text-slate-700 dark:text-slate-300">
                             {softwareColumns.map(({ field, header }) => (
                               <Fragment key={field}>
-                                <dt className="font-semibold text-slate-800">{header}</dt>
+                                <dt className="font-semibold text-slate-800 dark:text-slate-200">{header}</dt>
                                 <dd className="min-w-0 truncate" title={formatFieldValue(device.item?.[field])}>
                                   : {formatFieldValue(device.item?.[field])}
                                 </dd>
@@ -562,7 +562,7 @@ export function EmployeeDetailModal({
                             ))}
                             {device.licenses?.length > 0 && (
                               <Fragment>
-                                <dt className="font-semibold text-slate-800">Software Licenses</dt>
+                                <dt className="font-semibold text-slate-800 dark:text-slate-200">Software Licenses</dt>
                                 <dd className="min-w-0 truncate">
                                   : {device.licenses.map((license) => license.product_name).filter(Boolean).join(", ")}
                                 </dd>

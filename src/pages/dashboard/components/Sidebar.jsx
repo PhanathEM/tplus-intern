@@ -13,8 +13,8 @@ function getBadgeConfig(badges, label, fallbackBadge) {
 
 function getBadgeClass(tone) {
   if (tone === "danger") return "bg-rose-500 text-white";
-  if (tone === "warning") return "bg-amber-400 text-slate-950";
-  return "bg-slate-100 text-slate-600";
+  if (tone === "warning") return "bg-amber-400 text-slate-950 dark:bg-amber-500 dark:text-slate-950";
+  return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
 }
 
 export function SidebarNavigation({ collapsed = false, activeView, onSelect, user, badges }) {
@@ -27,11 +27,11 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
       {visibleSections.map((section, sectionIdx) => (
         <div key={section.label} className={sectionIdx === 0 ? "" : "mt-5"}>
           {!collapsed ? (
-            <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {section.label}
             </p>
           ) : (
-            sectionIdx !== 0 && <div className="mx-2 mb-3 border-t border-slate-200" />
+            sectionIdx !== 0 && <div className="mx-2 mb-3 border-t border-slate-200 dark:border-slate-700" />
           )}
 
           <div className="space-y-0.5">
@@ -63,10 +63,10 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
                       onSelect(item.label);
                     }}
                     title={collapsed ? item.label : undefined}
-                    className={`group relative flex w-full items-center rounded-lg py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${collapsed ? "justify-center px-0" : "gap-3 px-3 text-left"
+                    className={`group relative flex w-full items-center rounded-lg py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${collapsed ? "justify-center px-0" : "gap-3 px-3 text-left"
                       } ${isActive
-                        ? "bg-slate-100 text-slate-900"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
+                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
                       }`}
                   >
                     <Icon className="shrink-0 text-[17px]" />
@@ -74,7 +74,7 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
                     {!collapsed && hasChildren && (
                       <ChevronDown
                         size={14}
-                        className={`shrink-0 text-slate-500 transition-transform ${isExpanded ? "" : "-rotate-90"}`}
+                        className={`shrink-0 text-slate-500 transition-transform dark:text-slate-400 ${isExpanded ? "" : "-rotate-90"}`}
                       />
                     )}
                     {!collapsed && !hasChildren && badge && (
@@ -99,9 +99,9 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
                             key={child.label}
                             type="button"
                             onClick={() => onSelect(child.label)}
-                            className={`group relative flex w-full items-center gap-2.5 rounded-lg py-2 pl-2 pr-3 text-left text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${isChildItemActive
-                              ? "bg-slate-100 text-slate-900"
-                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                            className={`group relative flex w-full items-center gap-2.5 rounded-lg py-2 pl-2 pr-3 text-left text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${isChildItemActive
+                              ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
+                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
                               }`}
                           >
                             <ChildIcon className="shrink-0 text-sm" />
@@ -124,11 +124,11 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
 export function SidebarBrand({ collapsed, onToggleCollapse }) {
   return (
     <div
-      className={`flex shrink-0 items-center border-b border-slate-100 ${collapsed ? "h-auto flex-col justify-center gap-2 px-3 py-3" : "h-16 justify-between px-4"
+      className={`flex shrink-0 items-center border-b border-slate-100 dark:border-slate-800 ${collapsed ? "h-auto flex-col justify-center gap-2 px-3 py-3" : "h-16 justify-between px-4"
         }`}
     >
       <div className={`flex min-w-0 items-center ${collapsed ? "" : "gap-3"}`}>
-        <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-50 ring-1 ring-slate-200">
+        <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-50 ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
           <img
             src={tplusLogo}
             alt="TPLUS"
@@ -137,8 +137,8 @@ export function SidebarBrand({ collapsed, onToggleCollapse }) {
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <p className="text-[15px] font-semibold leading-tight text-slate-900">TPLUS</p>
-            <p className="text-[11px] leading-tight text-slate-500">Management System</p>
+            <p className="text-[15px] font-semibold leading-tight text-slate-900 dark:text-white">TPLUS</p>
+            <p className="text-[11px] leading-tight text-slate-500 dark:text-slate-400">Management System</p>
           </div>
         )}
       </div>
@@ -146,7 +146,7 @@ export function SidebarBrand({ collapsed, onToggleCollapse }) {
       <button
         type="button"
         onClick={onToggleCollapse}
-        className="hidden shrink-0 rounded-md p-1.5 text-slate-500 outline-none transition hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white xl:grid xl:place-items-center"
+        className="hidden shrink-0 rounded-md p-1.5 text-slate-500 outline-none transition hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white dark:focus-visible:ring-offset-slate-900 xl:grid xl:place-items-center"
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       >

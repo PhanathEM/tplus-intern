@@ -75,10 +75,10 @@ function StockLineSelect({ id, options, selectedId, onSelect, placeholder = "Sel
         onClick={() => setIsOpen((value) => !value)}
         className={`${formInputClass} flex items-center justify-between text-left`}
       >
-        <span className={`truncate ${selectedOption ? "text-slate-900" : "text-slate-400"}`}>
+        <span className={`truncate ${selectedOption ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"}`}>
           {selectedOption ? getStockOptionLabel(selectedOption) : placeholder}
         </span>
-        <ChevronDown size={14} className={`shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown size={14} className={`shrink-0 text-slate-400 transition-transform dark:text-slate-500 ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
       {isOpen &&
@@ -87,7 +87,7 @@ function StockLineSelect({ id, options, selectedId, onSelect, placeholder = "Sel
           <div
             ref={menuRef}
             style={{ position: "fixed", top: menuRect.top, left: menuRect.left, width: menuRect.width }}
-            className="z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
+            className="z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800"
           >
             <div className="max-h-56 overflow-y-auto p-1.5">
               {options.map((option) => {
@@ -100,11 +100,11 @@ function StockLineSelect({ id, options, selectedId, onSelect, placeholder = "Sel
                       onSelect(option.stock_id);
                       setIsOpen(false);
                     }}
-                    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected ? "text-orange-700" : "text-slate-700 hover:bg-slate-50"
+                    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected ? "text-orange-700 dark:text-orange-400" : "text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700"
                       }`}
                   >
                     <span
-                      className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border-2 ${isSelected ? "border-orange-500" : "border-slate-300"
+                      className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border-2 ${isSelected ? "border-orange-500" : "border-slate-300 dark:border-slate-600"
                         }`}
                     >
                       {isSelected && <span className="h-2 w-2 rounded-full bg-orange-500" />}
@@ -128,7 +128,7 @@ export function DeviceReplacementCategoryBar({ categories = [], selected, onSele
   );
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <CategoryTabs options={categoryOptions} selected={selected} onSelect={onSelect} />
     </div>
   );
@@ -155,12 +155,12 @@ export function ReplaceableDevicesView({
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">Devices you can replace</h2>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Devices you can replace</h2>
             {!isLoading && !error && (
-              <p className="mt-0.5 text-[13px] text-slate-500">
+              <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
                 {devices.length} device{devices.length === 1 ? "" : "s"}
                 {canManage && devices.length > 0 ? " · These devices have owners, click to replace devices" : ""}
               </p>
@@ -169,7 +169,7 @@ export function ReplaceableDevicesView({
 
           {onSearchChange && (
             <div className="relative w-64">
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={14} />
               <input
                 id="replaceable-devices-search"
                 type="text"
@@ -177,14 +177,14 @@ export function ReplaceableDevicesView({
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Search Employee"
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:ring-slate-700"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => onSearchChange("")}
                   aria-label="Clear search"
-                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400"
+                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                 >
                   <X size={13} />
                 </button>
@@ -239,37 +239,37 @@ function ReplacementHistoryRow({ replacement }) {
     replacement.computer_name || replacement.device_name || replacement.device_model || replacement.asset_code || "—";
 
   return (
-    <tr className="transition hover:bg-slate-50/70">
+    <tr className="transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
       <td className="whitespace-nowrap px-4 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
             {getInitials(replacement.owner_name)}
           </span>
-          <span className="font-semibold text-slate-900">{replacement.owner_name || "—"}</span>
+          <span className="font-semibold text-slate-900 dark:text-white">{replacement.owner_name || "—"}</span>
         </div>
       </td>
-      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{replacement.staff_code || "—"}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">{replacement.staff_code || "—"}</td>
       <td className="whitespace-nowrap px-4 py-3">
-        <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs text-slate-700">
-          <Monitor size={12} className="shrink-0 text-slate-400" />
+        <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+          <Monitor size={12} className="shrink-0 text-slate-400 dark:text-slate-500" />
           {deviceLabel}
         </span>
       </td>
-      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{replacement.asset_code || "—"}</td>
-      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{replacement.category_name || "—"}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">{replacement.asset_code || "—"}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">{replacement.category_name || "—"}</td>
       <td className="whitespace-nowrap px-4 py-3">
         <div className="inline-flex items-center gap-2 text-[13px]">
-          <span className="font-semibold text-slate-700">{replacement.part_name || "Part"}</span>
-          <span className="rounded-md bg-rose-50 px-2 py-0.5 font-mono text-xs font-semibold text-rose-600 line-through">
+          <span className="font-semibold text-slate-700 dark:text-slate-300">{replacement.part_name || "Part"}</span>
+          <span className="rounded-md bg-rose-50 px-2 py-0.5 font-mono text-xs font-semibold text-rose-600 line-through dark:bg-rose-950/40 dark:text-rose-400">
             {formatPartValue(replacement.part_name, replacement.old_value)}
           </span>
-          <span className="text-slate-300">&rarr;</span>
-          <span className="rounded-md bg-emerald-50 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-700">
+          <span className="text-slate-300 dark:text-slate-600">&rarr;</span>
+          <span className="rounded-md bg-emerald-50 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
             {formatPartValue(replacement.part_name, replacement.new_value)}
           </span>
         </div>
       </td>
-      <td className="whitespace-nowrap px-4 py-3 text-slate-500">{formatReplacementDate(replacement.replacement_date)}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-slate-500 dark:text-slate-400">{formatReplacementDate(replacement.replacement_date)}</td>
     </tr>
   );
 }
@@ -290,29 +290,29 @@ export function ReplacementHistoryView({
 }) {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <h2 className="text-[15px] font-semibold text-slate-950">Device Replacement History</h2>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+          <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Device Replacement History</h2>
           {!isLoading && !error && (
-            <p className="mt-0.5 text-[13px] text-slate-500">
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
               {replacements.length} replacement{replacements.length === 1 ? "" : "s"}
             </p>
           )}
         </div>
 
         {isLoading ? (
-          <div className="px-5 py-10 text-center text-[13px] text-slate-500">Loading replacements...</div>
+          <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading replacements...</div>
         ) : error ? (
           <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
-            <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500">
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
               <AlertTriangle size={18} />
             </div>
-            <p className="text-[13px] font-semibold text-slate-700">Couldn&apos;t load replacements</p>
-            <p className="text-xs text-slate-500">{error}</p>
+            <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Couldn&apos;t load replacements</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
             <button
               type="button"
               onClick={onRetry}
-              className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               <RefreshCw size={13} />
               Retry
@@ -326,8 +326,8 @@ export function ReplacementHistoryView({
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px]">
-              <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500">
+            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
+              <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Employee</th>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Staff Code</th>
@@ -338,7 +338,7 @@ export function ReplacementHistoryView({
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
                 {replacements.map((replacement, index) => (
                   <ReplacementHistoryRow key={replacement.replacement_id ?? index} replacement={replacement} />
                 ))}
@@ -420,15 +420,15 @@ export function ReplaceDeviceDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label="Close" />
-      <div className="relative flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">Replace this device</h2>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Replace this device</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Close"
           >
             <X size={16} />
@@ -438,13 +438,13 @@ export function ReplaceDeviceDialog({
         <form onSubmit={onSubmitPart} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
           <div className="flex flex-col gap-4 overflow-y-auto px-6 py-5">
             {submitPartError && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
                 {submitPartError}
               </div>
             )}
 
             <div>
-              <p className="mb-1.5 text-xs font-semibold text-slate-600">Part</p>
+              <p className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400">Part</p>
               <div className="flex flex-wrap gap-2">
                 {partTypes.map((partType) => {
                   const isSelected = String(partType.part_type_id) === String(selectedPartTypeId);
@@ -453,9 +453,9 @@ export function ReplaceDeviceDialog({
                       key={partType.part_type_id}
                       type="button"
                       onClick={() => onSelectPartType(partType.part_type_id)}
-                      className={`inline-flex h-9 items-center rounded-full border px-3.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${isSelected
-                        ? "border-slate-950 bg-slate-950 text-white"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                      className={`inline-flex h-9 items-center rounded-full border px-3.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${isSelected
+                        ? "border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-900"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
                         }`}
                     >
                       {partType.part_name}
@@ -466,15 +466,15 @@ export function ReplaceDeviceDialog({
             </div>
 
             {!selectedPartType ? (
-              <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-200 py-10 text-center text-sm text-slate-500">
+              <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-200 py-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
                 Select a part above to continue
               </div>
             ) : (
               <>
                 {availablePartActions.length > 1 && (
                   <div>
-                    <p className="mb-1.5 text-xs font-semibold text-slate-600">Action</p>
-                    <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1">
+                    <p className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400">Action</p>
+                    <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800">
                       {availablePartActions.map((option) => {
                         const isSelected = partAction === option.value;
                         return (
@@ -483,8 +483,8 @@ export function ReplaceDeviceDialog({
                             type="button"
                             onClick={() => onSelectPartAction(option.value)}
                             className={`rounded-full px-4 py-1.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isSelected
-                              ? "bg-white text-slate-900 shadow-sm"
-                              : "text-slate-500 hover:text-slate-700"
+                              ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white"
+                              : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                               }`}
                           >
                             {option.label}
@@ -498,7 +498,7 @@ export function ReplaceDeviceDialog({
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   {partAction === "replace" && (
                     <div>
-                      <label htmlFor="replace-part-old-status" className="mb-1.5 block text-xs font-semibold text-slate-600">
+                      <label htmlFor="replace-part-old-status" className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-400">
                         Old {selectedPartType.part_name} Status
                       </label>
                       <RadioSelect
@@ -512,47 +512,47 @@ export function ReplaceDeviceDialog({
                   )}
 
                   <div>
-                    <label htmlFor="replace-part-current" className="mb-1.5 block text-xs font-semibold text-slate-600">
+                    <label htmlFor="replace-part-current" className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-400">
                       Current {selectedPartType.part_name}
                     </label>
                     <div
                       id="replace-part-current"
-                      className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600"
+                      className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                     >
                       {getPartOldValueDisplay(selectedPartType)}
                     </div>
                   </div>
 
                   <div>
-                    <label htmlFor="replace-part-stock" className="mb-1.5 block text-xs font-semibold text-slate-600">
+                    <label htmlFor="replace-part-stock" className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-400">
                       New {selectedPartType.part_name}
                     </label>
 
                     {isAvailableStockLoading ? (
-                      <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500">
+                      <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
                         Loading stock...
                       </div>
                     ) : availableStockError ? (
-                      <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5">
-                        <span className="text-sm text-rose-700">{availableStockError}</span>
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 dark:border-rose-800 dark:bg-rose-950/40">
+                        <span className="text-sm text-rose-700 dark:text-rose-300">{availableStockError}</span>
                         <button
                           type="button"
                           onClick={onRetryAvailableStock}
-                          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-700 outline-none transition hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400"
+                          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-700 outline-none transition hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 dark:border-rose-800 dark:bg-slate-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
                         >
                           <RefreshCw size={13} />
                           Retry
                         </button>
                       </div>
                     ) : availableStock.length === 0 ? (
-                      <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
-                        <span className="text-sm text-amber-800">
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-800 dark:bg-amber-950/40">
+                        <span className="text-sm text-amber-800 dark:text-amber-300">
                           No {selectedPartType.part_name} in stock right now.
                         </span>
                         <button
                           type="button"
                           onClick={() => onOpenQuickAddDialog(selectedPartTypeId)}
-                          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-800 outline-none transition hover:bg-amber-100 focus-visible:ring-2 focus-visible:ring-amber-400"
+                          className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-800 outline-none transition hover:bg-amber-100 focus-visible:ring-2 focus-visible:ring-amber-400 dark:border-amber-700 dark:bg-slate-800 dark:text-amber-300 dark:hover:bg-amber-950/40"
                         >
                           <PlusCircle size={13} />
                           Add to stock
@@ -572,19 +572,19 @@ export function ReplaceDeviceDialog({
             )}
           </div>
 
-          <div className="mt-auto flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <div className="mt-auto flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmittingPart}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!canSubmitPart || isSubmittingPart}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmittingPart ? "Saving..." : "Save"}
             </button>

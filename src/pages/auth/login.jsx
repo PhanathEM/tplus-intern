@@ -10,6 +10,7 @@ import {
 import { login, signup } from "../../services/authService";
 import { setAuthToken } from "../../lib/apiClient";
 import tplusLogo from "../../assets/tplus-logo.png";
+import { ThemeToggle } from "../../components/ThemeToggle";
 
 function getPasswordScore(password) {
     let score = 0;
@@ -20,7 +21,7 @@ function getPasswordScore(password) {
     return score;
 }
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, theme, onToggleTheme }) {
     const [mode, setMode] = useState("signin");
 
     const [showPassword, setShowPassword] = useState(false);
@@ -125,16 +126,19 @@ export default function Login({ onLogin }) {
     };
 
     return (
-        <main className="min-h-screen bg-linear-to-br from-yellow-50 via-white to-amber-50 text-slate-950 overflow-hidden">
+        <main className="min-h-screen bg-linear-to-br from-yellow-50 via-white to-amber-50 text-slate-950 overflow-hidden dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-100">
+            <div className="absolute right-5 top-5 z-10">
+                <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+            </div>
             {/* Subtle background pattern */}
-            <div className="absolute inset-0 bg-[radial-gradient(#facc15_0.8px,transparent_1px)] bg-size-[20px_20px] opacity-30 pointer-events-none" />
+            <div className="absolute inset-0 bg-[radial-gradient(#facc15_0.8px,transparent_1px)] bg-size-[20px_20px] opacity-30 pointer-events-none dark:opacity-10" />
 
             <div className="flex min-h-screen flex-col items-center justify-center px-5 py-12 sm:px-8 relative">
                 <div className="mx-auto w-full max-w-md">
                     {/* Main Card */}
-                    <div className="rounded-3xl border border-yellow-100 bg-white/90 backdrop-blur-xl p-8 shadow-2xl shadow-yellow-500/10 sm:p-10">
+                    <div className="rounded-3xl border border-yellow-100 bg-white/90 backdrop-blur-xl p-8 shadow-2xl shadow-yellow-500/10 sm:p-10 dark:border-slate-700 dark:bg-slate-900/90 dark:shadow-black/40">
                         <div className="mb-8 flex items-center gap-4">
-                            <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-xl shadow-yellow-500/20 ring-1 ring-yellow-100">
+                            <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-xl shadow-yellow-500/20 ring-1 ring-yellow-100 dark:bg-slate-800 dark:ring-slate-700 dark:shadow-black/30">
                                 <img
                                     src={tplusLogo}
                                     alt="TPLUS"
@@ -142,19 +146,19 @@ export default function Login({ onLogin }) {
                                 />
                             </div>
                             <div className="min-w-0">
-                                <h1 className="text-3xl font-bold tracking-tight text-slate-950">TPLUS</h1>
-                                <p className="mt-0.5 text-sm font-medium text-slate-500">Management System</p>
+                                <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">TPLUS</h1>
+                                <p className="mt-0.5 text-sm font-medium text-slate-500 dark:text-slate-400">Management System</p>
                             </div>
                         </div>
 
                         {/* Mode Toggle */}
-                        <div className="mb-7 grid grid-cols-2 gap-1 rounded-2xl bg-yellow-50 p-1">
+                        <div className="mb-7 grid grid-cols-2 gap-1 rounded-2xl bg-yellow-50 p-1 dark:bg-slate-800">
                             <button
                                 type="button"
                                 onClick={() => switchMode("signin")}
                                 className={`h-11 rounded-xl text-sm font-semibold transition-all ${mode === "signin"
-                                    ? "bg-white text-slate-950 shadow-sm"
-                                    : "text-slate-500 hover:text-slate-700"
+                                    ? "bg-white text-slate-950 shadow-sm dark:bg-slate-700 dark:text-white"
+                                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                                     }`}
                             >
                                 Sign In
@@ -163,8 +167,8 @@ export default function Login({ onLogin }) {
                                 type="button"
                                 onClick={() => switchMode("register")}
                                 className={`h-11 rounded-xl text-sm font-semibold transition-all ${mode === "register"
-                                    ? "bg-white text-slate-950 shadow-sm"
-                                    : "text-slate-500 hover:text-slate-700"
+                                    ? "bg-white text-slate-950 shadow-sm dark:bg-slate-700 dark:text-white"
+                                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                                     }`}
                             >
                                 Create Account
@@ -173,7 +177,7 @@ export default function Login({ onLogin }) {
 
                         {mode === "signin" && signupNotice && (
                             <div
-                                className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-medium text-emerald-700 flex items-start gap-3"
+                                className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-medium text-emerald-700 flex items-start gap-3 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
                                 role="status"
                                 aria-live="polite"
                             >
@@ -184,7 +188,7 @@ export default function Login({ onLogin }) {
 
                         {mode === "signin" && error && (
                             <div
-                                className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-700 flex items-start gap-3"
+                                className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-700 flex items-start gap-3 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
                                 role="alert"
                                 aria-live="polite"
                             >
@@ -195,7 +199,7 @@ export default function Login({ onLogin }) {
 
                         {mode === "register" && regError && (
                             <div
-                                className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-700 flex items-start gap-3"
+                                className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-700 flex items-start gap-3 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
                                 role="alert"
                                 aria-live="polite"
                             >
@@ -209,13 +213,13 @@ export default function Login({ onLogin }) {
                             {/* Username Field */}
                             <div>
                                 <label
-                                    className="mb-2 block text-sm font-semibold text-slate-700"
+                                    className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                                     htmlFor="username"
                                 >
                                     Username
                                 </label>
                                 <div className="relative group">
-                                    <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors" />
+                                    <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors dark:text-slate-500 dark:group-focus-within:text-yellow-400" />
                                     <input
                                         id="username"
                                         type="text"
@@ -224,7 +228,7 @@ export default function Login({ onLogin }) {
                                         value={username}
                                         onChange={(e) => setUsername(e.target.value)}
                                         placeholder="Enter your username"
-                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-5 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400"
+                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-5 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-yellow-500 dark:focus:ring-yellow-500/20"
                                         disabled={isSubmitting || isLocked}
                                     />
                                 </div>
@@ -233,13 +237,13 @@ export default function Login({ onLogin }) {
                             {/* Password Field */}
                             <div>
                                 <label
-                                    className="mb-2 block text-sm font-semibold text-slate-700"
+                                    className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                                     htmlFor="password"
                                 >
                                     Password
                                 </label>
                                 <div className="relative group">
-                                    <FiKey className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors" />
+                                    <FiKey className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors dark:text-slate-500 dark:group-focus-within:text-yellow-400" />
                                     <input
                                         id="password"
                                         type={showPassword ? "text" : "password"}
@@ -248,13 +252,13 @@ export default function Login({ onLogin }) {
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="Enter your password"
-                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-14 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400"
+                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-14 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-yellow-500 dark:focus:ring-yellow-500/20"
                                         disabled={isSubmitting || isLocked}
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword((value) => !value)}
-                                        className="absolute right-4 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-xl text-slate-400 hover:bg-yellow-100 hover:text-slate-700 transition-all"
+                                        className="absolute right-4 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-xl text-slate-400 hover:bg-yellow-100 hover:text-slate-700 transition-all dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                                         aria-label={showPassword ? "Hide password" : "Show password"}
                                         disabled={isSubmitting || isLocked}
                                     >
@@ -269,7 +273,7 @@ export default function Login({ onLogin }) {
                                             key={level}
                                             className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${passwordScore >= level
                                                 ? "bg-linear-to-r from-yellow-400 to-amber-500"
-                                                : "bg-yellow-100"
+                                                : "bg-yellow-100 dark:bg-slate-700"
                                                 }`}
                                         />
                                     ))}
@@ -286,14 +290,14 @@ export default function Login({ onLogin }) {
                                         className="h-5 w-5 accent-yellow-500 border-yellow-300 rounded-lg focus:ring-yellow-400 transition"
                                         disabled={isSubmitting || isLocked}
                                     />
-                                    <span className="text-sm font-medium text-slate-600 group-hover:text-slate-800 transition">
+                                    <span className="text-sm font-medium text-slate-600 group-hover:text-slate-800 transition dark:text-slate-400 dark:group-hover:text-slate-200">
                                         Remember this device
                                     </span>
                                 </label>
 
                                 <button
                                     type="button"
-                                    className="text-sm font-semibold text-slate-600 hover:text-yellow-600 transition-colors"
+                                    className="text-sm font-semibold text-slate-600 hover:text-yellow-600 transition-colors dark:text-slate-400 dark:hover:text-yellow-400"
                                 >
                                     Forgot password?
                                 </button>
@@ -320,13 +324,13 @@ export default function Login({ onLogin }) {
                             {/* Full Name Field */}
                             <div>
                                 <label
-                                    className="mb-2 block text-sm font-semibold text-slate-700"
+                                    className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                                     htmlFor="reg-full-name"
                                 >
                                     Full Name
                                 </label>
                                 <div className="relative group">
-                                    <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors" />
+                                    <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors dark:text-slate-500 dark:group-focus-within:text-yellow-400" />
                                     <input
                                         id="reg-full-name"
                                         type="text"
@@ -335,7 +339,7 @@ export default function Login({ onLogin }) {
                                         value={regFullName}
                                         onChange={(e) => setRegFullName(e.target.value)}
                                         placeholder="Enter your full name"
-                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-5 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400"
+                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-5 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-yellow-500 dark:focus:ring-yellow-500/20"
                                         disabled={isRegisterSubmitting}
                                     />
                                 </div>
@@ -344,13 +348,13 @@ export default function Login({ onLogin }) {
                             {/* Username Field */}
                             <div>
                                 <label
-                                    className="mb-2 block text-sm font-semibold text-slate-700"
+                                    className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                                     htmlFor="reg-username"
                                 >
                                     Username
                                 </label>
                                 <div className="relative group">
-                                    <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors" />
+                                    <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors dark:text-slate-500 dark:group-focus-within:text-yellow-400" />
                                     <input
                                         id="reg-username"
                                         type="text"
@@ -359,7 +363,7 @@ export default function Login({ onLogin }) {
                                         value={regUsername}
                                         onChange={(e) => setRegUsername(e.target.value)}
                                         placeholder="Choose a username"
-                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-5 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400"
+                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-5 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-yellow-500 dark:focus:ring-yellow-500/20"
                                         disabled={isRegisterSubmitting}
                                     />
                                 </div>
@@ -368,13 +372,13 @@ export default function Login({ onLogin }) {
                             {/* Password Field */}
                             <div>
                                 <label
-                                    className="mb-2 block text-sm font-semibold text-slate-700"
+                                    className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                                     htmlFor="reg-password"
                                 >
                                     Password
                                 </label>
                                 <div className="relative group">
-                                    <FiKey className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors" />
+                                    <FiKey className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors dark:text-slate-500 dark:group-focus-within:text-yellow-400" />
                                     <input
                                         id="reg-password"
                                         type={regShowPassword ? "text" : "password"}
@@ -383,13 +387,13 @@ export default function Login({ onLogin }) {
                                         value={regPassword}
                                         onChange={(e) => setRegPassword(e.target.value)}
                                         placeholder="Create a password"
-                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-14 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400"
+                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-14 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-yellow-500 dark:focus:ring-yellow-500/20"
                                         disabled={isRegisterSubmitting}
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setRegShowPassword((value) => !value)}
-                                        className="absolute right-4 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-xl text-slate-400 hover:bg-yellow-100 hover:text-slate-700 transition-all"
+                                        className="absolute right-4 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-xl text-slate-400 hover:bg-yellow-100 hover:text-slate-700 transition-all dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                                         aria-label={regShowPassword ? "Hide password" : "Show password"}
                                         disabled={isRegisterSubmitting}
                                     >
@@ -404,7 +408,7 @@ export default function Login({ onLogin }) {
                                             key={level}
                                             className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${regPasswordScore >= level
                                                 ? "bg-linear-to-r from-yellow-400 to-amber-500"
-                                                : "bg-yellow-100"
+                                                : "bg-yellow-100 dark:bg-slate-700"
                                                 }`}
                                         />
                                     ))}
@@ -414,13 +418,13 @@ export default function Login({ onLogin }) {
                             {/* Confirm Password Field */}
                             <div>
                                 <label
-                                    className="mb-2 block text-sm font-semibold text-slate-700"
+                                    className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
                                     htmlFor="reg-confirm-password"
                                 >
                                     Confirm Password
                                 </label>
                                 <div className="relative group">
-                                    <FiKey className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors" />
+                                    <FiKey className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors dark:text-slate-500 dark:group-focus-within:text-yellow-400" />
                                     <input
                                         id="reg-confirm-password"
                                         type={regShowPassword ? "text" : "password"}
@@ -429,7 +433,7 @@ export default function Login({ onLogin }) {
                                         value={regConfirmPassword}
                                         onChange={(e) => setRegConfirmPassword(e.target.value)}
                                         placeholder="Re-enter your password"
-                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-5 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400"
+                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-5 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-yellow-500 dark:focus:ring-yellow-500/20"
                                         disabled={isRegisterSubmitting}
                                     />
                                 </div>

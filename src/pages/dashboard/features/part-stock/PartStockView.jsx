@@ -78,19 +78,19 @@ function PartTypeStockColumnsSection({
     <div className="flex flex-col gap-2">
       {error && <p className="text-[12px] font-medium text-rose-600">{error}</p>}
       {isLoading ? (
-        <p className="text-[13px] text-slate-500">Loading fields...</p>
+        <p className="text-[13px] text-slate-500 dark:text-slate-400">Loading fields...</p>
       ) : (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {builtInOptions.map((option) => (
             <label
               key={option.field}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 transition hover:border-slate-300"
+              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 transition hover:border-slate-300 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600"
             >
               <input
                 type="checkbox"
                 checked={isSelected(option.field)}
                 onChange={() => onToggle(option.field, option.suggested_header)}
-                className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
+                className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400 dark:border-slate-600 dark:bg-slate-800"
               />
               {option.suggested_header}
             </label>
@@ -98,13 +98,13 @@ function PartTypeStockColumnsSection({
           {customFieldOptions.map((option) => (
             <label
               key={option.field_key}
-              className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[13px] font-medium text-slate-600 transition hover:border-slate-400"
+              className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[13px] font-medium text-slate-600 transition hover:border-slate-400 dark:border-slate-600 dark:text-slate-400 dark:hover:border-slate-500"
             >
               <input
                 type="checkbox"
                 checked={isSelected(option.field_key)}
                 onChange={() => onToggle(option.field_key, option.field_label)}
-                className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400"
+                className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400 dark:border-slate-600 dark:bg-slate-800"
               />
               {option.field_label}
             </label>
@@ -152,18 +152,18 @@ function PartTypeFormModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label="Close" />
-      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">{isEdit ? "Edit part" : "Add new part"}</h2>
-            <p className="mt-0.5 text-[13px] text-slate-500">
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{isEdit ? "Edit part" : "Add new part"}</h2>
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
               {isEdit ? "Update this part's details." : "Add a new replaceable part to the catalog."}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Close"
           >
             <X size={16} />
@@ -173,7 +173,7 @@ function PartTypeFormModal({
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
           <div className="overflow-y-auto px-6 py-5">
             {error && (
-              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
                 {error}
               </div>
             )}
@@ -205,23 +205,23 @@ function PartTypeFormModal({
               </FormField>
 
               <div className="flex flex-wrap gap-4">
-                <label className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700">
+                <label className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700 dark:text-slate-300">
                   <input
                     type="checkbox"
                     checked={values.tracks_value}
                     onChange={(e) => onChange("tracks_value", e.target.checked)}
                     disabled={isSubmitting}
-                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400 dark:border-slate-600 dark:bg-slate-800"
                   />
                   Tracks a value (e.g. capacity)
                 </label>
-                <label className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700">
+                <label className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700 dark:text-slate-300">
                   <input
                     type="checkbox"
                     checked={values.is_countable}
                     onChange={(e) => onChange("is_countable", e.target.checked)}
                     disabled={isSubmitting}
-                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400 dark:border-slate-600 dark:bg-slate-800"
                   />
                   Countable in stock
                 </label>
@@ -242,20 +242,20 @@ function PartTypeFormModal({
 
               <FormField label="Applies to categories">
                 {isLoadingCategories ? (
-                  <p className="text-[13px] text-slate-500">Loading categories...</p>
+                  <p className="text-[13px] text-slate-500 dark:text-slate-400">Loading categories...</p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-3 dark:border-slate-700">
                     {categories.map((category) => (
                       <label
                         key={category.category_id}
-                        className="inline-flex items-center gap-2 text-[13px] text-slate-700"
+                        className="inline-flex items-center gap-2 text-[13px] text-slate-700 dark:text-slate-300"
                       >
                         <input
                           type="checkbox"
                           checked={values.category_ids.includes(category.category_id)}
                           onChange={() => onToggleCategory(category.category_id)}
                           disabled={isSubmitting}
-                          className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                          className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400 dark:border-slate-600 dark:bg-slate-800"
                         />
                         {category.category_name}
                       </label>
@@ -266,19 +266,19 @@ function PartTypeFormModal({
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add Part"}
             </button>
@@ -323,16 +323,16 @@ function EditStockDialog({ target, values, partTypes, customFieldCatalog, onChan
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label="Close" />
-      <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+      <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950">Edit {target.part_name}</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Update this stock line.</p>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Edit {target.part_name}</h2>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Update this stock line.</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
             aria-label="Close"
           >
             <X size={16} />
@@ -342,13 +342,13 @@ function EditStockDialog({ target, values, partTypes, customFieldCatalog, onChan
         <form onSubmit={onSubmit} autoComplete="off">
           <div className="flex flex-col gap-4 px-6 py-5">
             {error && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
                 {error}
               </div>
             )}
 
             <FormField label="Part Name" htmlFor="edit-stock-part">
-              <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700">
+              <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                 {target.part_name}
               </div>
             </FormField>
@@ -469,13 +469,13 @@ function EditStockDialog({ target, values, partTypes, customFieldCatalog, onChan
               field.field_type === "boolean" ? (
                 <label
                   key={field.field_key}
-                  className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700"
+                  className="inline-flex items-center gap-2 text-[13px] font-medium text-slate-700 dark:text-slate-300"
                 >
                   <input
                     type="checkbox"
                     checked={Boolean(values[field.field_key])}
                     onChange={(e) => onChange(field.field_key, e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400 dark:border-slate-600 dark:bg-slate-800"
                   />
                   {field.field_label}
                 </label>
@@ -517,19 +517,19 @@ function EditStockDialog({ target, values, partTypes, customFieldCatalog, onChan
             </FormField>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!canSubmit || isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting ? "Saving..." : "Save"}
             </button>
@@ -654,9 +654,9 @@ export function PartStockView({
     <>
       {/* Part type tabs */}
       <div className="px-4 pt-6 sm:px-6 lg:px-8">
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <div className="border-b border-slate-100 px-5 py-4">
-            <p className="text-[13px] text-slate-500">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+          <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+            <p className="text-[13px] text-slate-500 dark:text-slate-400">
               Click a part to see its stock.
             </p>
           </div>
@@ -720,7 +720,7 @@ export function PartStockView({
                   selectedPartTypeId
                 )
               }
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               <PlusCircle size={15} />
               {`Add New ${selectedPartType.part_name}`}
