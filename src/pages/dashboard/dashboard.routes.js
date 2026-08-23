@@ -13,6 +13,7 @@ export const dashboardRouteByView = {
   "Currently Borrowed": "currently-borrowed",
   "Borrow History": "borrow-history",
   "Stock of Replace a Part": "part-stock",
+  "Borrow a Part": "part-borrow",
   "Device Replacement": "device-replacement",
   "Device Replacement History": "replacement-history",
   "SSD Upgrade": "ssd-upgrade",

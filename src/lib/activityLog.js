@@ -13,6 +13,7 @@ export const ACTIVITY_MODULES = {
   STATUS: "Status",
   REPLACEMENT: "Device Replacement",
   PART_STOCK: "Part Stock",
+  PART_BORROW: "Part Borrow",
 };
 
 export const ACTIVITY_ACTIONS = {

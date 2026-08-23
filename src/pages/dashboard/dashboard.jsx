@@ -54,7 +54,9 @@ import {
 } from "./features/device-replacement/ReplacementView";
 import { useReplacements } from "./features/device-replacement/useReplacements";
 import { PartStockView } from "./features/part-stock/PartStockView";
+import { BorrowPartDialog, DeleteBorrowDialog, PartBorrowView, ReturnPartDialog } from "./features/part-borrow/PartBorrowView";
 import { usePartStock } from "./features/part-stock/usePartStock";
+import { usePartBorrow } from "./features/part-borrow/usePartBorrow";
 import { useSsdUpgrades } from "./features/records/useSsdUpgrades";
 import { useSsdProcurement } from "./features/records/useSsdProcurement";
 import { useAntivirus } from "./features/records/useAntivirus";
@@ -202,6 +204,7 @@ function Dashboard({ user, onLogout }) {
       "Device Replacement": replacements.resetForEntry,
       "Device Replacement History": replacements.resetForEntry,
       "Stock of Replace a Part": partStock.resetForEntry,
+      "Borrow a Part": partBorrow.resetForEntry,
       "SSD Upgrade": ssdUpgrades.resetForEntry,
       "SSD Procurement": ssdProcurement.resetForEntry,
       "Antivirus Install": antivirus.resetForEntry,
@@ -260,6 +263,7 @@ function Dashboard({ user, onLogout }) {
   const isReplacementView = activeView === "Device Replacement" && hasActiveViewAccess;
   const isReplacementHistoryView = activeView === "Device Replacement History" && hasActiveViewAccess;
   const isPartStockView = activeView === "Stock of Replace a Part" && hasActiveViewAccess;
+  const isPartBorrowView = activeView === "Borrow a Part" && hasActiveViewAccess;
   const isSsdUpgradeView = activeView === "SSD Upgrade" && hasActiveViewAccess;
   const isSsdProcurementView = activeView === "SSD Procurement" && hasActiveViewAccess;
   const isAntivirusView = activeView === "Antivirus Install" && hasActiveViewAccess;
@@ -289,6 +293,7 @@ function Dashboard({ user, onLogout }) {
 
   const replacements = useReplacements({ isActive: isReplacementView || isReplacementHistoryView, user });
   const partStock = usePartStock({ isActive: isPartStockView, user });
+  const partBorrow = usePartBorrow({ isActive: isPartBorrowView, user });
   const ssdUpgrades = useSsdUpgrades({ isActive: isSsdUpgradeView });
   const ssdProcurement = useSsdProcurement({ isActive: isSsdProcurementView });
   const antivirus = useAntivirus({ isActive: isAntivirusView });
@@ -371,9 +376,8 @@ function Dashboard({ user, onLogout }) {
 
         {/* Desktop sidebar */}
         <aside
-          className={`sticky top-0 hidden h-screen min-h-0 shrink-0 flex-col border-r border-slate-200 bg-white xl:flex ${
-            isResizingSidebar ? "" : "transition-[width] duration-200"
-          } ${isSidebarCollapsed ? "w-19" : "relative"}`}
+          className={`sticky top-0 hidden h-screen min-h-0 shrink-0 flex-col border-r border-slate-200 bg-white xl:flex ${isResizingSidebar ? "" : "transition-[width] duration-200"
+            } ${isSidebarCollapsed ? "w-19" : "relative"}`}
           style={isSidebarCollapsed ? undefined : { width: sidebarWidth }}
         >
           <SidebarBrand
@@ -768,6 +772,19 @@ function Dashboard({ user, onLogout }) {
             />
           )}
 
+          {isPartBorrowView && (
+            <PartBorrowView
+              borrows={partBorrow.borrows}
+              isLoading={partBorrow.isLoading}
+              error={partBorrow.error}
+              onRetry={partBorrow.handleRetry}
+              onAddBorrow={partBorrow.handleOpenBorrowDialog}
+              onReturn={partBorrow.handleOpenReturnDialog}
+              onDelete={partBorrow.handleOpenDeleteBorrow}
+              canDelete={canCreateRecords}
+            />
+          )}
+
           {isSsdUpgradeView && (
             <SsdUpgradesView
               upgrades={ssdUpgrades.ssdUpgrades}
@@ -898,6 +915,7 @@ function Dashboard({ user, onLogout }) {
             !isReplacementView &&
             !isReplacementHistoryView &&
             !isPartStockView &&
+            !isPartBorrowView &&
             !isSsdUpgradeView &&
             !isSsdProcurementView &&
             !isAntivirusView &&
@@ -1185,6 +1203,42 @@ function Dashboard({ user, onLogout }) {
         onClose={currentBorrows.handleCloseReturn}
         isSubmitting={currentBorrows.isReturning}
         error={currentBorrows.returnError}
+      />
+
+      <BorrowPartDialog
+        isOpen={partBorrow.isBorrowDialogOpen}
+        values={partBorrow.borrowValues}
+        onChange={partBorrow.handleBorrowFieldChange}
+        onSelectPartType={partBorrow.handleSelectBorrowPartType}
+        onSelectStock={partBorrow.handleSelectBorrowStock}
+        onSelectEmployee={partBorrow.handleSelectBorrowEmployee}
+        onSubmit={partBorrow.handleSubmitBorrow}
+        onClose={partBorrow.handleCloseBorrowDialog}
+        isSubmitting={partBorrow.isSubmittingBorrow}
+        error={partBorrow.borrowError}
+        partTypes={partBorrow.partTypes}
+        employees={partBorrow.employeeOptions}
+        availableStock={partBorrow.availableStock}
+        isAvailableStockLoading={partBorrow.isAvailableStockLoading}
+        availableStockError={partBorrow.availableStockError}
+      />
+
+      <ReturnPartDialog
+        borrow={partBorrow.returnTarget}
+        values={partBorrow.returnValues}
+        onChange={partBorrow.handleReturnFieldChange}
+        onSubmit={partBorrow.handleSubmitReturn}
+        onClose={partBorrow.handleCloseReturnDialog}
+        isSubmitting={partBorrow.isSubmittingReturn}
+        error={partBorrow.returnError}
+      />
+
+      <DeleteBorrowDialog
+        borrow={partBorrow.deletingBorrow}
+        onConfirm={partBorrow.handleConfirmDeleteBorrow}
+        onCancel={partBorrow.handleCloseDeleteBorrow}
+        isConfirming={partBorrow.isDeletingBorrow}
+        error={partBorrow.deleteBorrowError}
       />
 
       <EmployeeFormModal

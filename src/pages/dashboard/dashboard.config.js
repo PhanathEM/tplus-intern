@@ -31,6 +31,7 @@ export const navSections = [
         icon: RefreshCw,
         children: [
           { label: "Stock of Replace a Part", icon: Box, permission: PERMISSIONS.PART_STOCK },
+          { label: "Borrow a Part", icon: UserPlus, permission: PERMISSIONS.PART_BORROW },
           { label: "Device Replacement", icon: RefreshCw, permission: PERMISSIONS.DEVICE_REPLACEMENT },
           { label: "Device Replacement History", icon: Search, permission: PERMISSIONS.REPLACEMENT_HISTORY },
         ],
@@ -378,6 +379,30 @@ export const RETURN_EQUIPMENT_INITIAL_VALUES = {
   return_date: "",
   condition_on_return: "",
 };
+
+export const PART_BORROW_INITIAL_VALUES = {
+  part_type_id: "",
+  stock_id: "",
+  quantity: "1",
+  borrower_id: "",
+  borrow_date: "",
+  condition_on_borrow: "",
+};
+
+export const PART_RETURN_INITIAL_VALUES = {
+  return_date: "",
+  condition_on_return: "",
+  returned_broken: false,
+};
+
+export const partBorrowColumns = [
+  { key: "borrowed_item", label: "Borrowed Item" },
+  { key: "quantity", label: "Quantity" },
+  { key: "borrower_name", label: "Borrower" },
+  { key: "issued_by", label: "Lender" },
+  { key: "borrow_date", label: "Borrowed Date" },
+  { key: "condition_on_borrow", label: "Condition at Borrowing" },
+];
 
 export const EMPLOYEE_FORM_INITIAL_VALUES = {
   full_name: "",
