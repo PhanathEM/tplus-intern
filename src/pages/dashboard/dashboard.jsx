@@ -86,6 +86,17 @@ import { RecycleBinView } from "./features/recycle-bin/RecycleBinViews";
 import { useRecycleBin } from "./features/recycle-bin/useRecycleBin";
 import { DashboardHomeView } from "./features/home/DashboardHomeView";
 
+const SIDEBAR_WIDTH_STORAGE_KEY = "tplus-sidebar-width";
+const DEFAULT_SIDEBAR_WIDTH = 256; // matches the old fixed w-64
+const MIN_SIDEBAR_WIDTH = 200;
+const MAX_SIDEBAR_WIDTH = 420;
+
+function readStoredSidebarWidth() {
+  if (typeof window === "undefined") return DEFAULT_SIDEBAR_WIDTH;
+  const stored = Number(window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
+  return stored >= MIN_SIDEBAR_WIDTH && stored <= MAX_SIDEBAR_WIDTH ? stored : DEFAULT_SIDEBAR_WIDTH;
+}
+
 function Dashboard({ user, onLogout }) {
   const permissions = useDashboardPermissions({ user });
   const {
@@ -115,6 +126,44 @@ function Dashboard({ user, onLogout }) {
   const { activeView, hasActiveViewAccess } = routing;
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(readStoredSidebarWidth);
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+
+  function handleSidebarResizeStart(event) {
+    event.preventDefault();
+    setIsResizingSidebar(true);
+  }
+
+  useEffect(() => {
+    if (!isResizingSidebar) return;
+
+    function handleMouseMove(event) {
+      const next = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, event.clientX));
+      setSidebarWidth(next);
+    }
+    function handleMouseUp() {
+      setIsResizingSidebar(false);
+    }
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+    };
+  }, [isResizingSidebar]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth));
+  }, [sidebarWidth]);
   const notifications = useDashboardNotifications({ user, onSelectView: handleSelectView });
   const isDashboardHomeView = activeView === "Dashboard" && hasActiveViewAccess;
   const home = useDashboardHome({ isActive: isDashboardHomeView, accessibleDashboardViews });
@@ -322,8 +371,10 @@ function Dashboard({ user, onLogout }) {
 
         {/* Desktop sidebar */}
         <aside
-          className={`sticky top-0 hidden h-screen min-h-0 shrink-0 flex-col border-r border-slate-200 bg-white transition-[width] duration-200 xl:flex ${isSidebarCollapsed ? "w-19" : "w-64"
-            }`}
+          className={`sticky top-0 hidden h-screen min-h-0 shrink-0 flex-col border-r border-slate-200 bg-white xl:flex ${
+            isResizingSidebar ? "" : "transition-[width] duration-200"
+          } ${isSidebarCollapsed ? "w-19" : "relative"}`}
+          style={isSidebarCollapsed ? undefined : { width: sidebarWidth }}
         >
           <SidebarBrand
             collapsed={isSidebarCollapsed}
@@ -336,6 +387,15 @@ function Dashboard({ user, onLogout }) {
             user={user}
             badges={notifications.sidebarBadges}
           />
+          {!isSidebarCollapsed && (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize sidebar"
+              onMouseDown={handleSidebarResizeStart}
+              className="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize select-none"
+            />
+          )}
         </aside>
 
 
