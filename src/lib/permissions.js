@@ -32,7 +32,7 @@ export const PERMISSION_DEFINITIONS = [
   { value: PERMISSIONS.BORROW_HISTORY, label: "Borrow History" },
   { value: PERMISSIONS.PART_STOCK, label: "Stock of Replace a Part" },
   { value: PERMISSIONS.DEVICE_REPLACEMENT, label: "Device Replacement" },
-  { value: PERMISSIONS.REPLACEMENT_HISTORY, label: "History Replacement" },
+  { value: PERMISSIONS.REPLACEMENT_HISTORY, label: "Device Replacement History" },
   { value: PERMISSIONS.SSD_UPGRADE, label: "SSD Upgrade" },
   { value: PERMISSIONS.SSD_PROCUREMENT, label: "SSD Procurement" },
   { value: PERMISSIONS.ANTIVIRUS_INSTALL, label: "Antivirus Install" },

@@ -32,7 +32,7 @@ export const navSections = [
         children: [
           { label: "Stock of Replace a Part", icon: Box, permission: PERMISSIONS.PART_STOCK },
           { label: "Device Replacement", icon: RefreshCw, permission: PERMISSIONS.DEVICE_REPLACEMENT },
-          { label: "History Replacement", icon: Search, permission: PERMISSIONS.REPLACEMENT_HISTORY },
+          { label: "Device Replacement History", icon: Search, permission: PERMISSIONS.REPLACEMENT_HISTORY },
         ],
       },
       { label: "SSD Upgrade", icon: HardDrive, permission: PERMISSIONS.SSD_UPGRADE },
@@ -51,12 +51,12 @@ export const navSections = [
     items: [
       { label: "Cloud Rate", icon: DollarSign, permission: PERMISSIONS.CLOUD_RATE },
       { label: "Cloud Usage", icon: Cloud, permission: PERMISSIONS.CLOUD_USAGE },
+      { label: "Service Usage", icon: Activity, permission: PERMISSIONS.SERVICE_USAGE },
     ],
   },
   {
     label: "Operations",
     items: [
-      { label: "Service Usage", icon: Activity, permission: PERMISSIONS.SERVICE_USAGE },
       {
         label: "Managements",
         icon: Tool,

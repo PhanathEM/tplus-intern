@@ -103,7 +103,7 @@ export function useReplacements({ isActive, user }) {
   const [fetchToken, setFetchToken] = useState(0);
 
   // Category reference data — used by the "Devices you can replace" list's
-  // category bar. History Replacement has no category filter anymore.
+  // category bar. Device Replacement History has no category filter anymore.
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {

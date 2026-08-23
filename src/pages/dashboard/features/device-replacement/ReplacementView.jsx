@@ -292,7 +292,7 @@ export function ReplacementHistoryView({
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-100 px-5 py-4">
-          <h2 className="text-[15px] font-semibold text-slate-950">History Replacement</h2>
+          <h2 className="text-[15px] font-semibold text-slate-950">Device Replacement History</h2>
           {!isLoading && !error && (
             <p className="mt-0.5 text-[13px] text-slate-500">
               {replacements.length} replacement{replacements.length === 1 ? "" : "s"}

@@ -151,7 +151,7 @@ function Dashboard({ user, onLogout }) {
     const resetMap = {
       Equipments: equipment.resetForEntry,
       "Device Replacement": replacements.resetForEntry,
-      "History Replacement": replacements.resetForEntry,
+      "Device Replacement History": replacements.resetForEntry,
       "Stock of Replace a Part": partStock.resetForEntry,
       "SSD Upgrade": ssdUpgrades.resetForEntry,
       "SSD Procurement": ssdProcurement.resetForEntry,
@@ -209,7 +209,7 @@ function Dashboard({ user, onLogout }) {
   const isDepartmentsView = activeView === "Departments" && hasActiveViewAccess;
   const isEquipmentView = activeView === "Equipments" && hasActiveViewAccess;
   const isReplacementView = activeView === "Device Replacement" && hasActiveViewAccess;
-  const isReplacementHistoryView = activeView === "History Replacement" && hasActiveViewAccess;
+  const isReplacementHistoryView = activeView === "Device Replacement History" && hasActiveViewAccess;
   const isPartStockView = activeView === "Stock of Replace a Part" && hasActiveViewAccess;
   const isSsdUpgradeView = activeView === "SSD Upgrade" && hasActiveViewAccess;
   const isSsdProcurementView = activeView === "SSD Procurement" && hasActiveViewAccess;
