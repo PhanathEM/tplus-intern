@@ -1029,7 +1029,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
                 deviceCategory={assign.deviceCategory}
                 onDeviceCategoryChange={assign.handleDeviceCategoryChange}
                 deviceOptions={assign.deviceOptions}
-                deviceColumns={assign.deviceColumns}
                 isDeviceLoading={assign.isDeviceLoading}
                 deviceError={assign.deviceError}
                 selectedDevice={assign.selectedDevice}

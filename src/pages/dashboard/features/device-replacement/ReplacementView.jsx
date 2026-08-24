@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FiAlertTriangle as AlertTriangle, FiChevronDown as ChevronDown, FiMonitor as Monitor, FiPlusCircle as PlusCircle, FiRefreshCw as RefreshCw, FiSearch as Search, FiX as X } from "react-icons/fi";
 import { OLD_PART_STATUS_OPTIONS, PART_ACTION_OPTIONS } from "../../dashboard.config";
+import { formatFieldValue } from "../../dashboard.utils";
 import { EmptyState, formInputClass, RadioSelect } from "../../components/SharedControls";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
@@ -206,6 +207,7 @@ export function ReplaceableDevicesView({
           emptyTitle="No devices found"
           emptyDescription="Owned devices will appear here."
           onRowClick={canManage ? onOpenReplaceDialog : undefined}
+          elevatedRowHover={canManage}
         />
       </div>
     </div>
@@ -234,43 +236,188 @@ function formatPartValue(partName, value) {
   return String(value);
 }
 
-function ReplacementHistoryRow({ replacement }) {
-  const deviceLabel =
-    replacement.computer_name || replacement.device_name || replacement.device_model || replacement.asset_code || "—";
+function formatDetailValue(key, value) {
+  if (value === null || value === undefined || value === "") return null;
+  if (key === "action") return String(value).charAt(0).toUpperCase() + String(value).slice(1);
+  return formatFieldValue(value);
+}
+
+// The API's part-replacement records only ever carry these — there's no
+// old_computer_name/new_device_model/old_bag/etc. (that shape belonged to a
+// whole-device replacement flow that was removed as a product decision).
+// Each is shown only when it actually has a value.
+const REPLACEMENT_DETAIL_FIELDS = [
+  ["action", "Action"],
+  ["reason", "Reason"],
+  ["remark", "Remark"],
+  ["replaced_by", "Replaced By"],
+];
+
+// 1 -> "1st", 2 -> "2nd", 11 -> "11th", etc.
+function formatOrdinal(n) {
+  const rem100 = n % 100;
+  if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
+}
+
+// One row per employee in the table — `group.latestEntry` is the most
+// recent replacement, used for the row's Computer/Asset Code/Category/Date.
+// The full chronological list lives in the detail popup.
+function ReplacementHistoryRow({ group, onViewDetails }) {
+  const latest = group.latestEntry;
+  const deviceLabel = latest.computer_name || latest.device_name || latest.device_model || latest.asset_code || "—";
+
+  // Gmail's row hover: the row lifts off the list as its own little white
+  // card (shadow + rounded ends) instead of just tinting the background.
+  const cellClass = "whitespace-nowrap px-4 py-3 group-hover:bg-white dark:group-hover:bg-slate-800";
 
   return (
-    <tr className="transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
-      <td className="whitespace-nowrap px-4 py-3">
+    <tr
+      onClick={() => onViewDetails(group)}
+      className="group relative cursor-pointer transition hover:z-10 hover:shadow-[0_1px_2px_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.35)]"
+    >
+      <td className={`${cellClass} rounded-l-lg`}>
         <div className="flex items-center gap-2.5">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            {getInitials(replacement.owner_name)}
+            {getInitials(group.owner_name)}
           </span>
-          <span className="font-semibold text-slate-900 dark:text-white">{replacement.owner_name || "—"}</span>
+          <span className="font-semibold text-slate-900 dark:text-white">{group.owner_name || "—"}</span>
         </div>
       </td>
-      <td className="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">{replacement.staff_code || "—"}</td>
-      <td className="whitespace-nowrap px-4 py-3">
+      <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{group.staff_code || "—"}</td>
+      <td className={cellClass}>
         <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
           <Monitor size={12} className="shrink-0 text-slate-400 dark:text-slate-500" />
           {deviceLabel}
         </span>
       </td>
-      <td className="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">{replacement.asset_code || "—"}</td>
-      <td className="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">{replacement.category_name || "—"}</td>
-      <td className="whitespace-nowrap px-4 py-3">
+      <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{latest.asset_code || "—"}</td>
+      <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{latest.category_name || "—"}</td>
+      <td className={`${cellClass} rounded-r-lg`}>
         <div className="inline-flex items-center gap-2 text-[13px]">
-          <span className="font-semibold text-slate-700 dark:text-slate-300">{replacement.part_name || "Part"}</span>
+          <span className="font-semibold text-slate-700 dark:text-slate-300">{latest.part_name || "Part"}</span>
           <span className="rounded-md bg-rose-50 px-2 py-0.5 font-mono text-xs font-semibold text-rose-600 line-through dark:bg-rose-950/40 dark:text-rose-400">
-            {formatPartValue(replacement.part_name, replacement.old_value)}
+            {formatPartValue(latest.part_name, latest.old_value)}
           </span>
           <span className="text-slate-300 dark:text-slate-600">&rarr;</span>
           <span className="rounded-md bg-emerald-50 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-            {formatPartValue(replacement.part_name, replacement.new_value)}
+            {formatPartValue(latest.part_name, latest.new_value)}
           </span>
+          {group.count > 1 && (
+            <span className="text-xs font-medium text-slate-400 dark:text-slate-500">+{group.count - 1} more</span>
+          )}
         </div>
       </td>
-      <td className="whitespace-nowrap px-4 py-3 text-slate-500 dark:text-slate-400">{formatReplacementDate(replacement.replacement_date)}</td>
     </tr>
+  );
+}
+
+// One entry in the popup's history list — same part-change pill as the
+// table row, plus whichever real detail fields (action/reason/remark/
+// replaced_by) this specific replacement has.
+function ReplacementHistoryEntry({ entry }) {
+  const deviceLabel = entry.computer_name || entry.device_name || entry.device_model || entry.asset_code || "—";
+  const detailEntries = REPLACEMENT_DETAIL_FIELDS.map(([key, label]) => [key, label, formatDetailValue(key, entry[key])]).filter(
+    ([, , value]) => value !== null
+  );
+
+  return (
+    <div className="px-6 py-4">
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+          {formatOrdinal(entry._occurrence)} replacement
+        </span>
+        <span className="text-xs text-slate-400 dark:text-slate-500">{formatReplacementDate(entry.replacement_date)}</span>
+      </div>
+
+      <div className="mb-2 flex flex-wrap items-center gap-2 text-[13px]">
+        <span className="font-semibold text-slate-700 dark:text-slate-300">{entry.part_name || "Part"}</span>
+        <span className="rounded-md bg-rose-50 px-2 py-0.5 font-mono text-xs font-semibold text-rose-600 line-through dark:bg-rose-950/40 dark:text-rose-400">
+          {formatPartValue(entry.part_name, entry.old_value)}
+        </span>
+        <span className="text-slate-300 dark:text-slate-600">&rarr;</span>
+        <span className="rounded-md bg-emerald-50 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+          {formatPartValue(entry.part_name, entry.new_value)}
+        </span>
+      </div>
+
+      <p className="mb-2 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+        <Monitor size={12} className="shrink-0 text-slate-400 dark:text-slate-500" />
+        {deviceLabel}
+        {entry.asset_code ? ` · ${entry.asset_code}` : ""}
+      </p>
+
+      {detailEntries.length > 0 && (
+        <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-xs">
+          {detailEntries.map(([key, label, value]) => (
+            <Fragment key={key}>
+              <dt className="font-semibold text-slate-600 dark:text-slate-400">{label}</dt>
+              <dd className="min-w-0 truncate text-slate-500 dark:text-slate-400">{value}</dd>
+            </Fragment>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
+}
+
+function ReplacementDetailModal({ group, onClose }) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  if (!group) return null;
+
+  const latest = group.latestEntry;
+  const deviceLabel = latest.computer_name || latest.device_name || latest.device_model || latest.asset_code || "—";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label="Close" />
+      <div className="relative flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{group.owner_name || "Replacement"}</h2>
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                {group.count} replacement{group.count === 1 ? "" : "s"}
+              </span>
+            </div>
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
+              {group.staff_code ? `${group.staff_code} · ` : ""}
+              {deviceLabel}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            aria-label="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="divide-y divide-slate-100 overflow-y-auto dark:divide-slate-800">
+          {group.displayEntries.map((entry) => (
+            <ReplacementHistoryEntry key={entry.replacement_id ?? entry._occurrence} entry={entry} />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -288,6 +435,44 @@ export function ReplacementHistoryView({
   error,
   onRetry,
 }) {
+  const [selectedGroup, setSelectedGroup] = useState(null);
+
+  // One row per employee — repeated replacements for the same person are
+  // folded into a single row instead of repeating their name; the full
+  // chronological list (1st, 2nd, 3rd...) lives in the detail popup.
+  const employeeGroups = useMemo(() => {
+    const groups = new Map();
+    replacements.forEach((replacement) => {
+      const key = replacement.staff_code || replacement.owner_id || replacement.employee_id || replacement.owner_name || "unknown";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(replacement);
+    });
+
+    return Array.from(groups.entries()).map(([key, entries]) => {
+      const ascending = [...entries].sort((a, b) => {
+        const dateA = new Date(a.replacement_date).getTime();
+        const dateB = new Date(b.replacement_date).getTime();
+        if (dateA !== dateB) {
+          if (Number.isNaN(dateA)) return 1;
+          if (Number.isNaN(dateB)) return -1;
+          return dateA - dateB;
+        }
+        return (a.replacement_id ?? 0) - (b.replacement_id ?? 0);
+      });
+      const withOrdinal = ascending.map((entry, index) => ({ ...entry, _occurrence: index + 1 }));
+      const latestEntry = withOrdinal[withOrdinal.length - 1];
+
+      return {
+        key,
+        owner_name: latestEntry.owner_name,
+        staff_code: latestEntry.staff_code,
+        latestEntry,
+        count: withOrdinal.length,
+        displayEntries: [...withOrdinal].reverse(),
+      };
+    });
+  }, [replacements]);
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -295,7 +480,8 @@ export function ReplacementHistoryView({
           <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Device Replacement History</h2>
           {!isLoading && !error && (
             <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-              {replacements.length} replacement{replacements.length === 1 ? "" : "s"}
+              {employeeGroups.length} employee{employeeGroups.length === 1 ? "" : "s"} · {replacements.length} replacement
+              {replacements.length === 1 ? "" : "s"}
             </p>
           )}
         </div>
@@ -318,7 +504,7 @@ export function ReplacementHistoryView({
               Retry
             </button>
           </div>
-        ) : replacements.length === 0 ? (
+        ) : employeeGroups.length === 0 ? (
           <EmptyState
             icon={RefreshCw}
             title="No replacements found"
@@ -335,18 +521,19 @@ export function ReplacementHistoryView({
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Asset Code</th>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Category</th>
                   <th className="whitespace-nowrap px-4 py-3 font-semibold">Replacement</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
-                {replacements.map((replacement, index) => (
-                  <ReplacementHistoryRow key={replacement.replacement_id ?? index} replacement={replacement} />
+                {employeeGroups.map((group) => (
+                  <ReplacementHistoryRow key={group.key} group={group} onViewDetails={setSelectedGroup} />
                 ))}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      <ReplacementDetailModal group={selectedGroup} onClose={() => setSelectedGroup(null)} />
     </div>
   );
 }
@@ -403,9 +590,9 @@ export function ReplaceDeviceDialog({
     partAction === "add" || (partAction === "replace" && Boolean(selectedPartType?.tracks_value));
   const canSubmitPart = Boolean(
     selectedPartTypeId &&
-      (!partNeedsValue || partNewValue.trim()) &&
-      selectedStockId &&
-      (partAction !== "replace" || oldPartStatus)
+    (!partNeedsValue || partNewValue.trim()) &&
+    selectedStockId &&
+    (partAction !== "replace" || oldPartStatus)
   );
 
   // Read straight off the device row instead of asking — the API never wants

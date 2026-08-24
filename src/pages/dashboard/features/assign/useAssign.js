@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchAssignFormData, fetchAssignableEquipment, fetchAssignEmployees, submitAssign } from "../../../../services/assignService";
 import { unassignEquipment } from "../../../../services/equipmentService";
-import { normalizeEquipmentTableColumns } from "../../dashboard.utils";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 
 export function useAssign({ isActive, user, onAssigned }) {
@@ -16,7 +15,6 @@ export function useAssign({ isActive, user, onAssigned }) {
   const [deviceQuery, setDeviceQuery] = useState("");
   const [deviceCategory, setDeviceCategory] = useState("All");
   const [deviceOptions, setDeviceOptions] = useState([]);
-  const [deviceColumns, setDeviceColumns] = useState([]);
   const [isDeviceLoading, setIsDeviceLoading] = useState(false);
   const [deviceError, setDeviceError] = useState(null);
   const [selectedDevice, setSelectedDevice] = useState(null);
@@ -70,7 +68,6 @@ export function useAssign({ isActive, user, onAssigned }) {
         .then((data) => {
           if (ignore) return;
           setDeviceOptions(Array.isArray(data?.equipment) ? data.equipment : []);
-          setDeviceColumns(normalizeEquipmentTableColumns(data));
           setDeviceError(null);
         })
         .catch((error) => {
@@ -241,7 +238,6 @@ export function useAssign({ isActive, user, onAssigned }) {
     deviceCategory,
     handleDeviceCategoryChange,
     deviceOptions,
-    deviceColumns,
     isDeviceLoading,
     deviceError,
     selectedDevice,

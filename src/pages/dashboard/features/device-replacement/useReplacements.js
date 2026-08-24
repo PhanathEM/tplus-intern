@@ -154,9 +154,14 @@ export function useReplacements({ isActive, user }) {
     setFetchToken((value) => value + 1);
   }
 
+  // "Device Replacement" and "Device Replacement History" share this same
+  // `isActive` flag (it's true for either), so switching between just those
+  // two doesn't flip isActive and won't re-run the fetch effect on its own —
+  // bump fetchToken here too so entering either page always refetches.
   function resetForEntry() {
     setIsLoading(true);
     setError(null);
+    setFetchToken((value) => value + 1);
   }
 
   // Page-level category selection — there's no "All categories" tab, so

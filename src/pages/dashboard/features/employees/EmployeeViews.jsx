@@ -326,45 +326,51 @@ export function EmployeeDirectoryTable({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
-                {employees.map((employee) => (
-                  <tr
-                    key={employee.employee_id}
-                    onClick={() => onViewDetail(employee)}
-                    className="cursor-pointer transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40"
-                  >
-                    <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-950 dark:text-white">
-                      <div className="flex items-center gap-2.5">
-                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
-                          <UserIcon size={15} />
+                {employees.map((employee) => {
+                  // Gmail's row hover: the row lifts off the list as its own
+                  // white card (shadow + rounded ends) instead of just
+                  // tinting the background.
+                  const cellClass = "whitespace-nowrap px-5 py-3.5 group-hover:bg-white dark:group-hover:bg-slate-800";
+                  return (
+                    <tr
+                      key={employee.employee_id}
+                      onClick={() => onViewDetail(employee)}
+                      className="group relative cursor-pointer transition hover:z-10 hover:shadow-[0_1px_2px_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.35)]"
+                    >
+                      <td className={`${cellClass} rounded-l-lg font-semibold text-slate-950 dark:text-white`}>
+                        <div className="flex items-center gap-2.5">
+                          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                            <UserIcon size={15} />
+                          </div>
+                          {employee.full_name || "—"}
                         </div>
-                        {employee.full_name || "—"}
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">{employee.position || "—"}</td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">
-                      {getEmployeeDepartmentCode(employee) || "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">{employee.sex || "—"}</td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">{employee.staff_code || "—"}</td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">{employee.phone || "—"}</td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">{employee.location || "—"}</td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-right">
-                      <div className="flex items-center justify-end">
-                        {canManage && (
-                          <RowActionsMenu
-                            items={[
-                              { icon: FileText, label: "Download PDF", onClick: () => onDownloadPdf(employee) },
-                              { icon: Grid, label: "Download Excel", onClick: () => onDownloadExcel(employee) },
-                              { divider: true },
-                              { icon: Edit2, label: "Edit", onClick: () => onEdit(employee) },
-                              { icon: Trash2, label: "Delete", onClick: () => onDelete(employee), destructive: true },
-                            ]}
-                          />
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{employee.position || "—"}</td>
+                      <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>
+                        {getEmployeeDepartmentCode(employee) || "—"}
+                      </td>
+                      <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{employee.sex || "—"}</td>
+                      <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{employee.staff_code || "—"}</td>
+                      <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{employee.phone || "—"}</td>
+                      <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{employee.location || "—"}</td>
+                      <td className={`${cellClass} rounded-r-lg text-right`}>
+                        <div className="flex items-center justify-end">
+                          {canManage && (
+                            <RowActionsMenu
+                              items={[
+                                { icon: FileText, label: "Download PDF", onClick: () => onDownloadPdf(employee) },
+                                { icon: Grid, label: "Download Excel", onClick: () => onDownloadExcel(employee) },
+                                { divider: true },
+                                { icon: Edit2, label: "Edit", onClick: () => onEdit(employee) },
+                                { icon: Trash2, label: "Delete", onClick: () => onDelete(employee), destructive: true },
+                              ]}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
