@@ -289,8 +289,11 @@ export function EquipmentFormModal({
   fields = [],
   onRemoveField,
   onOpenColumnsPicker,
-  onOpenSoftwareLicense,
-  softwareLicenseCount = 0,
+  licenseOptions = [],
+  selectedLicenseIds = [],
+  onToggleLicense,
+  isLicensesLoading = false,
+  licensesError = null,
 }) {
   useEffect(() => {
     function handleKeyDown(event) {
@@ -404,49 +407,71 @@ return (
                 />
               </FormField>
             </div>
+
+<div className="mt-4">
+              <FormField label="Software License">
+                {isLicensesLoading ? (
+                  <p className="text-[13px] text-slate-500 dark:text-slate-400">Loading licenses...</p>
+                ) : licensesError ? (
+                  <p className="text-[13px] text-rose-600 dark:text-rose-400">{licensesError}</p>
+                ) : licenseOptions.length === 0 ? (
+                  <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                    No licenses found. Add one from the License page first.
+                  </p>
+                ) : (
+                  <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+                    {licenseOptions.map((license) => {
+                      const isChecked = selectedLicenseIds.some(
+                        (id) => String(id) === String(license.license_id)
+                      );
+                      return (
+                        <label
+                          key={license.license_id}
+                          className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-medium text-slate-700 transition hover:border-slate-300 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => onToggleLicense(license.license_id)}
+                            disabled={isSubmitting}
+                            className="h-4 w-4 shrink-0 rounded border-slate-300 text-slate-950 focus:ring-orange-400 dark:border-slate-600 dark:bg-slate-800"
+                          />
+                          <span className="truncate">{license.product_name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </FormField>
+            </div>
           </div>
 
-<div className="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
-            {onOpenSoftwareLicense ? (
+<div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
+            >
+              Cancel
+            </button>
+            {onOpenColumnsPicker && (
               <button
                 type="button"
-                onClick={onOpenSoftwareLicense}
-                disabled={isSubmitting}
+                onClick={onOpenColumnsPicker}
+                disabled={isSubmitting || !values.category}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
               >
-                {softwareLicenseCount > 0 ? `Software License (${softwareLicenseCount})` : "Software License"}
+                Add Columns
               </button>
-            ) : (
-              <span />
             )}
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isSubmitting}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
-              >
-                Cancel
-              </button>
-              {onOpenColumnsPicker && (
-                <button
-                  type="button"
-                  onClick={onOpenColumnsPicker}
-                  disabled={isSubmitting || !values.category}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
-                >
-                  Add Columns
-                </button>
-              )}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
-              >
-                {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add equipment"}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
+            >
+              {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add equipment"}
+            </button>
           </div>
         </form>
       </div>
@@ -576,117 +601,6 @@ export function ColumnsPickerModal({
               {isSaving ? "Saving..." : "Save columns"}
             </button>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function SoftwareLicensePickerModal({
-  isOpen,
-  licenses = [],
-  selectedIds = [],
-  onToggle,
-  onClose,
-  isLoading,
-  error,
-}) {
-  useEffect(() => {
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-slate-950/60"
-        onClick={onClose}
-        aria-label="Close"
-      />
-      <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
-          <div>
-            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Software License</h2>
-            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-              Choose one or more licenses to link to this equipment.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Close"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {error && (
-          <div className="mx-6 mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
-            {error}
-          </div>
-        )}
-
-        <div className="overflow-y-auto px-6 py-5">
-          {isLoading ? (
-            <div className="py-8 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading licenses...</div>
-          ) : licenses.length === 0 ? (
-            <div className="py-8 text-center text-[13px] text-slate-500 dark:text-slate-400">
-              No licenses found. Add one from the License page first.
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {licenses.map((license) => {
-                const isChecked = selectedIds.some((id) => String(id) === String(license.license_id));
-                return (
-                  <label
-                    key={license.license_id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2.5 text-[13px] font-medium text-slate-700 transition hover:border-slate-300 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600"
-                  >
-                    <span className="flex items-center gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => onToggle(license.license_id)}
-                        className="h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-orange-400 dark:border-slate-600 dark:bg-slate-800"
-                      />
-                      <span>
-                        <span className="block text-slate-950 dark:text-white">{license.product_name}</span>
-                        <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
-                          {[license.product_type, license.license_type].filter(Boolean).join(" · ") || "—"}
-                        </span>
-                      </span>
-                    </span>
-                    {license.install_count != null ? (
-                      <span className="shrink-0 text-xs font-normal text-slate-400 dark:text-slate-500">
-                        {license.install_count} installed
-                      </span>
-                    ) : (
-                      license.status && (
-                        <span className="shrink-0 text-xs font-normal text-slate-400 dark:text-slate-500">{license.status}</span>
-                      )
-                    )}
-                  </label>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
-          >
-            Done
-          </button>
         </div>
       </div>
     </div>

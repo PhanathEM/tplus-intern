@@ -34,6 +34,11 @@ const IGNORED_DIFF_KEYS = new Set([
   "updatedAt",
   "password",
   "password_hash",
+  "is_active",
+  // A display-only row index some tables add for numbering ("No." columns
+  // over ids that aren't sequential) — never real data, so never worth
+  // logging.
+  "_row_number",
 ]);
 
 function formatTimestamp(value) {
@@ -177,26 +182,6 @@ function ActivityTable({ entries, showActor, emptyDescription }) {
           ))}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-export function MyActivityView({ entries }) {
-  return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-          <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">My activity</h2>
-          <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-            {entries.length} action{entries.length === 1 ? "" : "s"} recorded on this device
-          </p>
-        </div>
-        <ActivityTable
-          entries={entries}
-          showActor={false}
-          emptyDescription="Things you add, edit, or delete will show up here."
-        />
-      </div>
     </div>
   );
 }

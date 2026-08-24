@@ -475,49 +475,6 @@ export function usePartStock({ isActive, user }) {
       .finally(() => setIsDeletingPartType(false));
   }
 
-  // Standalone "Deactivate Part" action — a deliberate choice from the kebab
-  // menu, separate from the auto-offered fallback above when Delete is
-  // blocked by real history. Two distinct actions so it's never ambiguous
-  // which one an admin is doing.
-  const [partTypeToDeactivate, setPartTypeToDeactivate] = useState(null);
-  const [isDeactivatingPartType, setIsDeactivatingPartType] = useState(false);
-  const [deactivatePartTypeError, setDeactivatePartTypeError] = useState(null);
-
-  function handleOpenDeactivatePartType(partType) {
-    setPartTypeToDeactivate(partType);
-    setDeactivatePartTypeError(null);
-  }
-
-  function handleCloseDeactivatePartType() {
-    setPartTypeToDeactivate(null);
-    setDeactivatePartTypeError(null);
-  }
-
-  function handleConfirmDeactivatePartType() {
-    if (!partTypeToDeactivate) return;
-
-    setIsDeactivatingPartType(true);
-    setDeactivatePartTypeError(null);
-
-    updatePartType(partTypeToDeactivate.part_type_id, { is_active: false })
-      .then(() => {
-        logActivity({
-          actor: user,
-          action: "update",
-          module: ACTIVITY_MODULES.PART_STOCK,
-          entityId: partTypeToDeactivate.part_type_id,
-          entityLabel: partTypeToDeactivate.part_name,
-          before: partTypeToDeactivate,
-          after: { is_active: false },
-        });
-        setPartTypeToDeactivate(null);
-        handleRetry();
-      })
-      .catch((error) => {
-        setDeactivatePartTypeError(error.response?.data?.error || error.message || "Could not deactivate this part type.");
-      })
-      .finally(() => setIsDeactivatingPartType(false));
-  }
 
   // --- Add to stock ---------------------------------------------------
 
@@ -743,13 +700,6 @@ export function usePartStock({ isActive, user }) {
     handleCloseDeletePartType,
     handleConfirmDeletePartType,
     handleDeactivatePartTypeInstead,
-
-    partTypeToDeactivate,
-    isDeactivatingPartType,
-    deactivatePartTypeError,
-    handleOpenDeactivatePartType,
-    handleCloseDeactivatePartType,
-    handleConfirmDeactivatePartType,
 
     isAddDialogOpen,
     addFormValues,

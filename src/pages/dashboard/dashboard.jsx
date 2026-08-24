@@ -36,7 +36,6 @@ import {
   EquipmentFormModal,
   EquipmentView,
   ReturnEquipmentModal,
-  SoftwareLicensePickerModal,
 } from "./features/equipment/EquipmentViews";
 import {
   AntivirusView,
@@ -80,7 +79,7 @@ import {
 import { ResetPasswordModal, UserPermissionsModal, UsersView } from "./features/users/UserViews";
 import { StatusesView, StatusFormModal } from "./features/statuses/StatusViews";
 import { AssignEquipmentView } from "./features/assign/AssignView";
-import { ActivityLogView, MyActivityView } from "./features/activity/ActivityViews";
+import { ActivityLogView } from "./features/activity/ActivityViews";
 import { useActivityLog } from "./features/activity/useActivityLog";
 import { useMyActivity } from "./features/activity/useMyActivity";
 import { getAccessProfileLabel } from "../../lib/permissions";
@@ -278,7 +277,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
   const isBorrowHistoryView = activeView === "Borrow History" && hasActiveViewAccess;
   const isUsersView = activeView === "Users" && hasActiveViewAccess;
   const isStatusView = activeView === "Statuses" && hasActiveViewAccess;
-  const isMyActivityView = activeView === "My Activity" && hasActiveViewAccess;
   const isActivityLogView = activeView === "Activity Log" && hasActiveViewAccess;
   const isRecycleBinView = activeView === "Recycle Bin" && hasActiveViewAccess;
 
@@ -644,7 +642,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
                 ...home.stats,
                 "Currently Borrowed": notifications.data.currentBorrows.length,
                 "Software License": notifications.data.licenses.length,
-                "My Activity": myActivity.entries.length,
                 "Activity Log": activityLog.entries.length,
               }}
               isStatsLoading={home.isLoading}
@@ -756,12 +753,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
               onCloseDeletePartType={partStock.handleCloseDeletePartType}
               onConfirmDeletePartType={partStock.handleConfirmDeletePartType}
               onDeactivatePartTypeInstead={partStock.handleDeactivatePartTypeInstead}
-              partTypeToDeactivate={partStock.partTypeToDeactivate}
-              isDeactivatingPartType={partStock.isDeactivatingPartType}
-              deactivatePartTypeError={partStock.deactivatePartTypeError}
-              onOpenDeactivatePartType={partStock.handleOpenDeactivatePartType}
-              onCloseDeactivatePartType={partStock.handleCloseDeactivatePartType}
-              onConfirmDeactivatePartType={partStock.handleConfirmDeactivatePartType}
               isAddDialogOpen={partStock.isAddDialogOpen}
               addFormValues={partStock.addFormValues}
               isSubmittingAdd={partStock.isSubmittingAdd}
@@ -939,7 +930,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
             !isBorrowHistoryView &&
             !isUsersView &&
             !isStatusView &&
-            !isMyActivityView &&
             !isActivityLogView &&
             !isRecycleBinView && (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -1081,8 +1071,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
               </div>
             ))}
 
-          {isMyActivityView && <MyActivityView entries={myActivity.entries} />}
-
           {isActivityLogView &&
             (canManageActivityLog ? (
               <ActivityLogView
@@ -1158,18 +1146,11 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
         fields={equipment.formFields}
         onRemoveField={equipment.handleRemoveField}
         onOpenColumnsPicker={equipment.handleOpenColumnsPickerFromForm}
-        onOpenSoftwareLicense={equipment.handleOpenSoftwareLicensePicker}
-        softwareLicenseCount={equipment.licenseSelectedIds.length}
-      />
-
-      <SoftwareLicensePickerModal
-        isOpen={equipment.isSoftwareLicensePickerOpen}
-        licenses={equipment.softwareLicenseOptions}
-        selectedIds={equipment.licenseSelectedIds}
-        onToggle={equipment.handleToggleSoftwareLicenseSelection}
-        onClose={equipment.handleCloseSoftwareLicensePicker}
-        isLoading={equipment.isSoftwareLicenseOptionsLoading}
-        error={equipment.softwareLicenseOptionsError}
+        licenseOptions={equipment.softwareLicenseOptions}
+        selectedLicenseIds={equipment.licenseSelectedIds}
+        onToggleLicense={equipment.handleToggleSoftwareLicenseSelection}
+        isLicensesLoading={equipment.isSoftwareLicenseOptionsLoading}
+        licensesError={equipment.softwareLicenseOptionsError}
       />
 
       <ColumnsPickerModal

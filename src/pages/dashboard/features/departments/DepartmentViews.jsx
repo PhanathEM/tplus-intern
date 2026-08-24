@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   FiEdit2 as Edit2,
   FiFileText as FileText,
@@ -28,10 +28,21 @@ export function DepartmentsView({
   canManage = true,
   canCreate = true,
 }) {
+  // department_id is the raw database id — new departments don't land at the
+  // end of that sequence, so number rows ourselves instead of showing it.
+  const numberedDepartments = useMemo(
+    () => departments.map((department, index) => ({ ...department, _row_number: index + 1 })),
+    [departments]
+  );
+  const numberedColumns = useMemo(
+    () => [{ key: "_row_number", label: "No." }, ...departmentColumns.filter((column) => column.key !== "department_id")],
+    []
+  );
+
   return (
     <RecordsTableView
-      records={departments}
-      columnsConfig={departmentColumns}
+      records={numberedDepartments}
+      columnsConfig={numberedColumns}
       title="Departments"
       recordLabel="department"
       loadingText="Loading departments..."

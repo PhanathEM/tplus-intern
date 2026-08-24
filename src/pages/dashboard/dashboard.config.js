@@ -1,4 +1,4 @@
-import { FiActivity as Activity, FiBox as Box, FiClock as Clock, FiCloud as Cloud, FiDollarSign as DollarSign, FiHardDrive as HardDrive, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiShield as Shield, FiShoppingCart as ShoppingCart, FiSliders as Sliders, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
+import { FiActivity as Activity, FiBox as Box, FiCloud as Cloud, FiDollarSign as DollarSign, FiHardDrive as HardDrive, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiShield as Shield, FiShoppingCart as ShoppingCart, FiSliders as Sliders, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
 import { PERMISSIONS } from "../../lib/permissions";
 
 export const navSections = [
@@ -64,10 +64,6 @@ export const navSections = [
         children: [{ label: "Statuses", icon: Sliders, permission: PERMISSIONS.EQUIPMENT_STATUS, adminOnly: true }],
       },
     ],
-  },
-  {
-    label: "Account",
-    items: [{ label: "My Activity", icon: Clock }],
   },
   {
     label: "Administration",

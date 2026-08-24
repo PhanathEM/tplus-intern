@@ -25,7 +25,6 @@ export const dashboardRouteByView = {
   "Service Usage": "service-usage",
   Statuses: "statuses",
   Users: "users",
-  "My Activity": "my-activity",
   "Activity Log": "activity-log",
   "Recycle Bin": "recycle-bin",
 };

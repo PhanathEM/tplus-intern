@@ -162,6 +162,11 @@ export function usePartBorrow({ isActive, user }) {
     };
     if (borrowValues.condition_on_borrow.trim()) payload.condition_on_borrow = borrowValues.condition_on_borrow;
 
+    const borrowerEmployee = employeeOptions.find(
+      (employee) => String(employee.employee_id) === String(borrowValues.borrower_id)
+    );
+    const itemLabel = `${partType?.part_name || "Part"}${stockOption?.part_value ? ` (${stockOption.part_value})` : ""}`;
+
     createPartBorrow(payload)
       .then((data) => {
         logActivity({
@@ -169,8 +174,17 @@ export function usePartBorrow({ isActive, user }) {
           action: "borrow",
           module: ACTIVITY_MODULES.PART_BORROW,
           entityId: data?.borrow_id,
-          entityLabel: `${partType?.part_name || "Part"}${stockOption?.part_value ? ` (${stockOption.part_value})` : ""} x${quantity}`,
-          after: payload,
+          entityLabel: `${itemLabel} x${quantity}`,
+          // A human-readable snapshot for the Activity Log's "Details" panel —
+          // not the raw API payload, which is just IDs (stock_id, borrower_id).
+          after: {
+            item: itemLabel,
+            quantity,
+            borrower: borrowerEmployee?.full_name || `Employee #${borrowValues.borrower_id}`,
+            condition: payload.condition_on_borrow || "—",
+            lender: user?.name || "—",
+            date: payload.borrow_date,
+          },
         });
         setIsBorrowDialogOpen(false);
         handleRetry();
@@ -232,8 +246,13 @@ export function usePartBorrow({ isActive, user }) {
           module: ACTIVITY_MODULES.PART_BORROW,
           entityId: returnTarget.borrow_id,
           entityLabel: returnTarget.part_name || `Borrow ${returnTarget.borrow_id}`,
-          before: returnTarget,
-          after: payload,
+          before: {
+            item: returnTarget.part_name || "Part",
+            quantity: returnTarget.quantity,
+            borrower: returnTarget.borrower_name || "—",
+            condition: payload.condition_on_return || "—",
+            date: payload.return_date,
+          },
         });
         setReturnTarget(null);
         handleRetry();
@@ -271,7 +290,14 @@ export function usePartBorrow({ isActive, user }) {
           module: ACTIVITY_MODULES.PART_BORROW,
           entityId: deletingBorrow.borrow_id,
           entityLabel: deletingBorrow.part_name || `Borrow ${deletingBorrow.borrow_id}`,
-          before: deletingBorrow,
+          before: {
+            item: deletingBorrow.part_name || "Part",
+            quantity: deletingBorrow.quantity,
+            borrower: deletingBorrow.borrower_name || "—",
+            condition: deletingBorrow.condition_on_borrow || "—",
+            lender: deletingBorrow.issued_by || "—",
+            date: deletingBorrow.borrow_date,
+          },
         });
         setDeletingBorrow(null);
         handleRetry();

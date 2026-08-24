@@ -1,7 +1,6 @@
 export {
   EquipmentFormModal,
   ColumnsPickerModal,
-  SoftwareLicensePickerModal,
   BorrowEquipmentModal,
   ReturnEquipmentModal,
 } from "./EquipmentModals";

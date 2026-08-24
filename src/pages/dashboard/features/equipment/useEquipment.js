@@ -75,7 +75,6 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
   const [equipmentToDelete, setEquipmentToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
-  const [isSoftwareLicensePickerOpen, setIsSoftwareLicensePickerOpen] = useState(false);
   const [softwareLicenseOptions, setSoftwareLicenseOptions] = useState([]);
   const [isSoftwareLicenseOptionsLoading, setIsSoftwareLicenseOptionsLoading] = useState(false);
   const [softwareLicenseOptionsError, setSoftwareLicenseOptionsError] = useState(null);
@@ -301,6 +300,7 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     setLicenseSelectedIds([]);
     setLicenseInitialIds([]);
     setIsFormOpen(true);
+    loadSoftwareLicenseOptions();
 
     loadDepartments();
 
@@ -342,6 +342,7 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     setLicenseSelectedIds(currentLicenseIds);
     setLicenseInitialIds(currentLicenseIds);
     setIsFormOpen(true);
+    loadSoftwareLicenseOptions();
 
     loadDepartments();
 
@@ -371,8 +372,10 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     setFormValues((current) => ({ ...current, [key]: value }));
   }
 
-  function handleOpenSoftwareLicensePicker() {
-    setIsSoftwareLicensePickerOpen(true);
+  // Licenses now show as an inline checklist inside the Add/Edit Equipment
+  // form itself (below Remark) instead of behind a separate "Software
+  // License" button/popup, so this loads as soon as that form opens.
+  function loadSoftwareLicenseOptions() {
     setIsSoftwareLicenseOptionsLoading(true);
     setSoftwareLicenseOptionsError(null);
 
@@ -380,10 +383,6 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
       .then((data) => setSoftwareLicenseOptions(normalizeEquipmentLicenseOptions(data)))
       .catch((error) => setSoftwareLicenseOptionsError(error.message || "Could not load licenses."))
       .finally(() => setIsSoftwareLicenseOptionsLoading(false));
-  }
-
-  function handleCloseSoftwareLicensePicker() {
-    setIsSoftwareLicensePickerOpen(false);
   }
 
   function handleToggleSoftwareLicenseSelection(licenseId) {
@@ -888,13 +887,10 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     handleOpenDelete,
     handleCloseDelete,
     handleConfirmDelete,
-    isSoftwareLicensePickerOpen,
     softwareLicenseOptions,
     isSoftwareLicenseOptionsLoading,
     softwareLicenseOptionsError,
     licenseSelectedIds,
-    handleOpenSoftwareLicensePicker,
-    handleCloseSoftwareLicensePicker,
     handleToggleSoftwareLicenseSelection,
     handleOpenColumnsPickerFromForm,
     isCategoryFormOpen,

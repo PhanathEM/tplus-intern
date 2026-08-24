@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import {
-  FiArchive as Archive,
   FiEdit2 as Edit2,
   FiPackage as Package,
   FiPlusCircle as PlusCircle,
@@ -581,13 +580,6 @@ export function PartStockView({
   onConfirmDeletePartType,
   onDeactivatePartTypeInstead,
 
-  partTypeToDeactivate,
-  isDeactivatingPartType,
-  deactivatePartTypeError,
-  onOpenDeactivatePartType,
-  onCloseDeactivatePartType,
-  onConfirmDeactivatePartType,
-
   isAddDialogOpen,
   addFormValues,
   isSubmittingAdd,
@@ -671,11 +663,6 @@ export function PartStockView({
                   ...(selectedPartType
                     ? [
                         { icon: Edit2, label: "Edit Part", onClick: () => onOpenEditPartType(selectedPartType) },
-                        {
-                          icon: Archive,
-                          label: "Deactivate Part",
-                          onClick: () => onOpenDeactivatePartType(selectedPartType),
-                        },
                         {
                           icon: Trash2,
                           label: "Delete Part",
@@ -818,24 +805,6 @@ export function PartStockView({
         blocked={deletePartTypeBlocked}
         blockedActionLabel="Deactivate instead"
         onBlockedAction={onDeactivatePartTypeInstead}
-      />
-
-      {/* Deactivate part type confirmation — separate from Delete so it's
-          never ambiguous which action is happening. */}
-      <ConfirmDialog
-        isOpen={Boolean(partTypeToDeactivate)}
-        title="Deactivate this part?"
-        message={
-          partTypeToDeactivate
-            ? `Hide "${partTypeToDeactivate.part_name}" from the part catalog. Its stock and replacement history are kept — unlike Delete, this isn't permanent.`
-            : ""
-        }
-        confirmLabel="Deactivate"
-        confirmingLabel="Deactivating..."
-        onConfirm={onConfirmDeactivatePartType}
-        onCancel={onCloseDeactivatePartType}
-        isConfirming={isDeactivatingPartType}
-        error={deactivatePartTypeError}
       />
     </>
   );
