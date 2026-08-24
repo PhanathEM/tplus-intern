@@ -14,6 +14,14 @@ export function fetchEquipmentStatuses() {
   return apiGet("/api/statuses");
 }
 
+// Powers the Statuses page's PDF/Excel exports — omitting `status` returns
+// every equipment record (any category) in one call, so "download all" can
+// group by status_name client-side instead of firing one request per status.
+export function fetchEquipmentByStatus(status) {
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  return apiGet(`/api/equipment${query}`);
+}
+
 export function fetchEquipmentViews() {
   return apiGet("/api/equipment/views");
 }

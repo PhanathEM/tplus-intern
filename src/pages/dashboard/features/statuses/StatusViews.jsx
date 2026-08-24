@@ -1,12 +1,16 @@
 import { useEffect } from "react";
 import {
   FiAlertTriangle as AlertTriangle,
+  FiEdit2 as Edit2,
+  FiFileText as FileText,
+  FiGrid as Grid,
   FiPlusCircle as PlusCircle,
   FiRefreshCw as RefreshCw,
   FiSliders as Sliders,
+  FiTrash2 as Trash2,
   FiX as X,
 } from "react-icons/fi";
-import { EmptyState, FormField, formInputClass } from "../../components/SharedControls";
+import { EmptyState, FormField, formInputClass, RowActionsMenu } from "../../components/SharedControls";
 
 export function StatusesView({
   statuses,
@@ -16,6 +20,15 @@ export function StatusesView({
   onAddNew,
   onEdit,
   onDelete,
+  onDownloadStatusPdf,
+  onDownloadStatusExcel,
+  downloadingPdfId,
+  downloadingExcelId,
+  onDownloadAllPdf,
+  onDownloadAllExcel,
+  isDownloadingAllPdf,
+  isDownloadingAllExcel,
+  downloadError,
   canManage = true,
 }) {
   return (
@@ -44,6 +57,13 @@ export function StatusesView({
           </div>
         </div>
 
+        {downloadError && (
+          <div className="mx-5 mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
+            <AlertTriangle size={14} />
+            {downloadError}
+          </div>
+        )}
+
         {isLoading ? (
           <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading statuses...</div>
         ) : error ? (
@@ -71,7 +91,23 @@ export function StatusesView({
                 <tr>
                   <th className="px-5 py-3 font-semibold">Status Name</th>
                   <th className="px-5 py-3 font-semibold">Description</th>
-                  <th className="px-5 py-3 font-semibold text-right">Actions</th>
+                  <th className="px-5 py-3 font-semibold">Equipment</th>
+                  <th className="px-5 py-3 text-right font-semibold">
+                    <RowActionsMenu
+                      items={[
+                        {
+                          icon: FileText,
+                          label: isDownloadingAllPdf ? "Preparing PDF..." : "Download All PDFs",
+                          onClick: onDownloadAllPdf,
+                        },
+                        {
+                          icon: Grid,
+                          label: isDownloadingAllExcel ? "Preparing Excel..." : "Download All Excel",
+                          onClick: onDownloadAllExcel,
+                        },
+                      ]}
+                    />
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
@@ -83,23 +119,33 @@ export function StatusesView({
                     <td className="max-w-72 truncate px-5 py-3.5 text-slate-600 dark:text-slate-300" title={status.description || ""}>
                       {status.description || "—"}
                     </td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">
+                      {status.equipment_count ?? 0}
+                    </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-right">
                       {canManage && (
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => onEdit(status)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onDelete(status)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-rose-800 dark:bg-slate-800 dark:text-rose-400 dark:hover:border-rose-700 dark:hover:bg-rose-950/40 dark:focus-visible:ring-offset-slate-900"
-                          >
-                            Delete
-                          </button>
+                        <div className="flex items-center justify-end">
+                          <RowActionsMenu
+                            items={[
+                              {
+                                icon: FileText,
+                                label:
+                                  downloadingPdfId === status.status_id ? "Preparing PDF..." : "Download as PDF",
+                                onClick: () => onDownloadStatusPdf(status),
+                              },
+                              {
+                                icon: Grid,
+                                label:
+                                  downloadingExcelId === status.status_id
+                                    ? "Preparing Excel..."
+                                    : "Download as Excel",
+                                onClick: () => onDownloadStatusExcel(status),
+                              },
+                              { divider: true },
+                              { icon: Edit2, label: "Edit", onClick: () => onEdit(status) },
+                              { icon: Trash2, label: "Delete", onClick: () => onDelete(status), destructive: true },
+                            ]}
+                          />
                         </div>
                       )}
                     </td>

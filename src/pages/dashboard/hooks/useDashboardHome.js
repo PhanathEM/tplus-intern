@@ -6,7 +6,6 @@ import { fetchBorrowHistory } from "../../../services/borrowService";
 import { fetchPartReplacements } from "../../../services/partReplacementService";
 import { fetchSsdUpgrades } from "../../../services/ssdUpgradeService";
 import { fetchSsdProcurement } from "../../../services/ssdProcurementService";
-import { fetchAntivirusInstalls } from "../../../services/antivirusService";
 import { fetchCloudRates } from "../../../services/cloudRateService";
 import { fetchCloudUsage } from "../../../services/cloudUsageService";
 import { fetchServerUsage } from "../../../services/serverUsageService";
@@ -29,7 +28,6 @@ const HOME_STAT_FETCHERS = {
     ),
   "SSD Upgrade": () => fetchSsdUpgrades().then((data) => normalizeRecordList(data).length),
   "SSD Procurement": () => fetchSsdProcurement().then((data) => normalizeRecordList(data).length),
-  "Antivirus Install": () => fetchAntivirusInstalls().then((data) => normalizeRecordList(data).length),
   "Cloud Rate": () => fetchCloudRates().then((data) => normalizeRecordList(data).length),
   "Cloud Usage": () => fetchCloudUsage().then((data) => normalizeRecordList(data).length),
   "Service Usage": () => fetchServerUsage().then((data) => normalizeRecordList(data).length),

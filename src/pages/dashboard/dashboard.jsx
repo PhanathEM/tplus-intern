@@ -38,7 +38,6 @@ import {
   ReturnEquipmentModal,
 } from "./features/equipment/EquipmentViews";
 import {
-  AntivirusView,
   CloudRatesView,
   CloudUsageView,
   LicenseFormModal,
@@ -60,7 +59,6 @@ import { usePartStock } from "./features/part-stock/usePartStock";
 import { usePartBorrow } from "./features/part-borrow/usePartBorrow";
 import { useSsdUpgrades } from "./features/records/useSsdUpgrades";
 import { useSsdProcurement } from "./features/records/useSsdProcurement";
-import { useAntivirus } from "./features/records/useAntivirus";
 import { useCloudRates } from "./features/records/useCloudRates";
 import { useServerUsage } from "./features/records/useServerUsage";
 import { useCloudUsage } from "./features/records/useCloudUsage";
@@ -208,7 +206,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
       "Borrow a Part": partBorrow.resetForEntry,
       "SSD Upgrade": ssdUpgrades.resetForEntry,
       "SSD Procurement": ssdProcurement.resetForEntry,
-      "Antivirus Install": antivirus.resetForEntry,
       "Software License": licenses.resetForEntry,
       "Cloud Rate": cloudRates.resetForEntry,
       "Service Usage": serverUsage.resetForEntry,
@@ -267,7 +264,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
   const isPartBorrowView = activeView === "Borrow a Part" && hasActiveViewAccess;
   const isSsdUpgradeView = activeView === "SSD Upgrade" && hasActiveViewAccess;
   const isSsdProcurementView = activeView === "SSD Procurement" && hasActiveViewAccess;
-  const isAntivirusView = activeView === "Antivirus Install" && hasActiveViewAccess;
   const isLicenseView = activeView === "Software License" && hasActiveViewAccess;
   const isCloudRateView = activeView === "Cloud Rate" && hasActiveViewAccess;
   const isServerUsageView = activeView === "Service Usage" && hasActiveViewAccess;
@@ -296,7 +292,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
   const partBorrow = usePartBorrow({ isActive: isPartBorrowView, user });
   const ssdUpgrades = useSsdUpgrades({ isActive: isSsdUpgradeView });
   const ssdProcurement = useSsdProcurement({ isActive: isSsdProcurementView });
-  const antivirus = useAntivirus({ isActive: isAntivirusView });
   const cloudRates = useCloudRates({ isActive: isCloudRateView });
   const serverUsage = useServerUsage({ isActive: isServerUsageView });
   const cloudUsage = useCloudUsage({ isActive: isCloudUsageView });
@@ -805,15 +800,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
             />
           )}
 
-          {isAntivirusView && (
-            <AntivirusView
-              installs={antivirus.antivirusInstalls}
-              isLoading={antivirus.isLoading}
-              error={antivirus.error}
-              onRetry={antivirus.handleRetry}
-            />
-          )}
-
           {isLicenseView && (
             <LicensesView
               licenses={licenses.licenses}
@@ -920,7 +906,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
             !isPartBorrowView &&
             !isSsdUpgradeView &&
             !isSsdProcurementView &&
-            !isAntivirusView &&
             !isLicenseView &&
             !isCloudRateView &&
             !isServerUsageView &&
@@ -1008,6 +993,15 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
                 onAddNew={statuses.handleOpenAdd}
                 onEdit={statuses.handleOpenEdit}
                 onDelete={statuses.handleOpenDelete}
+                onDownloadStatusPdf={statuses.handleDownloadStatusPdf}
+                onDownloadStatusExcel={statuses.handleDownloadStatusExcel}
+                downloadingPdfId={statuses.downloadingPdfId}
+                downloadingExcelId={statuses.downloadingExcelId}
+                onDownloadAllPdf={statuses.handleDownloadAllPdf}
+                onDownloadAllExcel={statuses.handleDownloadAllExcel}
+                isDownloadingAllPdf={statuses.isDownloadingAllPdf}
+                isDownloadingAllExcel={statuses.isDownloadingAllExcel}
+                downloadError={statuses.downloadError}
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">

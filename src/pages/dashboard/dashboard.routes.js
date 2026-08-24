@@ -18,7 +18,6 @@ export const dashboardRouteByView = {
   "Device Replacement History": "replacement-history",
   "SSD Upgrade": "ssd-upgrade",
   "SSD Procurement": "ssd-procurement",
-  "Antivirus Install": "antivirus-install",
   "Software License": "license",
   "Cloud Rate": "cloud-rate",
   "Cloud Usage": "cloud-usage",

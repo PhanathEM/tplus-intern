@@ -1,6 +1,23 @@
 import { useEffect, useState } from "react";
 import { createStatus, deleteStatus, fetchStatuses, updateStatus } from "../../../../services/statusService";
+import { fetchEquipmentByStatus } from "../../../../services/equipmentService";
+import { exportAllEquipmentToExcel, exportAllEquipmentToPdf } from "../equipment/equipmentExport";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
+
+// A deliberately generic column set — equipment records mixed across
+// categories (Laptop, CCTV, Server...) don't share most fields, so this
+// sticks to the ones nearly every category has instead of a sparse table.
+const STATUS_EQUIPMENT_EXPORT_COLUMNS = [
+  { key: "_row_number", label: "No." },
+  { key: "asset_code", label: "Asset Code" },
+  { key: "computer_name", label: "Computer Name" },
+  { key: "category_name", label: "Category" },
+  { key: "device_model", label: "Device Model" },
+  { key: "owner_name", label: "Owner Name" },
+  { key: "department_name", label: "Department" },
+  { key: "location", label: "Location" },
+  { key: "remark", label: "Remark" },
+];
 
 const STATUS_FORM_INITIAL_VALUES = {
   status_name: "",
@@ -27,6 +44,11 @@ export function useStatuses({ isActive, user }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteBlocked, setDeleteBlocked] = useState(false);
+  const [downloadingPdfId, setDownloadingPdfId] = useState(null);
+  const [downloadingExcelId, setDownloadingExcelId] = useState(null);
+  const [isDownloadingAllPdf, setIsDownloadingAllPdf] = useState(false);
+  const [isDownloadingAllExcel, setIsDownloadingAllExcel] = useState(false);
+  const [downloadError, setDownloadError] = useState(null);
 
   useEffect(() => {
     if (!isActive) return;
@@ -209,6 +231,73 @@ export function useStatuses({ isActive, user }) {
       .finally(() => setIsDeleting(false));
   }
 
+  function handleDownloadStatusPdf(status) {
+    setDownloadingPdfId(status.status_id);
+    setDownloadError(null);
+
+    fetchEquipmentByStatus(status.status_name)
+      .then((data) => {
+        const items = Array.isArray(data) ? data : [];
+        exportAllEquipmentToPdf(
+          [{ category: status.status_name, columns: STATUS_EQUIPMENT_EXPORT_COLUMNS, items }],
+          status.status_name
+        );
+      })
+      .catch((error) => setDownloadError(error.message || "Could not download this status's equipment as PDF."))
+      .finally(() => setDownloadingPdfId(null));
+  }
+
+  function handleDownloadStatusExcel(status) {
+    setDownloadingExcelId(status.status_id);
+    setDownloadError(null);
+
+    fetchEquipmentByStatus(status.status_name)
+      .then((data) => {
+        const items = Array.isArray(data) ? data : [];
+        exportAllEquipmentToExcel(
+          [{ category: status.status_name, columns: STATUS_EQUIPMENT_EXPORT_COLUMNS, items }],
+          status.status_name
+        );
+      })
+      .catch((error) => setDownloadError(error.message || "Could not download this status's equipment as Excel."))
+      .finally(() => setDownloadingExcelId(null));
+  }
+
+  // One fetch of every equipment record, then grouped by status_name
+  // client-side — cheaper than one request per status.
+  function buildAllStatusEntries() {
+    return fetchEquipmentByStatus().then((data) => {
+      const items = Array.isArray(data) ? data : [];
+      return statuses
+        .map((status) => ({
+          category: status.status_name,
+          columns: STATUS_EQUIPMENT_EXPORT_COLUMNS,
+          items: items.filter((item) => (item.status_name || item.status) === status.status_name),
+        }))
+        .filter((entry) => entry.items.length > 0);
+    });
+  }
+
+  function handleDownloadAllPdf() {
+    setIsDownloadingAllPdf(true);
+    setDownloadError(null);
+
+    buildAllStatusEntries()
+      .then((entries) => exportAllEquipmentToPdf(entries, "equipment-by-status"))
+      .catch((error) => setDownloadError(error.message || "Could not download equipment as PDF."))
+      .finally(() => setIsDownloadingAllPdf(false));
+  }
+
+  function handleDownloadAllExcel() {
+    setIsDownloadingAllExcel(true);
+    setDownloadError(null);
+
+    buildAllStatusEntries()
+      .then((entries) => exportAllEquipmentToExcel(entries, "equipment-by-status"))
+      .catch((error) => setDownloadError(error.message || "Could not download equipment as Excel."))
+      .finally(() => setIsDownloadingAllExcel(false));
+  }
+
   return {
     statuses,
     isLoading,
@@ -233,5 +322,14 @@ export function useStatuses({ isActive, user }) {
     handleCloseDelete,
     handleHideInstead,
     handleConfirmDelete,
+    downloadingPdfId,
+    downloadingExcelId,
+    isDownloadingAllPdf,
+    isDownloadingAllExcel,
+    downloadError,
+    handleDownloadStatusPdf,
+    handleDownloadStatusExcel,
+    handleDownloadAllPdf,
+    handleDownloadAllExcel,
   };
 }

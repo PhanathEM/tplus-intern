@@ -1,4 +1,4 @@
-import { FiActivity as Activity, FiBox as Box, FiCloud as Cloud, FiDollarSign as DollarSign, FiHardDrive as HardDrive, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiShield as Shield, FiShoppingCart as ShoppingCart, FiSliders as Sliders, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
+import { FiActivity as Activity, FiBox as Box, FiCloud as Cloud, FiDollarSign as DollarSign, FiHardDrive as HardDrive, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiShoppingCart as ShoppingCart, FiSliders as Sliders, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
 import { PERMISSIONS } from "../../lib/permissions";
 
 export const navSections = [
@@ -43,7 +43,6 @@ export const navSections = [
   {
     label: "Software & Security",
     items: [
-      { label: "Antivirus Install", icon: Shield, permission: PERMISSIONS.ANTIVIRUS_INSTALL },
       { label: "Software License", icon: Key, permission: PERMISSIONS.LICENSE },
     ],
   },
@@ -204,21 +203,6 @@ export const ssdProcurementColumns = [
   { key: "model_name", label: "Model Name" },
   { key: "qty", label: "Quantity" },
   { key: "decision", label: "Decision" },
-];
-
-export const antivirusColumns = [
-  { key: "install_id", label: "Install ID" },
-  { key: "equipment_id", label: "Equipment ID" },
-  { key: "owner_name", label: "Owner Name" },
-  { key: "computer_name", label: "Computer Name" },
-  { key: "device_model", label: "Device Model" },
-  { key: "asset_code", label: "Asset Code" },
-  { key: "antivirus_status", label: "Antivirus Status" },
-  { key: "windows_server_license", label: "Windows Server License" },
-  { key: "plan_date", label: "Plan Date" },
-  { key: "due_date", label: "Due Date" },
-  { key: "completed_date", label: "Completed Date" },
-  { key: "remark", label: "Remark" },
 ];
 
 export const licenseColumns = [

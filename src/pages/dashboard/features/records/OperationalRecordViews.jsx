@@ -7,13 +7,11 @@ import {
   FiHardDrive as HardDrive,
   FiKey as Key,
   FiPlusCircle as PlusCircle,
-  FiShield as Shield,
   FiShoppingCart as ShoppingCart,
   FiTrash2 as Trash2,
   FiX as X,
 } from "react-icons/fi";
 import {
-  antivirusColumns,
   cloudRateColumns,
   cloudUsageColumns,
   licenseColumns,
@@ -250,26 +248,6 @@ export function SsdProcurementView({ procurements, isLoading, error, onRetry }) 
       emptyTitle="No SSD procurement found"
       emptyDescription="SSD procurement records will appear here."
       rowKey={(procurement, index) => procurement.procurement_id ?? index}
-      isLoading={isLoading}
-      error={error}
-      onRetry={onRetry}
-    />
-  );
-}
-
-export function AntivirusView({ installs, isLoading, error, onRetry }) {
-  return (
-    <RecordsTableView
-      records={installs}
-      columnsConfig={antivirusColumns}
-      title="Antivirus installs"
-      recordLabel="install"
-      loadingText="Loading antivirus installs..."
-      errorTitle="Couldn't load antivirus installs"
-      emptyIcon={Shield}
-      emptyTitle="No antivirus installs found"
-      emptyDescription="Antivirus install records will appear here."
-      rowKey={(install, index) => install.install_id ?? index}
       isLoading={isLoading}
       error={error}
       onRetry={onRetry}
