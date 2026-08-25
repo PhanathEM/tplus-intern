@@ -1,12 +1,14 @@
 import { useEffect, useMemo } from "react";
 import {
   FiActivity as Activity,
+  FiAlertTriangle as AlertTriangle,
   FiCloud as Cloud,
   FiDollarSign as DollarSign,
   FiEdit2 as Edit2,
   FiHardDrive as HardDrive,
   FiKey as Key,
   FiPlusCircle as PlusCircle,
+  FiRefreshCw as RefreshCw,
   FiShoppingCart as ShoppingCart,
   FiTrash2 as Trash2,
   FiX as X,
@@ -15,13 +17,13 @@ import {
   cloudRateColumns,
   cloudUsageColumns,
   licenseColumns,
-  serverUsageColumns,
   ssdProcurementColumns,
   ssdUpgradeColumns,
 } from "../../dashboard.config";
 import { getLicenseExpiryInfo } from "../../dashboard.notifications";
+import { formatFieldValue } from "../../dashboard.utils";
 import { RecordCellValue, RecordsTableView } from "../../components/RecordsTableView";
-import { FormField, formInputClass, RadioSelect, RowActionsMenu } from "../../components/SharedControls";
+import { EmptyState, FormField, formInputClass, RadioSelect, RowActionsMenu } from "../../components/SharedControls";
 
 function LicenseStatusCell({ license }) {
   const status = String(license.status || "").toLowerCase();
@@ -374,23 +376,129 @@ export function CloudRatesView({ rates, isLoading, error, onRetry }) {
   );
 }
 
+// Matches the "Plan optimize" capacity-planning sheet this data comes from —
+// a grouped, spreadsheet-style header (Total Capacity/Usage/Reducing/After
+// Reducing bands) instead of the app's usual flat column list, since that
+// grouping is the whole point of this particular table. The dark header is
+// a fixed design choice (like conditional formatting in the source sheet),
+// not tied to the app's light/dark theme toggle.
+const SERVER_USAGE_BASE_CELL =
+  "border border-slate-700 bg-slate-900 px-3 py-3 text-center text-xs font-bold uppercase tracking-wide text-white";
+const SERVER_USAGE_GROUP_CELL = "border border-slate-700 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-white";
+const SERVER_USAGE_FIELD_CELL = "border border-slate-700 bg-slate-900 px-3 py-1.5 text-center text-xs font-bold text-white";
+const SERVER_USAGE_UNIT_CELL = "border border-slate-700 bg-slate-900 px-3 py-1 text-center text-[10px] font-medium text-slate-400";
+const SERVER_USAGE_GROUP_GRAY = "bg-slate-500";
+const SERVER_USAGE_GROUP_AMBER = "bg-amber-600";
+const SERVER_USAGE_GROUP_BLUE = "bg-blue-600";
+const SERVER_USAGE_GROUP_GREEN = "bg-emerald-600";
+const SERVER_USAGE_DATA_CELL = "border border-slate-200 bg-white px-3 py-2 whitespace-nowrap text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300";
+
 export function ServerUsageView({ usage, isLoading, error, onRetry }) {
   return (
-    <RecordsTableView
-      records={usage}
-      columnsConfig={serverUsageColumns}
-      title="Service usage"
-      recordLabel="usage"
-      loadingText="Loading service usage..."
-      errorTitle="Couldn't load service usage"
-      emptyIcon={Activity}
-      emptyTitle="No service usage found"
-      emptyDescription="Service usage records will appear here."
-      rowKey={(record, index) => record.usage_id ?? index}
-      isLoading={isLoading}
-      error={error}
-      onRetry={onRetry}
-    />
+    <div className="px-4 py-6 sm:px-6 lg:px-8">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+          <div>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Server usage</h2>
+            {!isLoading && !error && (
+              <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
+                {usage.length} usage{usage.length === 1 ? "" : "s"}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading server usage...</div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
+              <AlertTriangle size={18} />
+            </div>
+            <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Couldn&apos;t load server usage</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
+            >
+              <RefreshCw size={13} />
+              Retry
+            </button>
+          </div>
+        ) : usage.length === 0 ? (
+          <EmptyState icon={Activity} title="No server usage found" description="Server usage records will appear here." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-[13px]">
+              <thead>
+                <tr>
+                  <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>No.</th>
+                  <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>Plan Date</th>
+                  <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>Due Date</th>
+                  <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>Name</th>
+                  <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>IP Address</th>
+                  <th colSpan={3} className={`${SERVER_USAGE_GROUP_CELL} ${SERVER_USAGE_GROUP_GRAY}`}>Total Capacity</th>
+                  <th colSpan={3} className={`${SERVER_USAGE_GROUP_CELL} ${SERVER_USAGE_GROUP_AMBER}`}>Usage</th>
+                  <th colSpan={2} className={`${SERVER_USAGE_GROUP_CELL} ${SERVER_USAGE_GROUP_BLUE}`}>Reducing</th>
+                  <th colSpan={2} className={`${SERVER_USAGE_GROUP_CELL} ${SERVER_USAGE_GROUP_GREEN}`}>After Reducing</th>
+                  <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>Owner</th>
+                </tr>
+                <tr>
+                  <th className={SERVER_USAGE_FIELD_CELL}>CPU</th>
+                  <th className={SERVER_USAGE_FIELD_CELL}>Memory</th>
+                  <th className={SERVER_USAGE_FIELD_CELL}>HDD</th>
+                  <th className={SERVER_USAGE_FIELD_CELL}>CPU</th>
+                  <th className={SERVER_USAGE_FIELD_CELL}>Memory</th>
+                  <th className={SERVER_USAGE_FIELD_CELL}>HDD</th>
+                  <th className={SERVER_USAGE_FIELD_CELL}>CPU</th>
+                  <th className={SERVER_USAGE_FIELD_CELL}>Memory</th>
+                  <th className={SERVER_USAGE_FIELD_CELL}>CPU</th>
+                  <th className={SERVER_USAGE_FIELD_CELL}>Memory</th>
+                </tr>
+                <tr>
+                  {/* Usage's CPU/Memory are percentages in the real data, not
+                      GB — labeled accurately here rather than copying the
+                      sheet's "GB" for all three. */}
+                  <th className={SERVER_USAGE_UNIT_CELL}>Core</th>
+                  <th className={SERVER_USAGE_UNIT_CELL}>GB</th>
+                  <th className={SERVER_USAGE_UNIT_CELL}>GB</th>
+                  <th className={SERVER_USAGE_UNIT_CELL}>%</th>
+                  <th className={SERVER_USAGE_UNIT_CELL}>%</th>
+                  <th className={SERVER_USAGE_UNIT_CELL}>GB</th>
+                  <th className={SERVER_USAGE_UNIT_CELL}>Core</th>
+                  <th className={SERVER_USAGE_UNIT_CELL}>GB</th>
+                  <th className={SERVER_USAGE_UNIT_CELL}>Core</th>
+                  <th className={SERVER_USAGE_UNIT_CELL}>GB</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usage.map((record, index) => (
+                  <tr key={record.usage_id ?? index}>
+                    <td className={SERVER_USAGE_DATA_CELL}>{index + 1}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.plan_date)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.due_date)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.device_name)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.ip_address)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.cpu_core_total)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.memory_gb_total)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.hdd_gb_total)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.cpu_usage_pct)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.memory_usage_pct)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.hdd_usage_gb)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.reducing_cpu_core)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.reducing_memory_gb)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.after_reducing_cpu_core)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.after_reducing_memory_gb)}</td>
+                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.owner_name)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

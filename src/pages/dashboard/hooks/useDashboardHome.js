@@ -30,7 +30,7 @@ const HOME_STAT_FETCHERS = {
   "SSD Procurement": () => fetchSsdProcurement().then((data) => normalizeRecordList(data).length),
   "Cloud Rate": () => fetchCloudRates().then((data) => normalizeRecordList(data).length),
   "Cloud Usage": () => fetchCloudUsage().then((data) => normalizeRecordList(data).length),
-  "Service Usage": () => fetchServerUsage().then((data) => normalizeRecordList(data).length),
+  "Server Usage": () => fetchServerUsage().then((data) => normalizeRecordList(data).length),
   Users: () =>
     fetchUsers().then((data) => {
       const list = Array.isArray(data) ? data : data?.users;

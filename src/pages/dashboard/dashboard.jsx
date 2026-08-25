@@ -208,7 +208,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
       "SSD Procurement": ssdProcurement.resetForEntry,
       "Software License": licenses.resetForEntry,
       "Cloud Rate": cloudRates.resetForEntry,
-      "Service Usage": serverUsage.resetForEntry,
+      "Server Usage": serverUsage.resetForEntry,
       Statuses: statuses.resetForEntry,
       "Cloud Usage": cloudUsage.resetForEntry,
       "Currently Borrowed": currentBorrows.resetForEntry,
@@ -266,7 +266,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
   const isSsdProcurementView = activeView === "SSD Procurement" && hasActiveViewAccess;
   const isLicenseView = activeView === "Software License" && hasActiveViewAccess;
   const isCloudRateView = activeView === "Cloud Rate" && hasActiveViewAccess;
-  const isServerUsageView = activeView === "Service Usage" && hasActiveViewAccess;
+  const isServerUsageView = activeView === "Server Usage" && hasActiveViewAccess;
   const isCloudUsageView = activeView === "Cloud Usage" && hasActiveViewAccess;
   const isAssignView = activeView === "Assign" && hasActiveViewAccess;
   const isCurrentBorrowsView = activeView === "Currently Borrowed" && hasActiveViewAccess;
@@ -341,7 +341,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
   const borrowHistory = useBorrowHistory({ isActive: isBorrowHistoryView });
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-950 antialiased dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen bg-white text-slate-950 antialiased dark:bg-slate-950 dark:text-slate-100">
       <div className="flex min-h-screen">
         {/* Mobile sidebar */}
         {isMobileSidebarOpen && (
@@ -454,6 +454,10 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
                     onSelect={handleSelectGlobalSearchResult}
                   />
 
+                  {/* Mirrors the title block's flex-1 so the search bar above
+                      sits truly centered in the header, not just left of
+                      these icons. */}
+                  <div className="flex flex-1 items-center justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => setIsMobileSearchOpen(true)}
@@ -624,6 +628,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
                         </button>
                       </div>
                     )}
+                  </div>
                   </div>
                 </>
               )}

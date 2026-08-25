@@ -1,85 +1,12 @@
 import { useEffect, useState } from "react";
 import { fetchAssignFormData } from "../../../../services/assignService";
-import { fetchEquipmentByCategory } from "../../../../services/equipmentService";
+import { fetchEquipmentByCategory, fetchEquipmentByView } from "../../../../services/equipmentService";
 import { fetchPartTypes, fetchStockColumnOptions } from "../../../../services/partTypeService";
 import { fetchPartReplacements, submitPartReplacement } from "../../../../services/partReplacementService";
 import { addPartStock, fetchAvailablePartStock } from "../../../../services/partStockService";
 import { DEFAULT_PART_STOCK_STATUS } from "../../dashboard.config";
-import { buildPartStockPayload, getRecordColumns } from "../../dashboard.utils";
+import { buildPartStockPayload, normalizeEquipmentTableColumns } from "../../dashboard.utils";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
-
-// Both device lists are category-driven (their columns come straight from
-// the API), but the admin wants a fixed reading order regardless of category
-// — some columns dropped entirely, everything else in a fixed sequence.
-// Columns a category doesn't have (e.g. Server's ip_address) just get
-// skipped; columns not listed here (a brand-new category's own fields) fall
-// in at the end rather than disappearing.
-function buildColumnOrderer(hiddenKeys, orderedKeys) {
-  const priorityIndex = new Map(orderedKeys.map((key, index) => [key, index]));
-  return function orderColumns(columns) {
-    const visible = columns.filter((column) => !hiddenKeys.includes(column.key));
-    return [...visible].sort((a, b) => {
-      const aIndex = priorityIndex.has(a.key) ? priorityIndex.get(a.key) : orderedKeys.length;
-      const bIndex = priorityIndex.has(b.key) ? priorityIndex.get(b.key) : orderedKeys.length;
-      return aIndex - bIndex;
-    });
-  };
-}
-
-// Remark tends to be long free text — push it to the very end, after even
-// the extra columns buildColumnOrderer doesn't know about (device_model,
-// manufacturer, etc.), so it doesn't interrupt the more scannable columns.
-function moveRemarkToEnd(columns) {
-  const remarkIndex = columns.findIndex((column) => column.key === "remark");
-  if (remarkIndex === -1) return columns;
-  const reordered = [...columns];
-  const [remarkColumn] = reordered.splice(remarkIndex, 1);
-  reordered.push(remarkColumn);
-  return reordered;
-}
-
-// "Devices you can replace" — these have an owner, so it leads. The raw
-// /api/equipment record also carries a bunch of internal bookkeeping fields
-// (ids, booleans, borrow tracking) the old curated /replaceable endpoint
-// never surfaced — drop those here instead.
-const orderReplaceableColumns = buildColumnOrderer(
-  [
-    "equipment_id",
-    "received_date",
-    "category_id",
-    "status_id",
-    "department_id",
-    "owner_id",
-    "is_assignable",
-    "is_borrowable",
-    "current_borrow_id",
-    "current_borrower",
-    "borrowed_on",
-    "due_back",
-    "category_name",
-  ],
-  [
-    "owner_name",
-    "device_type",
-    "computer_name",
-    "asset_code",
-    "cpu",
-    "ram",
-    "hd",
-    "windows_license",
-    "av_license",
-    "status",
-    "bag",
-    "mouse",
-    "keyboard",
-    "owner_position",
-    "owner_department",
-    "location",
-    "service_tag",
-    "purchase_date",
-    "remark",
-  ]
-);
 
 const QUICK_ADD_FORM_INITIAL_VALUES = {
   part_type_id: "",
@@ -194,12 +121,21 @@ export function useReplacements({ isActive, user }) {
 
     let ignore = false;
 
-    fetchEquipmentByCategory(selectedCategory)
-      .then((data) => {
+    // Two calls on purpose: the raw category list carries every field the
+    // Replace dialog needs (category_id, owner_id, bag/mouse/keyboard, ...),
+    // while the view-key endpoint's `columns` is the exact same curated
+    // column set/order/labels the Equipment page shows for this category —
+    // pulling that instead of inventing our own ordering keeps this list
+    // looking identical to Equipment's, per the admin's request. The "No."
+    // entry it reports is really just equipment_id relabeled (not a real
+    // sequence), so it's dropped in favor of the row's own _row_number.
+    Promise.all([fetchEquipmentByCategory(selectedCategory), fetchEquipmentByView(selectedCategory)])
+      .then(([listData, viewData]) => {
         if (ignore) return;
-        const owned = (Array.isArray(data) ? data : []).filter((item) => item.owner_id != null);
+        const owned = (Array.isArray(listData) ? listData : []).filter((item) => item.owner_id != null);
+        const columns = normalizeEquipmentTableColumns(viewData).filter((column) => column.key !== "equipment_id");
         setReplaceableDevices(owned);
-        setReplaceableColumns(moveRemarkToEnd(orderReplaceableColumns(getRecordColumns(owned, []))));
+        setReplaceableColumns(columns);
         setReplaceableError(null);
       })
       .catch((error) => {

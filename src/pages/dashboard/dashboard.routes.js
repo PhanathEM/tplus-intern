@@ -21,7 +21,7 @@ export const dashboardRouteByView = {
   "Software License": "license",
   "Cloud Rate": "cloud-rate",
   "Cloud Usage": "cloud-usage",
-  "Service Usage": "service-usage",
+  "Server Usage": "server-usage",
   Statuses: "statuses",
   Users: "users",
   "Activity Log": "activity-log",

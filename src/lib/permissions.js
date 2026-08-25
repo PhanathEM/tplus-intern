@@ -39,7 +39,7 @@ export const PERMISSION_DEFINITIONS = [
   { value: PERMISSIONS.LICENSE, label: "Software License" },
   { value: PERMISSIONS.CLOUD_RATE, label: "Cloud Rate" },
   { value: PERMISSIONS.CLOUD_USAGE, label: "Cloud Usage" },
-  { value: PERMISSIONS.SERVICE_USAGE, label: "Service Usage" },
+  { value: PERMISSIONS.SERVICE_USAGE, label: "Server Usage" },
   { value: PERMISSIONS.USERS, label: "Users" },
   { value: PERMISSIONS.ACTIVITY_LOG, label: "Activity Log" },
   { value: PERMISSIONS.RECYCLE_BIN, label: "Recycle Bin" },

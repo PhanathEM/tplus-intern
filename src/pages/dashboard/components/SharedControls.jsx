@@ -312,10 +312,29 @@ export function RadioSelect({ id, options, value, onSelect, placeholder = "Selec
   const containerRef = useRef(null);
   const menuRef = useRef(null);
 
+  // How tall the menu would like to be if there's room; how little it'll
+  // shrink to before it's unusable.
+  const PREFERRED_MENU_HEIGHT = 224;
+  const MIN_MENU_HEIGHT = 120;
+  const VIEWPORT_MARGIN = 8;
+
   function updateMenuRect() {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    setMenuRect({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    const spaceBelow = window.innerHeight - rect.bottom - VIEWPORT_MARGIN;
+    const spaceAbove = rect.top - VIEWPORT_MARGIN;
+    // Open upward only when there's truly not enough room below AND above
+    // has more room to offer — otherwise keep the usual downward opening.
+    const openUpward = spaceBelow < MIN_MENU_HEIGHT && spaceAbove > spaceBelow;
+    const maxHeight = Math.max(MIN_MENU_HEIGHT, Math.min(PREFERRED_MENU_HEIGHT, openUpward ? spaceAbove : spaceBelow));
+    setMenuRect({
+      openUpward,
+      top: openUpward ? undefined : rect.bottom + 4,
+      bottom: openUpward ? window.innerHeight - rect.top + 4 : undefined,
+      left: rect.left,
+      width: rect.width,
+      maxHeight,
+    });
   }
 
   useEffect(() => {
@@ -372,10 +391,16 @@ export function RadioSelect({ id, options, value, onSelect, placeholder = "Selec
         createPortal(
           <div
             ref={menuRef}
-            style={{ position: "fixed", top: menuRect.top, left: menuRect.left, width: menuRect.width }}
+            style={{
+              position: "fixed",
+              top: menuRect.top,
+              bottom: menuRect.bottom,
+              left: menuRect.left,
+              width: menuRect.width,
+            }}
             className="z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800"
           >
-            <div className="max-h-56 overflow-y-auto p-1.5">
+            <div className="overflow-y-auto p-1.5" style={{ maxHeight: menuRect.maxHeight }}>
               {options.map((option) => {
                 const isSelected = String(option.value) === String(value);
                 return (

@@ -51,7 +51,7 @@ export const navSections = [
     items: [
       { label: "Cloud Rate", icon: DollarSign, permission: PERMISSIONS.CLOUD_RATE },
       { label: "Cloud Usage", icon: Cloud, permission: PERMISSIONS.CLOUD_USAGE },
-      { label: "Service Usage", icon: Activity, permission: PERMISSIONS.SERVICE_USAGE },
+      { label: "Server Usage", icon: Activity, permission: PERMISSIONS.SERVICE_USAGE },
     ],
   },
   {
@@ -226,36 +226,6 @@ export const cloudRateColumns = [
   { key: "total_price_month", label: "Total Price / Month" },
   { key: "total_price_year", label: "Total Price / Year" },
   { key: "year", label: "Year" },
-];
-
-export const serverUsageColumns = [
-  { key: "usage_id", label: "Usage ID" },
-  { key: "equipment_id", label: "Equipment ID" },
-  { key: "owner_name", label: "Owner Name" },
-  { key: "computer_name", label: "Computer Name" },
-  { key: "device_model", label: "Device Model" },
-  { key: "platform", label: "Platform" },
-  { key: "device_location", label: "Device Location" },
-  { key: "mac_address", label: "MAC Address" },
-  { key: "ip_address", label: "IP Address" },
-  { key: "os_type", label: "OS Type" },
-  { key: "os_version", label: "OS Version" },
-  { key: "windows_license_active", label: "Windows License Active" },
-  { key: "sql_version", label: "SQL Version" },
-  { key: "sql_license_active", label: "SQL License Active" },
-  { key: "cpu_core_total", label: "CPU Core Total" },
-  { key: "cpu_usage_pct", label: "CPU Usage %" },
-  { key: "memory_gb_total", label: "Memory GB Total" },
-  { key: "memory_usage_pct", label: "Memory Usage %" },
-  { key: "hdd_gb_total", label: "HDD GB Total" },
-  { key: "hdd_usage_gb", label: "HDD Usage GB" },
-  { key: "antivirus_status", label: "Antivirus Status" },
-  { key: "reinstall_antivirus", label: "Reinstall Antivirus" },
-  { key: "service_date", label: "Service Date" },
-  { key: "service_running", label: "Service Running" },
-  { key: "status_check", label: "Status Check" },
-  { key: "owner_id", label: "Owner ID" },
-  { key: "remark", label: "Remark" },
 ];
 
 export const cloudUsageColumns = [

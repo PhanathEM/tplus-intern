@@ -5,7 +5,7 @@ import {
   FiUserPlus as UserPlus,
   FiX as X,
 } from "react-icons/fi";
-import { FormField, formInputClass } from "../../components/SharedControls";
+import { FormField, formInputClass, RadioSelect } from "../../components/SharedControls";
 
 function SectionCard({ step, title, description, children }) {
   return (
@@ -222,18 +222,21 @@ export function AssignEquipmentView({
                     className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
                   />
                 </div>
-                <select
-                  value={deviceCategory}
-                  onChange={(e) => onDeviceCategoryChange(e.target.value)}
-                  className={`${formInputClass} sm:w-52`}
-                >
-                  <option value="All">All categories</option>
-                  {categories.map((category) => (
-                    <option key={category.category_id} value={category.category_name}>
-                      {category.category_name} ({category.available_count})
-                    </option>
-                  ))}
-                </select>
+                <div className="sm:w-52">
+                  <RadioSelect
+                    id="assign-device-category"
+                    options={[
+                      { value: "All", label: "All categories" },
+                      ...categories.map((category) => ({
+                        value: category.category_name,
+                        label: `${category.category_name} (${category.available_count})`,
+                      })),
+                    ]}
+                    value={deviceCategory}
+                    onSelect={onDeviceCategoryChange}
+                    placeholder="All categories"
+                  />
+                </div>
               </div>
 
               <div className="mt-3 max-h-72 overflow-y-auto rounded-lg border border-slate-100 dark:border-slate-800">
@@ -339,18 +342,13 @@ export function AssignEquipmentView({
         <SectionCard step={3} title="Status &amp; date">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Status" htmlFor="assign-page-status">
-              <select
+              <RadioSelect
                 id="assign-page-status"
+                options={statuses.map((item) => ({ value: item.status_name, label: item.status_name }))}
                 value={status}
-                onChange={(e) => onStatusChange(e.target.value)}
-                className={formInputClass}
-              >
-                {statuses.map((item) => (
-                  <option key={item.status_id} value={item.status_name}>
-                    {item.status_name}
-                  </option>
-                ))}
-              </select>
+                onSelect={onStatusChange}
+                placeholder="Select a status..."
+              />
             </FormField>
             <FormField label="Assigned Date" htmlFor="assign-page-date">
               <input

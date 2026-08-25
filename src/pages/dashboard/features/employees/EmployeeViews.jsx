@@ -1,4 +1,4 @@
-import { Fragment, useEffect } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import {
   FiAlertTriangle as AlertTriangle,
   FiBox as Box,
@@ -224,6 +224,23 @@ export function EmployeeDirectoryTable({
     { key: "location", label: "Location" },
   ];
 
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!onSearchChange) return;
+
+    function handleKeyDown(event) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onSearchChange]);
+
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
@@ -235,18 +252,19 @@ export function EmployeeDirectoryTable({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {onSearchChange && (
-            <div className="relative w-56">
+            <div className="relative w-64">
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={14} />
               <input
+                ref={searchInputRef}
                 id="employee-directory-search"
                 type="text"
                 autoComplete="off"
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="Search Employee"
-                className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:ring-slate-700"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-14 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
               />
-              {search && (
+              {search ? (
                 <button
                   type="button"
                   onClick={() => onSearchChange("")}
@@ -255,6 +273,10 @@ export function EmployeeDirectoryTable({
                 >
                   <X size={13} />
                 </button>
+              ) : (
+                <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
+                  Ctrl K
+                </kbd>
               )}
             </div>
           )}
