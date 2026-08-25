@@ -18,6 +18,21 @@
       sans-serif;
   }
 
+  /* Set by useLanguage.js (document.documentElement.lang) when Lao is
+     active — Phetsarath first, Inter still covers any Latin characters
+     (numbers, English brand names) mixed into Lao text. */
+  html[lang="lo"] {
+    font-family:
+      Phetsarath,
+      "Inter Variable",
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+  }
+
   body {
     margin: 0;
     min-width: 320px;

@@ -14,6 +14,9 @@ export function useLanguage() {
 
   useEffect(() => {
     i18n.changeLanguage(language);
+    // Drives the Phetsarath font swap in index.css (html[lang="lo"]) — also
+    // just the semantically correct thing to set for accessibility.
+    document.documentElement.lang = language;
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
   }, [language]);
 
