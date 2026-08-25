@@ -147,24 +147,22 @@ export function ReplaceableDevicesView({
   onOpenReplaceDialog,
   search = "",
   onSearchChange,
+  selectedCategory,
 }) {
   const [page, setPage] = useState(1);
 
-  // A new search means a whole new result set — start back on page 1 rather
-  // than stranding the user on a page number that may not exist. Adjusted
-  // during render (not an effect) per React's guidance for resetting state
-  // when a prop changes.
+  // A new search or category means a whole new result set — start back on
+  // page 1 rather than stranding the user on a page number that may not
+  // exist. Adjusted during render (not an effect) per React's guidance for
+  // resetting state when a prop changes.
   const [prevSearch, setPrevSearch] = useState(search);
   if (search !== prevSearch) {
     setPrevSearch(search);
     setPage(1);
   }
-  // `columns` is only ever a new array reference when a category switch
-  // actually re-fetches (unlike `devices`, which is rebuilt every render) —
-  // a reliable signal that this is a different result set entirely.
-  const [prevColumns, setPrevColumns] = useState(columns);
-  if (columns !== prevColumns) {
-    setPrevColumns(columns);
+  const [prevCategory, setPrevCategory] = useState(selectedCategory);
+  if (selectedCategory !== prevCategory) {
+    setPrevCategory(selectedCategory);
     setPage(1);
   }
 

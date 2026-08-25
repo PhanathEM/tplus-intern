@@ -698,6 +698,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
               <ReplaceableDevicesView
                 devices={replacements.replaceableDevices}
                 columns={replacements.replaceableColumns}
+                selectedCategory={replacements.selectedCategory}
                 isLoading={replacements.isReplaceableLoading}
                 error={replacements.replaceableError}
                 onRetry={replacements.handleRetryReplaceable}

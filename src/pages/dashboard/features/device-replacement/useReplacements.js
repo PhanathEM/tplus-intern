@@ -1,12 +1,26 @@
 import { useEffect, useState } from "react";
 import { fetchAssignFormData } from "../../../../services/assignService";
-import { fetchEquipmentByCategory, fetchEquipmentByView } from "../../../../services/equipmentService";
+import { fetchEquipmentByCategory } from "../../../../services/equipmentService";
 import { fetchPartTypes, fetchStockColumnOptions } from "../../../../services/partTypeService";
 import { fetchPartReplacements, submitPartReplacement } from "../../../../services/partReplacementService";
 import { addPartStock, fetchAvailablePartStock } from "../../../../services/partStockService";
 import { DEFAULT_PART_STOCK_STATUS } from "../../dashboard.config";
-import { buildPartStockPayload, normalizeEquipmentTableColumns } from "../../dashboard.utils";
+import { buildPartStockPayload } from "../../dashboard.utils";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
+
+// Fixed set for "Devices you can replace" — matches whatever the admin
+// asked for, independent of Equipment's own per-category configured columns.
+const REPLACEABLE_DEVICE_COLUMNS = [
+  { key: "device_name", label: "Device Name" },
+  { key: "owner_name", label: "Owner" },
+  { key: "platform", label: "Platform" },
+  { key: "asset_code", label: "Asset Code" },
+  { key: "cpu", label: "CPU" },
+  { key: "ram", label: "RAM" },
+  { key: "hd", label: "HDD" },
+  { key: "device_model", label: "Device Model" },
+  { key: "serial_no", label: "Serial Number" },
+];
 
 const QUICK_ADD_FORM_INITIAL_VALUES = {
   part_type_id: "",
@@ -121,21 +135,12 @@ export function useReplacements({ isActive, user }) {
 
     let ignore = false;
 
-    // Two calls on purpose: the raw category list carries every field the
-    // Replace dialog needs (category_id, owner_id, bag/mouse/keyboard, ...),
-    // while the view-key endpoint's `columns` is the exact same curated
-    // column set/order/labels the Equipment page shows for this category —
-    // pulling that instead of inventing our own ordering keeps this list
-    // looking identical to Equipment's, per the admin's request. The "No."
-    // entry it reports is really just equipment_id relabeled (not a real
-    // sequence), so it's dropped in favor of the row's own _row_number.
-    Promise.all([fetchEquipmentByCategory(selectedCategory), fetchEquipmentByView(selectedCategory)])
-      .then(([listData, viewData]) => {
+    fetchEquipmentByCategory(selectedCategory)
+      .then((listData) => {
         if (ignore) return;
         const owned = (Array.isArray(listData) ? listData : []).filter((item) => item.owner_id != null);
-        const columns = normalizeEquipmentTableColumns(viewData).filter((column) => column.key !== "equipment_id");
         setReplaceableDevices(owned);
-        setReplaceableColumns(columns);
+        setReplaceableColumns(REPLACEABLE_DEVICE_COLUMNS);
         setReplaceableError(null);
       })
       .catch((error) => {
