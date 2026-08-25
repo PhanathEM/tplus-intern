@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { FiActivity as ActivityIcon, FiBell as Bell } from "react-icons/fi";
 import { EmptyState } from "../../components/SharedControls";
 
@@ -19,6 +20,7 @@ const ACTION_LABELS = {
 };
 
 function StatCard({ item, count, isLoading, onSelect }) {
+  const { t } = useTranslation();
   const Icon = item.icon;
   const hasCount = typeof count === "number";
 
@@ -32,7 +34,7 @@ function StatCard({ item, count, isLoading, onSelect }) {
         <Icon size={30} />
       </div>
       <div className="min-w-0">
-        <p className="text-[15px] font-medium leading-tight text-slate-600 dark:text-slate-400">{item.label}</p>
+        <p className="text-[15px] font-medium leading-tight text-slate-600 dark:text-slate-400">{t(item.label)}</p>
         <p className="mt-1 text-3xl font-bold tabular-nums text-slate-950 dark:text-white">
           {hasCount ? count.toLocaleString() : isLoading ? "…" : "0"}
         </p>
@@ -42,16 +44,17 @@ function StatCard({ item, count, isLoading, onSelect }) {
 }
 
 function NotificationsPanel({ notifications, onOpenNotification }) {
+  const { t } = useTranslation();
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-        <h3 className="text-[15px] font-semibold text-slate-950 dark:text-white">Notifications</h3>
+        <h3 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Notifications")}</h3>
         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
           {notifications.length}
         </span>
       </div>
       {notifications.length === 0 ? (
-        <EmptyState icon={Bell} title="All clear" description="No alerts need your attention right now." />
+        <EmptyState icon={Bell} title={t("All clear")} description={t("No alerts need your attention right now.")} />
       ) : (
         <div className="divide-y divide-slate-50 dark:divide-slate-800">
           {notifications.slice(0, 6).map((item) => (
@@ -78,31 +81,32 @@ function NotificationsPanel({ notifications, onOpenNotification }) {
   );
 }
 
-function formatRelativeTime(value) {
+function formatRelativeTime(value, t) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   const diffMs = Date.now() - date.getTime();
   const minutes = Math.round(diffMs / 60000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return t("Just now");
+  if (minutes < 60) return t("m ago", { value: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("h ago", { value: hours });
   const days = Math.round(hours / 24);
-  return `${days}d ago`;
+  return t("d ago", { value: days });
 }
 
 function RecentActivityPanel({ entries }) {
+  const { t } = useTranslation();
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-        <h3 className="text-[15px] font-semibold text-slate-950 dark:text-white">Your recent activity</h3>
+        <h3 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Your recent activity")}</h3>
       </div>
       {entries.length === 0 ? (
         <EmptyState
           icon={ActivityIcon}
-          title="Nothing yet"
-          description="Things you add, edit, or delete will show up here."
+          title={t("Nothing yet")}
+          description={t("Things you add, edit, or delete will show up here.")}
         />
       ) : (
         <div className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -110,11 +114,11 @@ function RecentActivityPanel({ entries }) {
             <div key={entry.id} className="flex items-center justify-between gap-3 px-5 py-3">
               <div className="min-w-0">
                 <p className="truncate text-[13px] font-medium text-slate-800 dark:text-slate-200">
-                  <span className="font-semibold text-slate-950 dark:text-white">{ACTION_LABELS[entry.action] || entry.action}</span>{" "}
-                  {entry.module} · {entry.entityLabel || `#${entry.entityId ?? "—"}`}
+                  <span className="font-semibold text-slate-950 dark:text-white">{t(ACTION_LABELS[entry.action] || entry.action)}</span>{" "}
+                  {t(entry.module)} · {entry.entityLabel || `#${entry.entityId ?? "—"}`}
                 </p>
               </div>
-              <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">{formatRelativeTime(entry.timestamp)}</span>
+              <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">{formatRelativeTime(entry.timestamp, t)}</span>
             </div>
           ))}
         </div>
@@ -132,6 +136,7 @@ export function DashboardHomeView({
   onOpenNotification,
   recentActivity,
 }) {
+  const { t } = useTranslation();
   const cards = navSections.flatMap((section) =>
     section.items.flatMap((item) => (item.children?.length ? item.children : [item]))
   );
@@ -152,8 +157,8 @@ export function DashboardHomeView({
         <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
           <EmptyState
             icon={ActivityIcon}
-            title="No pages assigned"
-            description="Ask an admin to add permissions to this account."
+            title={t("No pages assigned")}
+            description={t("Ask an admin to add permissions to this account.")}
           />
         </div>
       ) : visibleCards.length > 0 ? (

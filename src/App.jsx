@@ -5,6 +5,7 @@ import Login from "./pages/auth/login";
 import { setAuthToken } from "./lib/apiClient";
 import { mergeStoredPermissionsForUser } from "./lib/permissions";
 import { useTheme } from "./hooks/useTheme";
+import { useLanguage } from "./hooks/useLanguage";
 
 const SESSION_STORAGE_KEY = "tplus_session";
 
@@ -21,6 +22,7 @@ function loadStoredSession() {
 function App() {
   const [session, setSession] = useState(loadStoredSession);
   const { theme, toggleTheme } = useTheme();
+  const { language, toggleLanguage } = useLanguage();
 
   useEffect(() => {
     if (!session) {
@@ -58,7 +60,14 @@ function App() {
         path="/dashboard/*"
         element={
           session ? (
-            <Dashboard user={session.user} onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} />
+            <Dashboard
+              user={session.user}
+              onLogout={handleLogout}
+              theme={theme}
+              onToggleTheme={toggleTheme}
+              language={language}
+              onToggleLanguage={toggleLanguage}
+            />
           ) : (
             <Navigate to="/login" replace />
           )

@@ -5,6 +5,7 @@ import {
   FiChevronDown as ChevronDown,
   FiLogOut as LogOut,
   FiMenu as Menu,
+  FiGlobe as Globe,
   FiMoon as Moon,
   FiRefreshCw as RefreshCw,
   FiSearch as Search,
@@ -13,6 +14,7 @@ import {
   FiX as X,
 } from "react-icons/fi";
 import { ThemeToggle } from "../../components/ThemeToggle";
+import { LanguageToggle } from "../../components/LanguageToggle";
 import { useEmployees } from "./features/employees/useEmployees";
 import { useEquipment } from "./features/equipment/useEquipment";
 import { useAssign } from "./features/assign/useAssign";
@@ -99,7 +101,7 @@ function readStoredSidebarWidth() {
   return stored >= MIN_SIDEBAR_WIDTH && stored <= MAX_SIDEBAR_WIDTH ? stored : DEFAULT_SIDEBAR_WIDTH;
 }
 
-function Dashboard({ user, onLogout, theme, onToggleTheme }) {
+function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLanguage }) {
   const permissions = useDashboardPermissions({ user });
   const {
     canCreateRecords,
@@ -475,6 +477,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
                   </button>
 
                   <ThemeToggle theme={theme} onToggle={onToggleTheme} className="hidden sm:inline-flex" />
+                  <LanguageToggle language={language} onToggle={onToggleLanguage} className="hidden sm:inline-flex" />
 
                   <div className="relative" ref={notificationsRef}>
                     <button
@@ -610,6 +613,13 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
                             Dark mode
                           </span>
                           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+                        </div>
+                        <div className="flex items-center justify-between gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-300 sm:hidden">
+                          <span className="flex items-center gap-2.5">
+                            <Globe size={15} />
+                            Language
+                          </span>
+                          <LanguageToggle language={language} onToggle={onToggleLanguage} />
                         </div>
                         <button
                           type="button"

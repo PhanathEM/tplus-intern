@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FiChevronDown as ChevronDown } from "react-icons/fi";
 import { TbLayoutSidebar } from "react-icons/tb";
 import tplusLogo from "../../../assets/tplus-logo.png";
@@ -18,6 +19,7 @@ function getBadgeClass(tone) {
 }
 
 export function SidebarNavigation({ collapsed = false, activeView, onSelect, user, badges }) {
+  const { t } = useTranslation();
   const [expandedLabels, setExpandedLabels] = useState(() => new Set());
 
   const visibleSections = getVisibleNavSections(user, navSections);
@@ -28,7 +30,7 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
         <div key={section.label} className={sectionIdx === 0 ? "" : "mt-5"}>
           {!collapsed ? (
             <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              {section.label}
+              {t(section.label)}
             </p>
           ) : (
             sectionIdx !== 0 && <div className="mx-2 mb-3 border-t border-slate-200 dark:border-slate-700" />
@@ -62,7 +64,7 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
                       }
                       onSelect(item.label);
                     }}
-                    title={collapsed ? item.label : undefined}
+                    title={collapsed ? t(item.label) : undefined}
                     className={`group relative flex w-full items-center rounded-lg py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${collapsed ? "justify-center px-0" : "gap-3 px-3 text-left"
                       } ${isActive
                         ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
@@ -70,7 +72,7 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
                       }`}
                   >
                     <Icon className="shrink-0 text-[17px]" />
-                    <span className={collapsed ? "sr-only" : "flex-1 truncate"}>{item.label}</span>
+                    <span className={collapsed ? "sr-only" : "flex-1 truncate"}>{t(item.label)}</span>
                     {!collapsed && hasChildren && (
                       <ChevronDown
                         size={14}
@@ -105,7 +107,7 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
                               }`}
                           >
                             <ChildIcon className="shrink-0 text-sm" />
-                            <span className="flex-1 truncate">{child.label}</span>
+                            <span className="flex-1 truncate">{t(child.label)}</span>
                           </button>
                         );
                       })}
@@ -122,6 +124,7 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
 }
 
 export function SidebarBrand({ collapsed, onToggleCollapse }) {
+  const { t } = useTranslation();
   return (
     <div
       className={`flex shrink-0 items-center border-b border-slate-100 dark:border-slate-800 ${collapsed ? "h-auto flex-col justify-center gap-2 px-3 py-3" : "h-16 justify-between px-4"
@@ -138,7 +141,7 @@ export function SidebarBrand({ collapsed, onToggleCollapse }) {
         {!collapsed && (
           <div className="min-w-0">
             <p className="text-[15px] font-semibold leading-tight text-slate-900 dark:text-white">TPLUS</p>
-            <p className="text-[11px] leading-tight text-slate-500 dark:text-slate-400">Management System</p>
+            <p className="text-[11px] leading-tight text-slate-500 dark:text-slate-400">{t("Management System")}</p>
           </div>
         )}
       </div>
@@ -147,8 +150,8 @@ export function SidebarBrand({ collapsed, onToggleCollapse }) {
         type="button"
         onClick={onToggleCollapse}
         className="hidden shrink-0 rounded-md p-1.5 text-slate-500 outline-none transition hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white dark:focus-visible:ring-offset-slate-900 xl:grid xl:place-items-center"
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? t("Expand sidebar") : t("Collapse sidebar")}
+        title={collapsed ? t("Expand sidebar") : t("Collapse sidebar")}
       >
         <TbLayoutSidebar size={19} />
       </button>
