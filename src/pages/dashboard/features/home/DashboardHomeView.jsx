@@ -18,23 +18,9 @@ const ACTION_LABELS = {
   return: "Returned",
 };
 
-const CARD_COLORS = [
-  { bg: "bg-indigo-950", text: "text-indigo-600" },
-  { bg: "bg-emerald-500", text: "text-emerald-600" },
-  { bg: "bg-sky-500", text: "text-sky-600" },
-  { bg: "bg-amber-400", text: "text-amber-600" },
-  { bg: "bg-pink-500", text: "text-pink-600" },
-  { bg: "bg-violet-500", text: "text-violet-600" },
-  { bg: "bg-rose-500", text: "text-rose-600" },
-  { bg: "bg-teal-500", text: "text-teal-600" },
-  { bg: "bg-fuchsia-500", text: "text-fuchsia-600" },
-  { bg: "bg-blue-500", text: "text-blue-600" },
-];
-
-function StatCard({ item, count, isLoading, onSelect, colorIndex }) {
+function StatCard({ item, count, isLoading, onSelect }) {
   const Icon = item.icon;
-  const color = CARD_COLORS[colorIndex % CARD_COLORS.length];
-  const hasCount = typeof count === "number" && count > 0;
+  const hasCount = typeof count === "number";
 
   return (
     <button
@@ -42,13 +28,13 @@ function StatCard({ item, count, isLoading, onSelect, colorIndex }) {
       onClick={() => onSelect(item.label)}
       className="group flex items-center gap-5 rounded-2xl border border-slate-200 bg-white px-6 py-6 text-left outline-none transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-900 dark:hover:shadow-black/30 dark:focus-visible:ring-offset-slate-900"
     >
-      <div className={`grid h-16 w-16 shrink-0 place-items-center rounded-xl ${color.bg} text-white`}>
+      <div className="grid h-16 w-16 shrink-0 place-items-center text-slate-500 dark:text-slate-400">
         <Icon size={30} />
       </div>
       <div className="min-w-0">
-        <p className={`text-[15px] font-medium leading-tight ${color.text} dark:brightness-125`}>{item.label}</p>
+        <p className="text-[15px] font-medium leading-tight text-slate-600 dark:text-slate-400">{item.label}</p>
         <p className="mt-1 text-3xl font-bold tabular-nums text-slate-950 dark:text-white">
-          {hasCount ? count.toLocaleString() : isLoading ? "…" : "—"}
+          {hasCount ? count.toLocaleString() : isLoading ? "…" : "0"}
         </p>
       </div>
     </button>
@@ -150,6 +136,16 @@ export function DashboardHomeView({
     section.items.flatMap((item) => (item.children?.length ? item.children : [item]))
   );
 
+  // A card sitting at 0 is just noise — only keep ones with something to
+  // show. Shown as-is while still loading so the grid doesn't flash empty
+  // before the real counts arrive.
+  const visibleCards = isStatsLoading
+    ? cards
+    : cards.filter((item) => {
+        const count = stats[item.label];
+        return typeof count === "number" && count > 0;
+      });
+
   return (
     <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       {cards.length === 0 ? (
@@ -160,20 +156,19 @@ export function DashboardHomeView({
             description="Ask an admin to add permissions to this account."
           />
         </div>
-      ) : (
+      ) : visibleCards.length > 0 ? (
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-          {cards.map((item, index) => (
+          {visibleCards.map((item) => (
             <StatCard
               key={item.label}
               item={item}
               count={stats[item.label]}
               isLoading={isStatsLoading}
               onSelect={onSelectView}
-              colorIndex={index}
             />
           ))}
         </div>
-      )}
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <NotificationsPanel notifications={notifications} onOpenNotification={onOpenNotification} />

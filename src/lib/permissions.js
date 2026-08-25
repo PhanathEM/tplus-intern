@@ -15,6 +15,8 @@ export const PERMISSIONS = {
   SSD_PROCUREMENT: "ssd_procurement",
   LICENSE: "license",
   EQUIPMENT_STATUS: "equipment_status",
+  EQUIPMENT_CATEGORY: "equipment_category",
+  PART_TYPE: "part_type",
   CLOUD_RATE: "cloud_rate",
   CLOUD_USAGE: "cloud_usage",
   SERVICE_USAGE: "service_usage",
@@ -44,6 +46,8 @@ export const PERMISSION_DEFINITIONS = [
   { value: PERMISSIONS.ACTIVITY_LOG, label: "Activity Log" },
   { value: PERMISSIONS.RECYCLE_BIN, label: "Recycle Bin" },
   { value: PERMISSIONS.EQUIPMENT_STATUS, label: "Status" },
+  { value: PERMISSIONS.EQUIPMENT_CATEGORY, label: "Category" },
+  { value: PERMISSIONS.PART_TYPE, label: "Part Types" },
 ];
 
 const ADMIN_ONLY_DEFAULT_PERMISSIONS = new Set([
@@ -51,6 +55,8 @@ const ADMIN_ONLY_DEFAULT_PERMISSIONS = new Set([
   PERMISSIONS.ACTIVITY_LOG,
   PERMISSIONS.RECYCLE_BIN,
   PERMISSIONS.EQUIPMENT_STATUS,
+  PERMISSIONS.EQUIPMENT_CATEGORY,
+  PERMISSIONS.PART_TYPE,
   PERMISSIONS.ASSIGN_EQUIPMENT,
 ]);
 

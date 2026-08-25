@@ -32,6 +32,7 @@ import { SidebarBrand, SidebarNavigation } from "./components/Sidebar";
 import { GlobalSearch } from "./components/GlobalSearch";
 import {
   BorrowEquipmentModal,
+  CategoryManagementView,
   ColumnsPickerModal,
   EquipmentFormModal,
   EquipmentView,
@@ -53,7 +54,7 @@ import {
   ReplacementHistoryView,
 } from "./features/device-replacement/ReplacementView";
 import { useReplacements } from "./features/device-replacement/useReplacements";
-import { PartStockView } from "./features/part-stock/PartStockView";
+import { PartStockView, PartTypeFormModal, PartTypeManagementView } from "./features/part-stock/PartStockView";
 import { BorrowPartDialog, DeleteBorrowDialog, PartBorrowView, ReturnPartDialog } from "./features/part-borrow/PartBorrowView";
 import { usePartStock } from "./features/part-stock/usePartStock";
 import { usePartBorrow } from "./features/part-borrow/usePartBorrow";
@@ -112,6 +113,8 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
     firstAccessibleDashboardView,
     canManageUsers,
     canManageStatuses,
+    canManageCategory,
+    canManagePartTypes,
     canManageAssign,
     visibleHomeNavSections,
   } = permissions;
@@ -200,9 +203,11 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
     // reaching into any hook's internal state directly.
     const resetMap = {
       Equipments: equipment.resetForEntry,
+      Category: equipment.resetForEntry,
       "Device Replacement": replacements.resetForEntry,
       "Device Replacement History": replacements.resetForEntry,
       "Stock of Replace a Part": partStock.resetForEntry,
+      "Part Types": partStock.resetForEntry,
       "Borrow a Part": partBorrow.resetForEntry,
       "SSD Upgrade": ssdUpgrades.resetForEntry,
       "SSD Procurement": ssdProcurement.resetForEntry,
@@ -261,6 +266,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
   const isReplacementView = activeView === "Device Replacement" && hasActiveViewAccess;
   const isReplacementHistoryView = activeView === "Device Replacement History" && hasActiveViewAccess;
   const isPartStockView = activeView === "Stock of Replace a Part" && hasActiveViewAccess;
+  const isPartTypeView = activeView === "Part Types" && hasActiveViewAccess;
   const isPartBorrowView = activeView === "Borrow a Part" && hasActiveViewAccess;
   const isSsdUpgradeView = activeView === "SSD Upgrade" && hasActiveViewAccess;
   const isSsdProcurementView = activeView === "SSD Procurement" && hasActiveViewAccess;
@@ -273,6 +279,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
   const isBorrowHistoryView = activeView === "Borrow History" && hasActiveViewAccess;
   const isUsersView = activeView === "Users" && hasActiveViewAccess;
   const isStatusView = activeView === "Statuses" && hasActiveViewAccess;
+  const isCategoryView = activeView === "Category" && hasActiveViewAccess;
   const isActivityLogView = activeView === "Activity Log" && hasActiveViewAccess;
   const isRecycleBinView = activeView === "Recycle Bin" && hasActiveViewAccess;
 
@@ -288,7 +295,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
   });
 
   const replacements = useReplacements({ isActive: isReplacementView || isReplacementHistoryView, user });
-  const partStock = usePartStock({ isActive: isPartStockView, user });
+  const partStock = usePartStock({ isActive: isPartStockView || isPartTypeView, user });
   const partBorrow = usePartBorrow({ isActive: isPartBorrowView, user });
   const ssdUpgrades = useSsdUpgrades({ isActive: isSsdUpgradeView });
   const ssdProcurement = useSsdProcurement({ isActive: isSsdProcurementView });
@@ -304,7 +311,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
   const users = useUsers({ isActive: isUsersView, user });
 
   const equipment = useEquipment({
-    isActive: isEquipmentView,
+    isActive: isEquipmentView || isCategoryView,
     user,
     loadDepartments: departments.loadDepartments,
     onEquipmentMutated: notifications.handleRetry,
@@ -671,9 +678,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
               onUnassign={equipment.handleOpenUnassign}
               onDelete={equipment.handleOpenDelete}
               onBorrow={currentBorrows.handleOpenBorrow}
-              onAddCategory={equipment.handleOpenAddCategory}
-              onEditCategory={equipment.handleOpenEditCategory}
-              onDeleteCategory={equipment.handleOpenDeleteCategory}
               onDownloadAllExcel={equipment.handleDownloadAllEquipmentExcel}
               onDownloadAllPdf={equipment.handleDownloadAllEquipmentPdf}
               isDownloadingAllExcel={equipment.isDownloadingAllExcel}
@@ -723,36 +727,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
               partTypes={partStock.partTypes}
               selectedPartTypeId={partStock.selectedPartTypeId}
               onSelectPart={partStock.handleSelectPart}
-              allCategories={partStock.allCategories}
-              isPartTypeFormOpen={partStock.isPartTypeFormOpen}
-              partTypeFormMode={partStock.partTypeFormMode}
-              partTypeFormValues={partStock.partTypeFormValues}
-              isSavingPartType={partStock.isSavingPartType}
-              partTypeFormError={partStock.partTypeFormError}
-              isLoadingPartTypeCategories={partStock.isLoadingPartTypeCategories}
-              stockColumnBuiltInOptions={partStock.stockColumnBuiltInOptions}
               stockColumnCustomFieldOptions={partStock.stockColumnCustomFieldOptions}
-              partCustomFieldTypes={partStock.partCustomFieldTypes}
-              selectedStockColumns={partStock.selectedStockColumns}
-              isLoadingStockColumns={partStock.isLoadingStockColumns}
-              stockColumnsError={partStock.stockColumnsError}
-              onOpenAddPartType={partStock.handleOpenAddPartType}
-              onOpenEditPartType={partStock.handleOpenEditPartType}
-              onClosePartTypeForm={partStock.handleClosePartTypeForm}
-              onPartTypeFormFieldChange={partStock.handlePartTypeFormFieldChange}
-              onTogglePartTypeCategory={partStock.handleTogglePartTypeCategory}
-              onToggleStockColumn={partStock.handleToggleStockColumn}
-              onAddCustomField={partStock.handleAddCustomField}
-              onSubmitPartTypeForm={partStock.handleSubmitPartTypeForm}
-              partTypeToDelete={partStock.partTypeToDelete}
-              isDeletingPartType={partStock.isDeletingPartType}
-              deletePartTypeError={partStock.deletePartTypeError}
-              deletePartTypeBlocked={partStock.deletePartTypeBlocked}
-              linkedEquipmentField={partStock.linkedEquipmentField}
-              onOpenDeletePartType={partStock.handleOpenDeletePartType}
-              onCloseDeletePartType={partStock.handleCloseDeletePartType}
-              onConfirmDeletePartType={partStock.handleConfirmDeletePartType}
-              onDeactivatePartTypeInstead={partStock.handleDeactivatePartTypeInstead}
               isAddDialogOpen={partStock.isAddDialogOpen}
               addFormValues={partStock.addFormValues}
               isSubmittingAdd={partStock.isSubmittingAdd}
@@ -773,6 +748,30 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
               onDeleteStock={partStock.handleDeleteStock}
             />
           )}
+
+          {isPartTypeView &&
+            (canManagePartTypes ? (
+              <PartTypeManagementView
+                partTypes={partStock.partTypes}
+                isLoading={partStock.isLoading}
+                error={partStock.error}
+                onRetry={partStock.handleRetry}
+                onAddPartType={partStock.handleOpenAddPartType}
+                onEditPartType={partStock.handleOpenEditPartType}
+                onDeletePartType={partStock.handleOpenDeletePartType}
+                canManage={canCreateRecords}
+              />
+            ) : (
+              <div className="px-4 py-6 sm:px-6 lg:px-8">
+                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+                  <EmptyState
+                    icon={Box}
+                    title="Not available"
+                    description="This page is admin-only."
+                  />
+                </div>
+              </div>
+            ))}
 
           {isPartBorrowView && (
             <PartBorrowView
@@ -908,6 +907,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
             !isReplacementView &&
             !isReplacementHistoryView &&
             !isPartStockView &&
+            !isPartTypeView &&
             !isPartBorrowView &&
             !isSsdUpgradeView &&
             !isSsdProcurementView &&
@@ -920,6 +920,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
             !isBorrowHistoryView &&
             !isUsersView &&
             !isStatusView &&
+            !isCategoryView &&
             !isActivityLogView &&
             !isRecycleBinView && (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -1007,6 +1008,30 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
                 isDownloadingAllPdf={statuses.isDownloadingAllPdf}
                 isDownloadingAllExcel={statuses.isDownloadingAllExcel}
                 downloadError={statuses.downloadError}
+              />
+            ) : (
+              <div className="px-4 py-6 sm:px-6 lg:px-8">
+                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+                  <EmptyState
+                    icon={Box}
+                    title="Not available"
+                    description="This page is admin-only."
+                  />
+                </div>
+              </div>
+            ))}
+
+          {isCategoryView &&
+            (canManageCategory ? (
+              <CategoryManagementView
+                categories={equipment.categories}
+                isLoading={equipment.isLoading}
+                error={equipment.error}
+                onRetry={equipment.handleRetry}
+                onAddCategory={equipment.handleOpenAddCategory}
+                onEditCategory={equipment.handleOpenEditCategory}
+                onDeleteCategory={equipment.handleOpenDeleteCategory}
+                canManage={canCreateRecords}
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -1138,6 +1163,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
         isSubmitting={equipment.isSaving}
         error={equipment.formError}
         departments={departments.departments}
+        employees={equipment.formEmployees}
         statuses={equipment.statuses}
         categoryOptions={equipment.formCategoryOptions}
         categoryLocked
@@ -1287,6 +1313,51 @@ function Dashboard({ user, onLogout, theme, onToggleTheme }) {
         onClose={equipment.handleCloseCategoryForm}
         isSubmitting={equipment.isSavingCategory}
         error={equipment.categoryFormError}
+      />
+
+      <PartTypeFormModal
+        isOpen={partStock.isPartTypeFormOpen}
+        mode={partStock.partTypeFormMode}
+        values={partStock.partTypeFormValues}
+        categories={partStock.allCategories}
+        isLoadingCategories={partStock.isLoadingPartTypeCategories}
+        stockColumnBuiltInOptions={partStock.stockColumnBuiltInOptions}
+        stockColumnCustomFieldOptions={partStock.stockColumnCustomFieldOptions}
+        customFieldTypes={partStock.partCustomFieldTypes}
+        selectedStockColumns={partStock.selectedStockColumns}
+        isLoadingStockColumns={partStock.isLoadingStockColumns}
+        stockColumnsError={partStock.stockColumnsError}
+        onChange={partStock.handlePartTypeFormFieldChange}
+        onToggleCategory={partStock.handleTogglePartTypeCategory}
+        onToggleStockColumn={partStock.handleToggleStockColumn}
+        onAddCustomField={partStock.handleAddCustomField}
+        onSubmit={partStock.handleSubmitPartTypeForm}
+        onClose={partStock.handleClosePartTypeForm}
+        isSubmitting={partStock.isSavingPartType}
+        error={partStock.partTypeFormError}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(partStock.partTypeToDelete)}
+        title="Delete this part?"
+        message={
+          partStock.partTypeToDelete
+            ? `Remove "${partStock.partTypeToDelete.part_name}" from the part catalog. This can't be undone.${
+                partStock.linkedEquipmentField
+                  ? ` It'll also delete the linked equipment field "${partStock.linkedEquipmentField.label}" everywhere it's used.`
+                  : ""
+              }`
+            : ""
+        }
+        confirmLabel="Delete"
+        confirmingLabel="Deleting..."
+        onConfirm={partStock.handleConfirmDeletePartType}
+        onCancel={partStock.handleCloseDeletePartType}
+        isConfirming={partStock.isDeletingPartType}
+        error={partStock.deletePartTypeError}
+        blocked={partStock.deletePartTypeBlocked}
+        blockedActionLabel="Deactivate instead"
+        onBlockedAction={partStock.handleDeactivatePartTypeInstead}
       />
 
       <ReplaceDeviceDialog

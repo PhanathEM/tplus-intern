@@ -4,4 +4,4 @@ export {
   BorrowEquipmentModal,
   ReturnEquipmentModal,
 } from "./EquipmentModals";
-export { EquipmentView } from "./EquipmentView";
+export { EquipmentView, CategoryManagementView } from "./EquipmentView";

@@ -324,7 +324,6 @@ const EQUIPMENT_FORM_EXCLUDED_KEYS = new Set([
   "status",
   "remark",
   "owner_id",
-  "owner_name",
   // Derived from the equipment's assigned licenses (see software_licenses)
   // instead of being real, directly-editable columns — managed through the
   // "Software License" picker, not typed into the form.
@@ -340,6 +339,11 @@ const EQUIPMENT_FORM_FIELD_TYPES = {
   department_code: "department-select",
   windows_license: "yes-no-select",
   av_license: "yes-no-select",
+  // The column is "owner_name" (a display string), but the API only accepts
+  // an owner_id — the picker's value is the selected employee's id, renamed
+  // to owner_id right before the request goes out (see handleSubmitForm).
+  owner_name: "employee-select",
+  server_type: "server-type-select",
 };
 
 function inferEquipmentFieldType(key) {
@@ -386,6 +390,13 @@ export function buildEquipmentFormValues(fields, source = {}) {
   fields.forEach(({ key, type }) => {
     if (key === "department") {
       values.department = source.department_code || source.department || "";
+      return;
+    }
+    if (key === "owner_name") {
+      // The view list this form's source comes from only has owner_name (a
+      // display string), not owner_id — left empty here and patched in once
+      // a single-record fetch resolves the real id (see handleOpenEditItem).
+      values.owner_name = source.owner_id != null ? String(source.owner_id) : "";
       return;
     }
     if (type === "date") {

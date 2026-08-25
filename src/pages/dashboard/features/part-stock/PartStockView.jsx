@@ -1,8 +1,10 @@
 import { useEffect } from "react";
 import {
+  FiAlertTriangle as AlertTriangle,
   FiEdit2 as Edit2,
   FiPackage as Package,
   FiPlusCircle as PlusCircle,
+  FiRefreshCw as RefreshCw,
   FiTrash2 as Trash2,
   FiX as X,
 } from "react-icons/fi";
@@ -23,7 +25,7 @@ import { RecordsTableView } from "../../components/RecordsTableView";
 import { CategoryTabs } from "../../components/CategoryTabs";
 
 import {
-  ConfirmDialog,
+  EmptyState,
   FormField,
   formInputClass,
   RowActionsMenu,
@@ -115,7 +117,7 @@ function PartTypeStockColumnsSection({
   );
 }
 
-function PartTypeFormModal({
+export function PartTypeFormModal({
   isOpen,
   mode,
   values,
@@ -548,37 +550,7 @@ export function PartStockView({
   selectedPartTypeId,
   onSelectPart,
 
-  allCategories,
-  isPartTypeFormOpen,
-  partTypeFormMode,
-  partTypeFormValues,
-  isSavingPartType,
-  partTypeFormError,
-  isLoadingPartTypeCategories,
-  stockColumnBuiltInOptions,
   stockColumnCustomFieldOptions,
-  partCustomFieldTypes,
-  selectedStockColumns,
-  isLoadingStockColumns,
-  stockColumnsError,
-  onOpenAddPartType,
-  onOpenEditPartType,
-  onClosePartTypeForm,
-  onPartTypeFormFieldChange,
-  onTogglePartTypeCategory,
-  onToggleStockColumn,
-  onAddCustomField,
-  onSubmitPartTypeForm,
-
-  partTypeToDelete,
-  isDeletingPartType,
-  deletePartTypeError,
-  deletePartTypeBlocked,
-  linkedEquipmentField,
-  onOpenDeletePartType,
-  onCloseDeletePartType,
-  onConfirmDeletePartType,
-  onDeactivatePartTypeInstead,
 
   isAddDialogOpen,
   addFormValues,
@@ -657,25 +629,6 @@ export function PartStockView({
             options={partTypes.map((partType) => ({ value: partType.part_type_id, label: partType.part_name }))}
             selected={selectedPartTypeId}
             onSelect={onSelectPart}
-            trailing={
-              <RowActionsMenu
-                items={[
-                  ...(selectedPartType
-                    ? [
-                        { icon: Edit2, label: "Edit Part", onClick: () => onOpenEditPartType(selectedPartType) },
-                        {
-                          icon: Trash2,
-                          label: "Delete Part",
-                          onClick: () => onOpenDeletePartType(selectedPartType),
-                          destructive: true,
-                        },
-                        { divider: true },
-                      ]
-                    : []),
-                  { icon: PlusCircle, label: "New Part", onClick: onOpenAddPartType },
-                ]}
-              />
-            }
           />
         </div>
       </div>
@@ -759,53 +712,113 @@ export function PartStockView({
         isSubmitting={isSubmittingEdit}
         error={editError}
       />
-
-      {/* Add/edit part type */}
-      <PartTypeFormModal
-        isOpen={isPartTypeFormOpen}
-        mode={partTypeFormMode}
-        values={partTypeFormValues}
-        categories={allCategories}
-        isLoadingCategories={isLoadingPartTypeCategories}
-        stockColumnBuiltInOptions={stockColumnBuiltInOptions}
-        stockColumnCustomFieldOptions={stockColumnCustomFieldOptions}
-        customFieldTypes={partCustomFieldTypes}
-        selectedStockColumns={selectedStockColumns}
-        isLoadingStockColumns={isLoadingStockColumns}
-        stockColumnsError={stockColumnsError}
-        onChange={onPartTypeFormFieldChange}
-        onToggleCategory={onTogglePartTypeCategory}
-        onToggleStockColumn={onToggleStockColumn}
-        onAddCustomField={onAddCustomField}
-        onSubmit={onSubmitPartTypeForm}
-        onClose={onClosePartTypeForm}
-        isSubmitting={isSavingPartType}
-        error={partTypeFormError}
-      />
-
-      {/* Delete part type confirmation */}
-      <ConfirmDialog
-        isOpen={Boolean(partTypeToDelete)}
-        title="Delete this part?"
-        message={
-          partTypeToDelete
-            ? `Remove "${partTypeToDelete.part_name}" from the part catalog. This can't be undone.${
-                linkedEquipmentField
-                  ? ` It'll also delete the linked equipment field "${linkedEquipmentField.label}" everywhere it's used.`
-                  : ""
-              }`
-            : ""
-        }
-        confirmLabel="Delete"
-        confirmingLabel="Deleting..."
-        onConfirm={onConfirmDeletePartType}
-        onCancel={onCloseDeletePartType}
-        isConfirming={isDeletingPartType}
-        error={deletePartTypeError}
-        blocked={deletePartTypeBlocked}
-        blockedActionLabel="Deactivate instead"
-        onBlockedAction={onDeactivatePartTypeInstead}
-      />
     </>
+  );
+}
+
+// Standalone part-type management page (Managements > Part Types) — the
+// same part catalog, Add/Edit/Delete handlers, and PartTypeFormModal the
+// Stock of Replace a Part page's tab kebab menu used to expose inline, just
+// given a proper table + its own place in the nav instead.
+export function PartTypeManagementView({
+  partTypes,
+  isLoading,
+  error,
+  onRetry,
+  onAddPartType,
+  onEditPartType,
+  onDeletePartType,
+  canManage = true,
+}) {
+  return (
+    <div className="px-4 py-6 sm:px-6 lg:px-8">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+          <div>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Part types</h2>
+            {!isLoading && !error && (
+              <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
+                {partTypes.length} part type{partTypes.length === 1 ? "" : "s"}
+              </p>
+            )}
+          </div>
+          {canManage && (
+            <button
+              type="button"
+              onClick={onAddPartType}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
+            >
+              <PlusCircle size={15} />
+              New Part
+            </button>
+          )}
+        </div>
+
+        {isLoading ? (
+          <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading part types...</div>
+        ) : error ? (
+          <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
+              <AlertTriangle size={18} />
+            </div>
+            <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Couldn&apos;t load part types</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
+            >
+              <RefreshCw size={13} />
+              Retry
+            </button>
+          </div>
+        ) : partTypes.length === 0 ? (
+          <EmptyState icon={Package} title="No part types found" description="Part types will appear here." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
+              <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Part Name</th>
+                  <th className="px-5 py-3 font-semibold">Description</th>
+                  <th className="px-5 py-3 font-semibold">Tracks Value</th>
+                  <th className="px-5 py-3 text-right font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+                {partTypes.map((partType) => (
+                  <tr
+                    key={partType.part_type_id}
+                    className="transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40"
+                  >
+                    <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-950 dark:text-white">
+                      {partType.part_name}
+                    </td>
+                    <td className="max-w-72 truncate px-5 py-3.5 text-slate-600 dark:text-slate-300" title={partType.description || ""}>
+                      {partType.description || "—"}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">
+                      {partType.tracks_value ? "Yes" : "No"}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-right">
+                      {canManage && (
+                        <div className="flex items-center justify-end">
+                          <RowActionsMenu
+                            items={[
+                              { icon: Edit2, label: "Edit", onClick: () => onEditPartType(partType) },
+                              { icon: Trash2, label: "Delete", onClick: () => onDeletePartType(partType), destructive: true },
+                            ]}
+                          />
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

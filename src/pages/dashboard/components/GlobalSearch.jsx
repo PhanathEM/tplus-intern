@@ -85,12 +85,13 @@ export function GlobalSearch({
   isLoading,
   onSelect,
   autoFocus = false,
-  placeholder = "Search employees, departments, equipment...",
+  placeholder = "Search...",
   inputClassName,
   className = "w-full lg:w-72",
 }) {
   const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef(null);
+  const inputRef = useRef(null);
   const safeResults = results || EMPTY_RESULTS;
 
   useEffect(() => {
@@ -100,7 +101,15 @@ export function GlobalSearch({
       }
     }
     function handleKeyDown(event) {
-      if (event.key === "Escape") setIsFocused(false);
+      if (event.key === "Escape") {
+        setIsFocused(false);
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }
     }
     document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
@@ -121,6 +130,7 @@ export function GlobalSearch({
         <span className="sr-only">Search</span>
         <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
         <input
+          ref={inputRef}
           autoFocus={autoFocus}
           type="search"
           value={value}
@@ -129,9 +139,14 @@ export function GlobalSearch({
           placeholder={placeholder}
           className={
             inputClassName ||
-            "h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
+            "h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-14 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
           }
         />
+        {!value && (
+          <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
+            Ctrl K
+          </kbd>
+        )}
       </label>
 
       {showDropdown && (

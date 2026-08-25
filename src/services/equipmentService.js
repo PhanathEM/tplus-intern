@@ -30,6 +30,13 @@ export function fetchEquipmentByView(view) {
   return apiGet(`/api/equipment/${view}`);
 }
 
+// The per-category view list (fetchEquipmentByView) carries owner_name but
+// not owner_id — this single-record endpoint has both, needed to preselect
+// the right employee when opening an item for edit.
+export function fetchEquipmentDetail(equipmentId) {
+  return apiGet(`/api/equipment/${equipmentId}`);
+}
+
 export function createEquipmentByView(view, payload) {
   return apiPost(`/api/equipment/${view}`, payload);
 }

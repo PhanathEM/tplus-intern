@@ -135,6 +135,8 @@ export function DeviceReplacementCategoryBar({ categories = [], selected, onSele
   );
 }
 
+const REPLACEABLE_PAGE_SIZE = 15;
+
 export function ReplaceableDevicesView({
   devices,
   columns = [],
@@ -146,6 +148,26 @@ export function ReplaceableDevicesView({
   search = "",
   onSearchChange,
 }) {
+  const [page, setPage] = useState(1);
+
+  // A new search means a whole new result set — start back on page 1 rather
+  // than stranding the user on a page number that may not exist. Adjusted
+  // during render (not an effect) per React's guidance for resetting state
+  // when a prop changes.
+  const [prevSearch, setPrevSearch] = useState(search);
+  if (search !== prevSearch) {
+    setPrevSearch(search);
+    setPage(1);
+  }
+  // `columns` is only ever a new array reference when a category switch
+  // actually re-fetches (unlike `devices`, which is rebuilt every render) —
+  // a reliable signal that this is a different result set entirely.
+  const [prevColumns, setPrevColumns] = useState(columns);
+  if (columns !== prevColumns) {
+    setPrevColumns(columns);
+    setPage(1);
+  }
+
   // The backend's own equipment_id isn't sequential (and we dropped its "No."
   // column), so number rows 1..n ourselves, matching whatever's on screen.
   const numberedDevices = useMemo(
@@ -153,6 +175,9 @@ export function ReplaceableDevicesView({
     [devices]
   );
   const numberedColumns = useMemo(() => [{ key: "_row_number", label: "No." }, ...columns], [columns]);
+
+  const pageCount = Math.max(1, Math.ceil(numberedDevices.length / REPLACEABLE_PAGE_SIZE));
+  const paginatedDevices = numberedDevices.slice((page - 1) * REPLACEABLE_PAGE_SIZE, page * REPLACEABLE_PAGE_SIZE);
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -196,7 +221,7 @@ export function ReplaceableDevicesView({
 
         <DynamicEquipmentTable
           columns={numberedColumns}
-          records={numberedDevices}
+          records={paginatedDevices}
           rowKey={(device, index) => device.equipment_id ?? index}
           isLoading={isLoading}
           loadingText="Loading devices..."
@@ -209,6 +234,37 @@ export function ReplaceableDevicesView({
           onRowClick={canManage ? onOpenReplaceDialog : undefined}
           elevatedRowHover={canManage}
         />
+
+        {!isLoading && !error && numberedDevices.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            <span>
+              Showing {(page - 1) * REPLACEABLE_PAGE_SIZE + 1}
+              {"–"}
+              {Math.min(page * REPLACEABLE_PAGE_SIZE, numberedDevices.length)} of {numberedDevices.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={page === 1}
+                onClick={() => setPage(Math.max(1, page - 1))}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
+              >
+                Previous
+              </button>
+              <span className="tabular-nums text-slate-400 dark:text-slate-500">
+                {page} / {pageCount}
+              </span>
+              <button
+                type="button"
+                disabled={page === pageCount}
+                onClick={() => setPage(Math.min(pageCount, page + 1))}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

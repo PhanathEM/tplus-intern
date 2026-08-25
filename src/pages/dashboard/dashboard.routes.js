@@ -23,6 +23,8 @@ export const dashboardRouteByView = {
   "Cloud Usage": "cloud-usage",
   "Server Usage": "server-usage",
   Statuses: "statuses",
+  Category: "category",
+  "Part Types": "part-types",
   Users: "users",
   "Activity Log": "activity-log",
   "Recycle Bin": "recycle-bin",

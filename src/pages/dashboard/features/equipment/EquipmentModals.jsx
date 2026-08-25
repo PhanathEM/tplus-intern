@@ -6,7 +6,7 @@ import {
   formInputClass,
 } from "../../components/SharedControls";
 
-function EquipmentDynamicField({ field, values, onChange, isSubmitting, departments, onRemove }) {
+function EquipmentDynamicField({ field, values, onChange, isSubmitting, departments, employees, onRemove }) {
   const id = `add-equipment-${field.key}`;
   const value = values[field.key] || "";
   const [isRemoving, setIsRemoving] = useState(false);
@@ -58,6 +58,31 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
             {dept.department_name}
           </option>
         ))}
+      </select>
+    );
+  } else if (field.type === "employee-select") {
+    input = (
+      <EmployeeSelectDropdown
+        employees={employees || []}
+        selectedId={value}
+        onSelect={(employeeId) => onChange(field.key, String(employeeId))}
+        disabled={isSubmitting}
+        placeholder="Select employee"
+      />
+    );
+  } else if (field.type === "server-type-select") {
+    input = (
+      <select
+        id={id}
+        autoComplete="off"
+        value={value}
+        onChange={(e) => onChange(field.key, e.target.value)}
+        className={formInputClass}
+        disabled={isSubmitting}
+      >
+        <option value="">—</option>
+        <option value="Cloud">Cloud</option>
+        <option value="Physical">Physical</option>
       </select>
     );
   } else if (field.type === "yes-no-select") {
@@ -283,6 +308,7 @@ export function EquipmentFormModal({
   isSubmitting,
   error,
   departments,
+  employees,
   statuses,
   categoryOptions,
   categoryLocked = false,
@@ -371,6 +397,7 @@ return (
                   onChange={onChange}
                   isSubmitting={isSubmitting}
                   departments={departments}
+                  employees={employees}
                   onRemove={onRemoveField}
                 />
               ))}

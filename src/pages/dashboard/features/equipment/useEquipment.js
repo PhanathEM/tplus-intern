@@ -3,6 +3,7 @@ import {
   fetchEquipmentStatuses,
   fetchEquipmentViews,
   fetchEquipmentByView,
+  fetchEquipmentDetail,
   createEquipmentByView,
   updateEquipmentByView,
   deleteEquipmentItem,
@@ -16,6 +17,7 @@ import {
   removeCustomFieldFromCategory,
   unassignEquipment,
 } from "../../../../services/equipmentService";
+import { fetchEmployees } from "../../../../services/employeeService";
 import { createCategory, updateCategory, deleteCategory } from "../../../../services/categoryService";
 import {
   assignEquipmentLicenses,
@@ -62,6 +64,10 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
   const [isItemsLoading, setIsItemsLoading] = useState(false);
   const [itemsError, setItemsError] = useState(null);
   const [statuses, setStatuses] = useState([]);
+  // For the Add/Edit form's Owner picker — fetched lazily when the form
+  // opens rather than eagerly, since most categories don't have an owner
+  // field configured.
+  const [formEmployees, setFormEmployees] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState("add");
   const [formTarget, setFormTarget] = useState(null);
@@ -280,6 +286,15 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     setCategoryOverride(targetCategory);
   }
 
+  // The Owner picker needs the employee list — fetched only when a field
+  // actually needs it, since most categories don't configure an Owner column.
+  function loadFormEmployeesIfNeeded(fields) {
+    if (!fields.some((field) => field.key === "owner_name")) return;
+    fetchEmployees()
+      .then((data) => setFormEmployees(Array.isArray(data) ? data : []))
+      .catch(() => setFormEmployees([]));
+  }
+
   function handleOpenAddItem() {
     const activeEntry = categoryBySlug.get(category);
     if (activeEntry && activeEntry.columnCount === 0) {
@@ -301,6 +316,7 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     setLicenseInitialIds([]);
     setIsFormOpen(true);
     loadSoftwareLicenseOptions();
+    loadFormEmployeesIfNeeded(fields);
 
     loadDepartments();
 
@@ -343,6 +359,20 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     setLicenseInitialIds(currentLicenseIds);
     setIsFormOpen(true);
     loadSoftwareLicenseOptions();
+    loadFormEmployeesIfNeeded(fields);
+
+    // The view list `item` came from only has owner_name (a display string),
+    // not owner_id — fetch the single-record detail to preselect the right
+    // employee in the picker. Patched in once resolved rather than blocking
+    // the form from opening.
+    if (fields.some((field) => field.key === "owner_name") && item.equipment_id != null) {
+      fetchEquipmentDetail(item.equipment_id)
+        .then((detail) => {
+          if (detail?.owner_id == null) return;
+          setFormValues((current) => ({ ...current, owner_name: String(detail.owner_id) }));
+        })
+        .catch(() => {});
+    }
 
     loadDepartments();
 
@@ -511,7 +541,14 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
 
     // "category" is implied by the view/URL, not a real per-item field — the
     // backend rejects it as an unknown column if it's included in the body.
-    const requestPayload = Object.fromEntries(Object.entries(payload).filter(([key]) => key !== "category"));
+    // "owner_name" is the column key (a display string), but the picker's
+    // value is really the selected employee's id — the API wants that sent
+    // as owner_id instead.
+    const requestPayload = Object.fromEntries(
+      Object.entries(payload)
+        .filter(([key]) => key !== "category")
+        .map(([key, value]) => (key === "owner_name" ? ["owner_id", value] : [key, value]))
+    );
 
     const request = isEdit
       ? updateEquipmentByView(view, formTarget.equipment_id, requestPayload)
@@ -859,6 +896,7 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     isItemsLoading,
     itemsError,
     statuses,
+    formEmployees,
     handleViewCategory,
     handleSelectCategory,
     formCategoryOptions,

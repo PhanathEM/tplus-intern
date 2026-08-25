@@ -379,18 +379,15 @@ export function CloudRatesView({ rates, isLoading, error, onRetry }) {
 // Matches the "Plan optimize" capacity-planning sheet this data comes from —
 // a grouped, spreadsheet-style header (Total Capacity/Usage/Reducing/After
 // Reducing bands) instead of the app's usual flat column list, since that
-// grouping is the whole point of this particular table. The dark header is
-// a fixed design choice (like conditional formatting in the source sheet),
-// not tied to the app's light/dark theme toggle.
+// grouping is the whole point of this particular table. The header's own
+// fixed light background is a deliberate design choice (like conditional
+// formatting in the source sheet), not tied to the app's light/dark toggle.
 const SERVER_USAGE_BASE_CELL =
-  "border border-slate-700 bg-slate-900 px-3 py-3 text-center text-xs font-bold uppercase tracking-wide text-white";
-const SERVER_USAGE_GROUP_CELL = "border border-slate-700 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-white";
-const SERVER_USAGE_FIELD_CELL = "border border-slate-700 bg-slate-900 px-3 py-1.5 text-center text-xs font-bold text-white";
-const SERVER_USAGE_UNIT_CELL = "border border-slate-700 bg-slate-900 px-3 py-1 text-center text-[10px] font-medium text-slate-400";
-const SERVER_USAGE_GROUP_GRAY = "bg-slate-500";
-const SERVER_USAGE_GROUP_AMBER = "bg-amber-600";
-const SERVER_USAGE_GROUP_BLUE = "bg-blue-600";
-const SERVER_USAGE_GROUP_GREEN = "bg-emerald-600";
+  "border border-slate-200 bg-[#f9fbfc] px-3 py-3 text-center text-xs font-bold uppercase tracking-wide text-slate-900";
+const SERVER_USAGE_GROUP_CELL =
+  "border border-slate-200 bg-[#f9fbfc] px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-slate-900";
+const SERVER_USAGE_FIELD_CELL = "border border-slate-200 bg-[#f9fbfc] px-3 py-1.5 text-center text-xs font-bold text-slate-900";
+const SERVER_USAGE_UNIT_CELL = "border border-slate-200 bg-[#f9fbfc] px-3 py-1 text-center text-[10px] font-medium text-slate-500";
 const SERVER_USAGE_DATA_CELL = "border border-slate-200 bg-white px-3 py-2 whitespace-nowrap text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300";
 
 export function ServerUsageView({ usage, isLoading, error, onRetry }) {
@@ -438,10 +435,10 @@ export function ServerUsageView({ usage, isLoading, error, onRetry }) {
                   <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>Due Date</th>
                   <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>Name</th>
                   <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>IP Address</th>
-                  <th colSpan={3} className={`${SERVER_USAGE_GROUP_CELL} ${SERVER_USAGE_GROUP_GRAY}`}>Total Capacity</th>
-                  <th colSpan={3} className={`${SERVER_USAGE_GROUP_CELL} ${SERVER_USAGE_GROUP_AMBER}`}>Usage</th>
-                  <th colSpan={2} className={`${SERVER_USAGE_GROUP_CELL} ${SERVER_USAGE_GROUP_BLUE}`}>Reducing</th>
-                  <th colSpan={2} className={`${SERVER_USAGE_GROUP_CELL} ${SERVER_USAGE_GROUP_GREEN}`}>After Reducing</th>
+                  <th colSpan={3} className={SERVER_USAGE_GROUP_CELL}>Total Capacity</th>
+                  <th colSpan={3} className={SERVER_USAGE_GROUP_CELL}>Usage</th>
+                  <th colSpan={2} className={SERVER_USAGE_GROUP_CELL}>Reducing</th>
+                  <th colSpan={2} className={SERVER_USAGE_GROUP_CELL}>After Reducing</th>
                   <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>Owner</th>
                 </tr>
                 <tr>

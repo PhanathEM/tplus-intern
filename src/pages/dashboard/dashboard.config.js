@@ -1,4 +1,4 @@
-import { FiActivity as Activity, FiBox as Box, FiCloud as Cloud, FiDollarSign as DollarSign, FiHardDrive as HardDrive, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiShoppingCart as ShoppingCart, FiSliders as Sliders, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
+import { FiActivity as Activity, FiBox as Box, FiCloud as Cloud, FiDollarSign as DollarSign, FiHardDrive as HardDrive, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiShoppingCart as ShoppingCart, FiSliders as Sliders, FiTag as Tag, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
 import { PERMISSIONS } from "../../lib/permissions";
 
 export const navSections = [
@@ -60,7 +60,11 @@ export const navSections = [
       {
         label: "Managements",
         icon: Tool,
-        children: [{ label: "Statuses", icon: Sliders, permission: PERMISSIONS.EQUIPMENT_STATUS, adminOnly: true }],
+        children: [
+          { label: "Statuses", icon: Sliders, permission: PERMISSIONS.EQUIPMENT_STATUS, adminOnly: true },
+          { label: "Category", icon: Tag, permission: PERMISSIONS.EQUIPMENT_CATEGORY, adminOnly: true },
+          { label: "Part Types", icon: Box, permission: PERMISSIONS.PART_TYPE, adminOnly: true },
+        ],
       },
     ],
   },
@@ -364,7 +368,7 @@ export const EMPLOYEE_FORM_INITIAL_VALUES = {
   sex: "",
 };
 
-export const EMPLOYEES_PAGE_SIZE = 8;
+export const EMPLOYEES_PAGE_SIZE = 15;
 
 // ---------------------------------------------------------------------------
 // Empty state
