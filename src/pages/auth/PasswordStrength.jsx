@@ -1,4 +1,4 @@
-// Shared between login.jsx (create account) and resetPassword.jsx.
+// Used by login.jsx for both Create Account and the Forgot Password code/reset step.
 export function PasswordStrengthBar({ score }) {
     return (
         <div className="mt-2.5 flex gap-1.5" aria-hidden="true">

@@ -253,6 +253,16 @@ export function getPermissionSummary(user, maxLabels = 3, t = identity) {
   return remainingCount > 0 ? `${visibleLabels} ${t("more_count", { count: remainingCount })}` : visibleLabels;
 }
 
+// Coarse three-state summary for list views where the exact permission
+// list is too long to show inline — "All access" (admin-equivalent),
+// "Some access" (a limited custom set), or "No access" (nothing granted).
+export function getAccessLevelSummary(user, t = identity) {
+  const permissions = normalizeUserPermissions(user);
+  if (permissions.length === ALL_PERMISSION_VALUES.length) return t("All access");
+  if (permissions.length === 0) return t("No access");
+  return t("Some access");
+}
+
 export function getAccessProfileLabel(user, t = identity) {
   const permissions = normalizeUserPermissions(user);
   if (permissions.length === ALL_PERMISSION_VALUES.length) return t("Full access");

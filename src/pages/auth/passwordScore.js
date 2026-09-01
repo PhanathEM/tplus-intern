@@ -1,4 +1,4 @@
-// Shared between login.jsx (create account) and resetPassword.jsx.
+// Used by login.jsx for both Create Account and the Forgot Password code/reset step.
 export function getPasswordScore(password) {
     let score = 0;
     if (password.length >= 8) score += 1;

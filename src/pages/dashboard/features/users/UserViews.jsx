@@ -12,7 +12,7 @@ import { userPermissionSections } from "../../dashboard.config";
 import { translateLabel } from "../../../../lib/i18nLabel";
 import {
   ALL_PERMISSION_VALUES,
-  getPermissionSummary,
+  getAccessLevelSummary,
   normalizeUserPermissions,
 } from "../../../../lib/permissions";
 
@@ -92,9 +92,9 @@ export function UsersView({
                     <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">
                       {user.email || "—"}
                     </td>
-                    <td className="min-w-64 px-5 py-3.5 text-slate-600 dark:text-slate-300">
-                      <span className="inline-flex max-w-72 items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                        <span className="truncate">{getPermissionSummary(user, 3, t)}</span>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        {getAccessLevelSummary(user, t)}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5">

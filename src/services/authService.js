@@ -23,14 +23,19 @@ export function signup({ fullName, username, email, password }) {
   );
 }
 
-// Both pre-auth, like login/signup — no credentials to attach yet. Paths and
-// body shape are provisional pending backend actually building these (see
-// the "Need: real self-service forgot password flow" spec); update if
-// backend's real endpoints differ.
+// Both pre-auth, like login/signup — no credentials to attach yet. `username`
+// accepts either the real username or the account's email (backend matches
+// either). Live and SMTP-backed: forgot-password emails a 6-digit code
+// instead of a link — reset-password needs that same identifier again since
+// the code alone doesn't uniquely identify the account.
 export function requestPasswordReset(username) {
   return apiPost("/api/auth/forgot-password", { username }, { skipCredentials: true });
 }
 
-export function confirmPasswordReset(token, newPassword) {
-  return apiPost("/api/auth/reset-password", { token, new_password: newPassword }, { skipCredentials: true });
+export function confirmPasswordReset(username, code, newPassword) {
+  return apiPost(
+    "/api/auth/reset-password",
+    { username, code, new_password: newPassword },
+    { skipCredentials: true }
+  );
 }

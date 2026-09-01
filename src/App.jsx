@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Dashboard from "./pages/dashboard/dashboard";
 import Login from "./pages/auth/login";
-import ResetPassword from "./pages/auth/resetPassword";
 import { setAuthToken, setStoredCredentials } from "./lib/apiClient";
 import { mergeStoredPermissionsForUser } from "./lib/permissions";
 import { useTheme } from "./hooks/useTheme";
@@ -57,10 +56,6 @@ function App() {
             <Login onLogin={handleLogin} theme={theme} onToggleTheme={toggleTheme} />
           )
         }
-      />
-      <Route
-        path="/reset-password"
-        element={<ResetPassword theme={theme} onToggleTheme={toggleTheme} />}
       />
       <Route
         path="/dashboard/*"

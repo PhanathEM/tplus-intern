@@ -1,15 +1,16 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
     FiArrowLeft,
     FiArrowRight,
     FiEye,
     FiEyeOff,
     FiKey,
+    FiLock,
     FiMail,
     FiUser,
     FiUserPlus,
 } from "react-icons/fi";
-import { login, signup, requestPasswordReset } from "../../services/authService";
+import { confirmPasswordReset, login, signup, requestPasswordReset } from "../../services/authService";
 import { setAuthToken, setStoredCredentials } from "../../lib/apiClient";
 import { AuthLayout } from "./AuthLayout";
 import { PasswordStrengthBar } from "./PasswordStrength";
@@ -43,17 +44,29 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
     const [isRegisterSubmitting, setIsRegisterSubmitting] = useState(false);
     const [signupNotice, setSignupNotice] = useState("");
 
-    // Backend doesn't have the real forgot-password endpoint built yet (see
-    // the spec sent over) — this still runs the real request so it starts
-    // working the moment that ships, but a 404 today is handled honestly
-    // instead of pretending an email went out.
-    const [forgotUsername, setForgotUsername] = useState("");
+    // "request" (enter email) | "code" (enter the 6-digit code) |
+    // "reset" (enter new password) | "done"
+    const [forgotStep, setForgotStep] = useState("request");
+    const [forgotEmail, setForgotEmail] = useState("");
     const [isRequestingReset, setIsRequestingReset] = useState(false);
     const [forgotError, setForgotError] = useState("");
-    const [forgotNotice, setForgotNotice] = useState("");
+
+    // One character per box, joined into a string wherever it's sent.
+    const [forgotCodeDigits, setForgotCodeDigits] = useState(["", "", "", "", "", ""]);
+    const [codeError, setCodeError] = useState("");
+    const [resendNotice, setResendNotice] = useState("");
+    const codeInputRefs = useRef([]);
+
+    const [forgotNewPassword, setForgotNewPassword] = useState("");
+    const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
+    const [forgotShowPassword, setForgotShowPassword] = useState(false);
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
+    const [resetError, setResetError] = useState("");
 
     const passwordScore = useMemo(() => getPasswordScore(password), [password]);
     const regPasswordScore = useMemo(() => getPasswordScore(regPassword), [regPassword]);
+    const forgotPasswordScore = useMemo(() => getPasswordScore(forgotNewPassword), [forgotNewPassword]);
+    const forgotCode = forgotCodeDigits.join("");
     const isLocked = attempts >= 3;
 
     const switchMode = (nextMode) => {
@@ -61,8 +74,46 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
         setError("");
         setRegError("");
         setSignupNotice("");
+        setForgotStep("request");
         setForgotError("");
-        setForgotNotice("");
+        setForgotCodeDigits(["", "", "", "", "", ""]);
+        setCodeError("");
+        setResendNotice("");
+        setForgotNewPassword("");
+        setForgotConfirmPassword("");
+        setResetError("");
+    };
+
+    const handleCodeDigitChange = (index, rawValue) => {
+        const digit = rawValue.replace(/\D/g, "").slice(-1);
+        setForgotCodeDigits((current) => {
+            const next = [...current];
+            next[index] = digit;
+            return next;
+        });
+        if (digit && index < 5) {
+            codeInputRefs.current[index + 1]?.focus();
+        }
+    };
+
+    const handleCodeKeyDown = (index, e) => {
+        if (e.key === "Backspace" && !forgotCodeDigits[index] && index > 0) {
+            codeInputRefs.current[index - 1]?.focus();
+        }
+    };
+
+    const handleCodePaste = (e) => {
+        const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6).split("");
+        if (!digits.length) return;
+        e.preventDefault();
+        setForgotCodeDigits((current) => {
+            const next = [...current];
+            digits.forEach((digit, i) => {
+                next[i] = digit;
+            });
+            return next;
+        });
+        codeInputRefs.current[Math.min(digits.length, 6) - 1]?.focus();
     };
 
     const handleRegisterSubmit = async (e) => {
@@ -156,30 +207,94 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
     const handleForgotSubmit = async (e) => {
         e.preventDefault();
 
-        if (!forgotUsername.trim()) {
-            setForgotError("Enter your username to continue.");
+        if (!forgotEmail.trim()) {
+            setForgotError("Enter your email to continue.");
             return;
         }
 
         setForgotError("");
-        setForgotNotice("");
         setIsRequestingReset(true);
 
         try {
-            await requestPasswordReset(forgotUsername.trim());
-            // Same wording regardless of whether the account exists — never
-            // let this confirm/deny a username to whoever's asking.
-            setForgotNotice("If an account exists for that username, a reset link has been sent to the email on file.");
+            await requestPasswordReset(forgotEmail.trim());
+            // Same next step regardless of whether the account exists —
+            // never let this confirm/deny an email to whoever's asking.
+            setForgotCodeDigits(["", "", "", "", "", ""]);
+            setCodeError("");
+            setForgotStep("code");
         } catch (err) {
             if (err.status === 404) {
                 setForgotError("This isn't set up yet — ask your system administrator to reset your password for you.");
             } else if (err.status >= 500) {
                 setForgotError(err.message || "Something went wrong. Please try again.");
             } else {
-                setForgotNotice("If an account exists for that username, a reset link has been sent to the email on file.");
+                setForgotCodeDigits(["", "", "", "", "", ""]);
+                setCodeError("");
+                setForgotStep("code");
             }
         } finally {
             setIsRequestingReset(false);
+        }
+    };
+
+    const handleResendCode = async () => {
+        setCodeError("");
+        setResendNotice("");
+        setIsRequestingReset(true);
+
+        try {
+            await requestPasswordReset(forgotEmail.trim());
+            setForgotCodeDigits(["", "", "", "", "", ""]);
+            setResendNotice("A new code has been sent.");
+            codeInputRefs.current[0]?.focus();
+        } catch (err) {
+            setCodeError(err.message || "Could not resend the code. Please try again.");
+        } finally {
+            setIsRequestingReset(false);
+        }
+    };
+
+    // The code itself can only really be checked by backend, and the only
+    // endpoint that does that also requires the new password in the same
+    // call — so this step just confirms all 6 digits are filled before
+    // moving on; a wrong/expired code still surfaces its real error on the
+    // final submit in handleResetSubmit below.
+    const handleVerifyCode = (e) => {
+        e.preventDefault();
+
+        if (!/^\d{6}$/.test(forgotCode)) {
+            setCodeError("Enter all 6 digits of the code.");
+            return;
+        }
+
+        setCodeError("");
+        setResetError("");
+        setForgotStep("reset");
+    };
+
+    const handleResetSubmit = async (e) => {
+        e.preventDefault();
+
+        if (forgotNewPassword.length < 8) {
+            setResetError("New password must be at least 8 characters.");
+            return;
+        }
+
+        if (forgotNewPassword !== forgotConfirmPassword) {
+            setResetError("Passwords do not match.");
+            return;
+        }
+
+        setResetError("");
+        setIsResettingPassword(true);
+
+        try {
+            await confirmPasswordReset(forgotEmail.trim(), forgotCode, forgotNewPassword);
+            setForgotStep("done");
+        } catch (err) {
+            setResetError(err.message || "That code is invalid or has expired. Request a new one.");
+        } finally {
+            setIsResettingPassword(false);
         }
     };
 
@@ -298,7 +413,7 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
                             <>Verifying identity...</>
                         ) : (
                             <>
-                                Sign in securely
+                                Sign In
                                 <FiArrowRight size={15} />
                             </>
                         )}
@@ -416,45 +531,42 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
                 </form>
             )}
 
-            {mode === "forgot" && (
+            {mode === "forgot" && forgotStep === "request" && (
                 <>
                     <div className="mb-6">
                         <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Reset your password</h2>
                         <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
-                            Enter your username and we'll email a reset link to the address on file for that account.
+                            Enter your email and we'll send a 6-digit code to it.
                         </p>
                     </div>
 
-                    {forgotNotice && <div className={`mb-5 ${noticeBoxClass}`}>{forgotNotice}</div>}
                     {forgotError && <div className={`mb-5 ${errorBoxClass}`}>{forgotError}</div>}
 
-                    {!forgotNotice && (
-                        <form onSubmit={handleForgotSubmit} className="space-y-5" autoComplete="off">
-                            <div>
-                                <label className={fieldLabelClass} htmlFor="forgot-username">
-                                    Username
-                                </label>
-                                <div className="relative">
-                                    <FiUser className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
-                                    <input
-                                        id="forgot-username"
-                                        type="text"
-                                        required
-                                        autoComplete="off"
-                                        value={forgotUsername}
-                                        onChange={(e) => setForgotUsername(e.target.value)}
-                                        placeholder="Enter your username"
-                                        className={fieldInputClass}
-                                        disabled={isRequestingReset}
-                                    />
-                                </div>
+                    <form onSubmit={handleForgotSubmit} className="space-y-5" autoComplete="off">
+                        <div>
+                            <label className={fieldLabelClass} htmlFor="forgot-email">
+                                Email
+                            </label>
+                            <div className="relative">
+                                <FiMail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
+                                <input
+                                    id="forgot-email"
+                                    type="email"
+                                    required
+                                    autoComplete="off"
+                                    value={forgotEmail}
+                                    onChange={(e) => setForgotEmail(e.target.value)}
+                                    placeholder="Enter your email"
+                                    className={fieldInputClass}
+                                    disabled={isRequestingReset}
+                                />
                             </div>
+                        </div>
 
-                            <button type="submit" className={primaryButtonClass} disabled={isRequestingReset}>
-                                {isRequestingReset ? "Sending..." : "Send reset link"}
-                            </button>
-                        </form>
-                    )}
+                        <button type="submit" className={primaryButtonClass} disabled={isRequestingReset}>
+                            {isRequestingReset ? "Sending..." : "Send code"}
+                        </button>
+                    </form>
 
                     <button
                         type="button"
@@ -463,6 +575,171 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
                     >
                         <FiArrowLeft size={14} />
                         Back to Sign In
+                    </button>
+                </>
+            )}
+
+            {mode === "forgot" && forgotStep === "code" && (
+                <>
+                    <div className="mb-6 flex flex-col items-center text-center">
+                        <div className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-orange-50 ring-1 ring-orange-200 dark:bg-orange-500/10 dark:ring-orange-500/30">
+                            <FiLock className="text-orange-500 dark:text-orange-400" size={22} />
+                        </div>
+                        <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Enter your code</h2>
+                        <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
+                            If an account exists for {forgotEmail.trim()}, a 6-digit code was sent to it. It expires in 10 minutes.
+                        </p>
+                    </div>
+
+                    {codeError && <div className={`mb-5 ${errorBoxClass}`}>{codeError}</div>}
+                    {!codeError && resendNotice && <div className={`mb-5 ${noticeBoxClass}`}>{resendNotice}</div>}
+
+                    <form onSubmit={handleVerifyCode} className="space-y-6" autoComplete="off">
+                        <div className="flex justify-between gap-2">
+                            {forgotCodeDigits.map((digit, index) => (
+                                <input
+                                    key={index}
+                                    ref={(el) => (codeInputRefs.current[index] = el)}
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={1}
+                                    autoComplete="off"
+                                    value={digit}
+                                    onChange={(e) => handleCodeDigitChange(index, e.target.value)}
+                                    onKeyDown={(e) => handleCodeKeyDown(index, e)}
+                                    onPaste={handleCodePaste}
+                                    disabled={isRequestingReset}
+                                    aria-label={`Digit ${index + 1} of 6`}
+                                    className="h-14 w-full rounded-xl border border-slate-200 bg-white text-center text-lg font-semibold text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                />
+                            ))}
+                        </div>
+
+                        <button type="submit" className={primaryButtonClass} disabled={isRequestingReset}>
+                            Verify Code
+                        </button>
+                    </form>
+
+                    <div className="mt-5 flex items-center justify-between">
+                        <button
+                            type="button"
+                            onClick={() => switchMode("signin")}
+                            className="inline-flex items-center gap-1.5 rounded text-[13px] font-semibold text-slate-600 outline-none transition hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:text-slate-200"
+                        >
+                            <FiArrowLeft size={14} />
+                            Back to Sign In
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleResendCode}
+                            disabled={isRequestingReset}
+                            className="rounded text-[13px] font-semibold text-orange-600 outline-none transition hover:text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-400 disabled:opacity-50 dark:text-orange-400 dark:hover:text-orange-300"
+                        >
+                            {isRequestingReset ? "Sending..." : "Resend Code"}
+                        </button>
+                    </div>
+                </>
+            )}
+
+            {mode === "forgot" && forgotStep === "reset" && (
+                <>
+                    <div className="mb-6">
+                        <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Set a new password</h2>
+                        <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">Code verified — choose a new password below.</p>
+                    </div>
+
+                    {resetError && <div className={`mb-5 ${errorBoxClass}`}>{resetError}</div>}
+
+                    <form onSubmit={handleResetSubmit} className="space-y-5" autoComplete="off">
+                        <div>
+                            <label className={fieldLabelClass} htmlFor="forgot-new-password">
+                                New Password
+                            </label>
+                            <div className="relative">
+                                <FiKey className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
+                                <input
+                                    id="forgot-new-password"
+                                    type={forgotShowPassword ? "text" : "password"}
+                                    required
+                                    autoComplete="new-password"
+                                    value={forgotNewPassword}
+                                    onChange={(e) => setForgotNewPassword(e.target.value)}
+                                    placeholder="Create a new password"
+                                    className={`${fieldInputClass} pr-11`}
+                                    disabled={isResettingPassword}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setForgotShowPassword((value) => !value)}
+                                    className="absolute right-1.5 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                                    aria-label={forgotShowPassword ? "Hide password" : "Show password"}
+                                    disabled={isResettingPassword}
+                                >
+                                    {forgotShowPassword ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+                                </button>
+                            </div>
+                            <PasswordStrengthBar score={forgotPasswordScore} />
+                        </div>
+
+                        <div>
+                            <label className={fieldLabelClass} htmlFor="forgot-confirm-password">
+                                Confirm New Password
+                            </label>
+                            <div className="relative">
+                                <FiKey className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
+                                <input
+                                    id="forgot-confirm-password"
+                                    type={forgotShowPassword ? "text" : "password"}
+                                    required
+                                    autoComplete="new-password"
+                                    value={forgotConfirmPassword}
+                                    onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                                    placeholder="Re-enter your new password"
+                                    className={fieldInputClass}
+                                    disabled={isResettingPassword}
+                                />
+                            </div>
+                        </div>
+
+                        <button type="submit" className={primaryButtonClass} disabled={isResettingPassword}>
+                            {isResettingPassword ? "Resetting..." : "Reset password"}
+                        </button>
+                    </form>
+
+                    <div className="mt-5 flex items-center justify-between">
+                        <button
+                            type="button"
+                            onClick={() => switchMode("signin")}
+                            className="inline-flex items-center gap-1.5 rounded text-[13px] font-semibold text-slate-600 outline-none transition hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:text-slate-200"
+                        >
+                            <FiArrowLeft size={14} />
+                            Back to Sign In
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setForgotStep("code");
+                                setResetError("");
+                            }}
+                            className="rounded text-[13px] font-semibold text-orange-600 outline-none transition hover:text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-orange-400 dark:hover:text-orange-300"
+                        >
+                            Change code
+                        </button>
+                    </div>
+                </>
+            )}
+
+            {mode === "forgot" && forgotStep === "done" && (
+                <>
+                    <div className="mb-6">
+                        <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Password reset</h2>
+                    </div>
+
+                    <div className={noticeBoxClass}>Your password has been reset. You can now sign in with your new password.</div>
+
+                    <button type="button" onClick={() => switchMode("signin")} className={`${primaryButtonClass} mt-5`}>
+                        Back to Sign In
+                        <FiArrowRight size={15} />
                     </button>
                 </>
             )}

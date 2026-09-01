@@ -1,5 +1,6 @@
-// Shared between login.jsx and resetPassword.jsx so both pages of the
-// pre-auth flow look like one continuous thing rather than two designs.
+// Shared styling constants for every form on login.jsx (Sign In, Create
+// Account, and the Forgot Password code/reset step) so they all look like
+// one continuous design.
 
 // Same field/label/focus treatment as formInputClass in SharedControls.jsx
 // (used by every form in the dashboard), just a touch taller and with room
