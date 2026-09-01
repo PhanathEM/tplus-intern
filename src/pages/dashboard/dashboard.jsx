@@ -875,7 +875,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
               isLoading={borrowHistory.isLoading}
               error={borrowHistory.error}
               onRetry={borrowHistory.handleRetry}
-              employees={borrowHistory.employeeOptions}
               filters={borrowHistory.filters}
               onFilterChange={borrowHistory.handleFilterChange}
               onClearFilters={borrowHistory.handleClearFilters}
@@ -968,6 +967,8 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                 onApprove={users.handleApprove}
                 onEditPermissions={users.handleOpenEditPermissions}
                 onResetPassword={users.handleOpenResetPassword}
+                onDelete={users.handleOpenDeleteUser}
+                currentUserId={user?.user_id ?? user?.id}
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -1329,6 +1330,21 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         error={users.resetPasswordError}
       />
 
+      <ConfirmDialog
+        isOpen={Boolean(users.userToDelete)}
+        title="Delete this account?"
+        message={
+          users.userToDelete
+            ? `"${users.userToDelete.username}" will be permanently removed and will no longer be able to sign in. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete account"
+        onConfirm={users.handleConfirmDeleteUser}
+        onCancel={users.handleCloseDeleteUser}
+        isConfirming={users.isDeletingUser}
+        error={users.deleteUserError}
+      />
+
       <CategoryFormModal
         isOpen={equipment.isCategoryFormOpen}
         mode={equipment.categoryFormMode}
@@ -1605,9 +1621,9 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
 
       <ConfirmDialog
         isOpen={recycleBin.isPurgeOpen}
-        title="Purge the entire recycle bin?"
+        title="Delete everything in the recycle bin forever?"
         message={`${recycleBin.entries.length} item${recycleBin.entries.length === 1 ? "" : "s"} will be permanently deleted. This cannot be undone.`}
-        confirmLabel="Purge all"
+        confirmLabel="Delete All Forever"
         onConfirm={recycleBin.handleConfirmPurge}
         onCancel={recycleBin.handleClosePurge}
         isConfirming={recycleBin.isPurging}
@@ -1625,8 +1641,10 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
 
       <ChangePasswordModal
         isOpen={account.isPasswordOpen}
+        currentPassword={account.currentPassword}
         newPassword={account.newPassword}
         confirmPassword={account.confirmPassword}
+        onChangeCurrentPassword={account.setCurrentPassword}
         onChangeNewPassword={account.setNewPassword}
         onChangeConfirmPassword={account.setConfirmPassword}
         onSubmit={account.handleSubmitChangePassword}

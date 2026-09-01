@@ -1,31 +1,33 @@
 import { useMemo, useState } from "react";
 import {
+    FiArrowLeft,
     FiArrowRight,
     FiEye,
     FiEyeOff,
     FiKey,
+    FiMail,
     FiUser,
     FiUserPlus,
 } from "react-icons/fi";
-import { login, signup } from "../../services/authService";
+import { login, signup, requestPasswordReset } from "../../services/authService";
 import { setAuthToken, setStoredCredentials } from "../../lib/apiClient";
-import tplusLogo from "../../assets/tplus-logo.png";
-import { ThemeToggle } from "../../components/ThemeToggle";
-
-function getPasswordScore(password) {
-    let score = 0;
-    if (password.length >= 8) score += 1;
-    if (/[A-Z]/.test(password)) score += 1;
-    if (/[0-9]/.test(password)) score += 1;
-    if (/[^A-Za-z0-9]/.test(password)) score += 1;
-    return score;
-}
+import { AuthLayout } from "./AuthLayout";
+import { PasswordStrengthBar } from "./PasswordStrength";
+import { getPasswordScore } from "./passwordScore";
+import {
+    errorBoxClass,
+    fieldInputClass,
+    fieldLabelClass,
+    noticeBoxClass,
+    primaryButtonClass,
+} from "./authStyles";
 
 export default function Login({ onLogin, theme, onToggleTheme }) {
+    // "signin" | "register" | "forgot"
     const [mode, setMode] = useState("signin");
 
     const [showPassword, setShowPassword] = useState(false);
-    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [rememberDevice, setRememberDevice] = useState(false);
     const [error, setError] = useState("");
@@ -33,12 +35,22 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
     const [attempts, setAttempts] = useState(0);
 
     const [regUsername, setRegUsername] = useState("");
+    const [regEmail, setRegEmail] = useState("");
     const [regPassword, setRegPassword] = useState("");
     const [regConfirmPassword, setRegConfirmPassword] = useState("");
     const [regShowPassword, setRegShowPassword] = useState(false);
     const [regError, setRegError] = useState("");
     const [isRegisterSubmitting, setIsRegisterSubmitting] = useState(false);
     const [signupNotice, setSignupNotice] = useState("");
+
+    // Backend doesn't have the real forgot-password endpoint built yet (see
+    // the spec sent over) — this still runs the real request so it starts
+    // working the moment that ships, but a 404 today is handled honestly
+    // instead of pretending an email went out.
+    const [forgotUsername, setForgotUsername] = useState("");
+    const [isRequestingReset, setIsRequestingReset] = useState(false);
+    const [forgotError, setForgotError] = useState("");
+    const [forgotNotice, setForgotNotice] = useState("");
 
     const passwordScore = useMemo(() => getPasswordScore(password), [password]);
     const regPasswordScore = useMemo(() => getPasswordScore(regPassword), [regPassword]);
@@ -49,13 +61,20 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
         setError("");
         setRegError("");
         setSignupNotice("");
+        setForgotError("");
+        setForgotNotice("");
     };
 
     const handleRegisterSubmit = async (e) => {
         e.preventDefault();
 
-        if (!regUsername.trim() || !regPassword.trim()) {
-            setRegError("Fill in your username and password to continue.");
+        if (!regUsername.trim() || !regEmail.trim() || !regPassword.trim()) {
+            setRegError("Fill in your username, email, and password to continue.");
+            return;
+        }
+
+        if (!/^\S+@\S+\.\S+$/.test(regEmail.trim())) {
+            setRegError("Enter a valid email address.");
             return;
         }
 
@@ -74,9 +93,11 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
             await signup({
                 fullName: regUsername.trim(),
                 username: regUsername.trim(),
+                email: regEmail.trim(),
                 password: regPassword,
             });
             setRegUsername("");
+            setRegEmail("");
             setRegPassword("");
             setRegConfirmPassword("");
             setSignupNotice("Account created — an admin needs to approve it before you can sign in.");
@@ -96,9 +117,9 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
             return;
         }
 
-        if (!username.trim() || !password.trim()) {
+        if (!email.trim() || !password.trim()) {
             setAttempts((value) => value + 1);
-            setError("Enter your username and password to continue.");
+            setError("Enter your email and password to continue.");
             return;
         }
 
@@ -107,7 +128,7 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
         setIsSubmitting(true);
 
         try {
-            const response = await login(username.trim(), password);
+            const response = await login(email.trim(), password);
             // Field name isn't documented by the backend yet — probe common shapes.
             const token = response?.token ?? response?.access_token ?? response?.accessToken;
             if (token) setAuthToken(token);
@@ -116,11 +137,11 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
             // apiClient.js) always match whatever the password actually is
             // right now — including right after this same account's
             // password was changed via Account settings.
-            setStoredCredentials(username.trim(), password);
+            setStoredCredentials(email.trim(), password);
             onLogin({
                 user: {
                     ...response?.user,
-                    name: response?.user?.full_name || response?.user?.username || username.trim(),
+                    name: response?.user?.full_name || response?.user?.username || email.trim(),
                     rememberDevice,
                 },
             });
@@ -132,316 +153,319 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
         }
     };
 
+    const handleForgotSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!forgotUsername.trim()) {
+            setForgotError("Enter your username to continue.");
+            return;
+        }
+
+        setForgotError("");
+        setForgotNotice("");
+        setIsRequestingReset(true);
+
+        try {
+            await requestPasswordReset(forgotUsername.trim());
+            // Same wording regardless of whether the account exists — never
+            // let this confirm/deny a username to whoever's asking.
+            setForgotNotice("If an account exists for that username, a reset link has been sent to the email on file.");
+        } catch (err) {
+            if (err.status === 404) {
+                setForgotError("This isn't set up yet — ask your system administrator to reset your password for you.");
+            } else if (err.status >= 500) {
+                setForgotError(err.message || "Something went wrong. Please try again.");
+            } else {
+                setForgotNotice("If an account exists for that username, a reset link has been sent to the email on file.");
+            }
+        } finally {
+            setIsRequestingReset(false);
+        }
+    };
+
     return (
-        <main className="min-h-screen bg-linear-to-br from-yellow-50 via-white to-amber-50 text-slate-950 overflow-hidden dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-100">
-            <div className="absolute right-5 top-5 z-10">
-                <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-            </div>
-            {/* Subtle background pattern */}
-            <div className="absolute inset-0 bg-[radial-gradient(#facc15_0.8px,transparent_1px)] bg-size-[20px_20px] opacity-30 pointer-events-none dark:opacity-10" />
+        <AuthLayout theme={theme} onToggleTheme={onToggleTheme}>
+            {mode !== "forgot" && (
+                <div className="mb-7 flex border-b border-slate-200 dark:border-slate-700">
+                    <button
+                        type="button"
+                        onClick={() => switchMode("signin")}
+                        className={`flex-1 border-b-2 px-4 py-2.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-inset ${mode === "signin"
+                            ? "border-orange-500 text-orange-600 dark:text-orange-400"
+                            : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                            }`}
+                    >
+                        Sign In
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => switchMode("register")}
+                        className={`flex-1 border-b-2 px-4 py-2.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-inset ${mode === "register"
+                            ? "border-orange-500 text-orange-600 dark:text-orange-400"
+                            : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                            }`}
+                    >
+                        Create Account
+                    </button>
+                </div>
+            )}
 
-            <div className="flex min-h-screen flex-col items-center justify-center px-5 py-12 sm:px-8 relative">
-                <div className="mx-auto w-full max-w-md">
-                    {/* Main Card */}
-                    <div className="rounded-3xl border border-yellow-100 bg-white/90 backdrop-blur-xl p-8 shadow-2xl shadow-yellow-500/10 sm:p-10 dark:border-slate-700 dark:bg-slate-900/90 dark:shadow-black/40">
-                        <div className="mb-8 flex items-center gap-4">
-                            <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-xl shadow-yellow-500/20 ring-1 ring-yellow-100 dark:bg-slate-800 dark:ring-slate-700 dark:shadow-black/30">
-                                <img
-                                    src={tplusLogo}
-                                    alt="TPLUS"
-                                    className="h-full w-full object-cover"
-                                />
-                            </div>
-                            <div className="min-w-0">
-                                <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">TPLUS</h1>
-                                <p className="mt-0.5 text-sm font-medium text-slate-500 dark:text-slate-400">Management System</p>
-                            </div>
+            {mode === "signin" && signupNotice && <div className={`mb-5 ${noticeBoxClass}`}>{signupNotice}</div>}
+            {mode === "signin" && error && <div className={`mb-5 ${errorBoxClass}`}>{error}</div>}
+            {mode === "register" && regError && <div className={`mb-5 ${errorBoxClass}`}>{regError}</div>}
+
+            {mode === "signin" && (
+                <form onSubmit={handleSubmit} className="space-y-5" autoComplete="off">
+                    {/* Email Field */}
+                    <div>
+                        <label className={fieldLabelClass} htmlFor="email">
+                            Email
+                        </label>
+                        <div className="relative">
+                            <FiMail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
+                            <input
+                                id="email"
+                                type="email"
+                                required
+                                autoComplete="off"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="Enter your email"
+                                className={fieldInputClass}
+                                disabled={isSubmitting || isLocked}
+                            />
                         </div>
+                    </div>
 
-                        {/* Mode Toggle */}
-                        <div className="mb-7 grid grid-cols-2 gap-1 rounded-2xl bg-yellow-50 p-1 dark:bg-slate-800">
+                    {/* Password Field */}
+                    <div>
+                        <label className={fieldLabelClass} htmlFor="password">
+                            Password
+                        </label>
+                        <div className="relative">
+                            <FiKey className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
+                            <input
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                required
+                                autoComplete="new-password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Enter your password"
+                                className={`${fieldInputClass} pr-11`}
+                                disabled={isSubmitting || isLocked}
+                            />
                             <button
                                 type="button"
-                                onClick={() => switchMode("signin")}
-                                className={`h-11 rounded-xl text-sm font-semibold transition-all ${mode === "signin"
-                                    ? "bg-white text-slate-950 shadow-sm dark:bg-slate-700 dark:text-white"
-                                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                                    }`}
-                            >
-                                Sign In
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => switchMode("register")}
-                                className={`h-11 rounded-xl text-sm font-semibold transition-all ${mode === "register"
-                                    ? "bg-white text-slate-950 shadow-sm dark:bg-slate-700 dark:text-white"
-                                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                                    }`}
-                            >
-                                Create Account
-                            </button>
-                        </div>
-
-                        {mode === "signin" && signupNotice && (
-                            <div
-                                className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-medium text-emerald-700 flex items-start gap-3 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
-                                role="status"
-                                aria-live="polite"
-                            >
-                                <div className="mt-0.5">✅</div>
-                                <div>{signupNotice}</div>
-                            </div>
-                        )}
-
-                        {mode === "signin" && error && (
-                            <div
-                                className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-700 flex items-start gap-3 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
-                                role="alert"
-                                aria-live="polite"
-                            >
-                                <div className="mt-0.5">⚠️</div>
-                                <div>{error}</div>
-                            </div>
-                        )}
-
-                        {mode === "register" && regError && (
-                            <div
-                                className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-700 flex items-start gap-3 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
-                                role="alert"
-                                aria-live="polite"
-                            >
-                                <div className="mt-0.5">⚠️</div>
-                                <div>{regError}</div>
-                            </div>
-                        )}
-
-                        {mode === "signin" ? (
-                        <form onSubmit={handleSubmit} className="space-y-7" autoComplete="off">
-                            {/* Username Field */}
-                            <div>
-                                <label
-                                    className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
-                                    htmlFor="username"
-                                >
-                                    Username
-                                </label>
-                                <div className="relative group">
-                                    <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors dark:text-slate-500 dark:group-focus-within:text-yellow-400" />
-                                    <input
-                                        id="username"
-                                        type="text"
-                                        required
-                                        autoComplete="off"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        placeholder="Enter your username"
-                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-5 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-yellow-500 dark:focus:ring-yellow-500/20"
-                                        disabled={isSubmitting || isLocked}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Password Field */}
-                            <div>
-                                <label
-                                    className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
-                                    htmlFor="password"
-                                >
-                                    Password
-                                </label>
-                                <div className="relative group">
-                                    <FiKey className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors dark:text-slate-500 dark:group-focus-within:text-yellow-400" />
-                                    <input
-                                        id="password"
-                                        type={showPassword ? "text" : "password"}
-                                        required
-                                        autoComplete="new-password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="Enter your password"
-                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-14 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-yellow-500 dark:focus:ring-yellow-500/20"
-                                        disabled={isSubmitting || isLocked}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword((value) => !value)}
-                                        className="absolute right-4 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-xl text-slate-400 hover:bg-yellow-100 hover:text-slate-700 transition-all dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                                        aria-label={showPassword ? "Hide password" : "Show password"}
-                                        disabled={isSubmitting || isLocked}
-                                    >
-                                        {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
-                                    </button>
-                                </div>
-
-                                {/* Password Strength */}
-                                <div className="mt-4 flex gap-2" aria-hidden="true">
-                                    {[1, 2, 3, 4].map((level) => (
-                                        <div
-                                            key={level}
-                                            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${passwordScore >= level
-                                                ? "bg-linear-to-r from-yellow-400 to-amber-500"
-                                                : "bg-yellow-100 dark:bg-slate-700"
-                                                }`}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Options */}
-                            <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
-                                <label className="flex items-center gap-3 cursor-pointer group">
-                                    <input
-                                        type="checkbox"
-                                        checked={rememberDevice}
-                                        onChange={(e) => setRememberDevice(e.target.checked)}
-                                        className="h-5 w-5 accent-yellow-500 border-yellow-300 rounded-lg focus:ring-yellow-400 transition"
-                                        disabled={isSubmitting || isLocked}
-                                    />
-                                    <span className="text-sm font-medium text-slate-600 group-hover:text-slate-800 transition dark:text-slate-400 dark:group-hover:text-slate-200">
-                                        Remember this device
-                                    </span>
-                                </label>
-
-                                <button
-                                    type="button"
-                                    className="text-sm font-semibold text-slate-600 hover:text-yellow-600 transition-colors dark:text-slate-400 dark:hover:text-yellow-400"
-                                >
-                                    Forgot password?
-                                </button>
-                            </div>
-
-                            {/* Submit Button */}
-                            <button
-                                type="submit"
-                                className="mt-4 inline-flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-linear-to-r from-yellow-500 to-amber-500 px-8 text-base font-semibold text-slate-950 shadow-lg shadow-yellow-500/30 transition-all hover:brightness-110 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-70"
+                                onClick={() => setShowPassword((value) => !value)}
+                                className="absolute right-1.5 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                                aria-label={showPassword ? "Hide password" : "Show password"}
                                 disabled={isSubmitting || isLocked}
                             >
-                                {isSubmitting ? (
-                                    <>Verifying identity...</>
-                                ) : (
-                                    <>
-                                        Sign in securely
-                                        <FiArrowRight className="transition-transform group-hover:translate-x-1" />
-                                    </>
-                                )}
+                                {showPassword ? <FiEyeOff size={16} /> : <FiEye size={16} />}
                             </button>
-                        </form>
+                        </div>
+                        <PasswordStrengthBar score={passwordScore} />
+                    </div>
+
+                    {/* Options */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                        <label className="flex cursor-pointer items-center gap-2">
+                            <input
+                                type="checkbox"
+                                checked={rememberDevice}
+                                onChange={(e) => setRememberDevice(e.target.checked)}
+                                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400 dark:border-slate-600 dark:bg-slate-800"
+                                disabled={isSubmitting || isLocked}
+                            />
+                            <span className="text-[13px] font-medium text-slate-600 dark:text-slate-400">
+                                Remember this device
+                            </span>
+                        </label>
+
+                        <button
+                            type="button"
+                            onClick={() => switchMode("forgot")}
+                            className="rounded text-[13px] font-semibold text-orange-600 outline-none transition hover:text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-orange-400 dark:hover:text-orange-300"
+                        >
+                            Forgot password?
+                        </button>
+                    </div>
+
+                    {/* Submit Button */}
+                    <button type="submit" className={`${primaryButtonClass} mt-2`} disabled={isSubmitting || isLocked}>
+                        {isSubmitting ? (
+                            <>Verifying identity...</>
                         ) : (
-                        <form onSubmit={handleRegisterSubmit} className="space-y-6" autoComplete="off">
-                            {/* Username Field */}
+                            <>
+                                Sign in securely
+                                <FiArrowRight size={15} />
+                            </>
+                        )}
+                    </button>
+                </form>
+            )}
+
+            {mode === "register" && (
+                <form onSubmit={handleRegisterSubmit} className="space-y-5" autoComplete="off">
+                    {/* Username Field */}
+                    <div>
+                        <label className={fieldLabelClass} htmlFor="reg-username">
+                            Username
+                        </label>
+                        <div className="relative">
+                            <FiUser className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
+                            <input
+                                id="reg-username"
+                                type="text"
+                                required
+                                autoComplete="off"
+                                value={regUsername}
+                                onChange={(e) => setRegUsername(e.target.value)}
+                                placeholder="Choose a username"
+                                className={fieldInputClass}
+                                disabled={isRegisterSubmitting}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Email Field */}
+                    <div>
+                        <label className={fieldLabelClass} htmlFor="reg-email">
+                            Email
+                        </label>
+                        <div className="relative">
+                            <FiMail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
+                            <input
+                                id="reg-email"
+                                type="email"
+                                required
+                                autoComplete="off"
+                                value={regEmail}
+                                onChange={(e) => setRegEmail(e.target.value)}
+                                placeholder="you@company.com"
+                                className={fieldInputClass}
+                                disabled={isRegisterSubmitting}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Password Field */}
+                    <div>
+                        <label className={fieldLabelClass} htmlFor="reg-password">
+                            Password
+                        </label>
+                        <div className="relative">
+                            <FiKey className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
+                            <input
+                                id="reg-password"
+                                type={regShowPassword ? "text" : "password"}
+                                required
+                                autoComplete="new-password"
+                                value={regPassword}
+                                onChange={(e) => setRegPassword(e.target.value)}
+                                placeholder="Create a password"
+                                className={`${fieldInputClass} pr-11`}
+                                disabled={isRegisterSubmitting}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setRegShowPassword((value) => !value)}
+                                className="absolute right-1.5 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-md text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                                aria-label={regShowPassword ? "Hide password" : "Show password"}
+                                disabled={isRegisterSubmitting}
+                            >
+                                {regShowPassword ? <FiEyeOff size={16} /> : <FiEye size={16} />}
+                            </button>
+                        </div>
+                        <PasswordStrengthBar score={regPasswordScore} />
+                    </div>
+
+                    {/* Confirm Password Field */}
+                    <div>
+                        <label className={fieldLabelClass} htmlFor="reg-confirm-password">
+                            Confirm Password
+                        </label>
+                        <div className="relative">
+                            <FiKey className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
+                            <input
+                                id="reg-confirm-password"
+                                type={regShowPassword ? "text" : "password"}
+                                required
+                                autoComplete="new-password"
+                                value={regConfirmPassword}
+                                onChange={(e) => setRegConfirmPassword(e.target.value)}
+                                placeholder="Re-enter your password"
+                                className={fieldInputClass}
+                                disabled={isRegisterSubmitting}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <button type="submit" className={`${primaryButtonClass} mt-2`} disabled={isRegisterSubmitting}>
+                        {isRegisterSubmitting ? (
+                            <>Creating account...</>
+                        ) : (
+                            <>
+                                Create account
+                                <FiUserPlus size={15} />
+                            </>
+                        )}
+                    </button>
+                </form>
+            )}
+
+            {mode === "forgot" && (
+                <>
+                    <div className="mb-6">
+                        <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Reset your password</h2>
+                        <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
+                            Enter your username and we'll email a reset link to the address on file for that account.
+                        </p>
+                    </div>
+
+                    {forgotNotice && <div className={`mb-5 ${noticeBoxClass}`}>{forgotNotice}</div>}
+                    {forgotError && <div className={`mb-5 ${errorBoxClass}`}>{forgotError}</div>}
+
+                    {!forgotNotice && (
+                        <form onSubmit={handleForgotSubmit} className="space-y-5" autoComplete="off">
                             <div>
-                                <label
-                                    className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
-                                    htmlFor="reg-username"
-                                >
+                                <label className={fieldLabelClass} htmlFor="forgot-username">
                                     Username
                                 </label>
-                                <div className="relative group">
-                                    <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors dark:text-slate-500 dark:group-focus-within:text-yellow-400" />
+                                <div className="relative">
+                                    <FiUser className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
                                     <input
-                                        id="reg-username"
+                                        id="forgot-username"
                                         type="text"
                                         required
                                         autoComplete="off"
-                                        value={regUsername}
-                                        onChange={(e) => setRegUsername(e.target.value)}
-                                        placeholder="Choose a username"
-                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-5 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-yellow-500 dark:focus:ring-yellow-500/20"
-                                        disabled={isRegisterSubmitting}
+                                        value={forgotUsername}
+                                        onChange={(e) => setForgotUsername(e.target.value)}
+                                        placeholder="Enter your username"
+                                        className={fieldInputClass}
+                                        disabled={isRequestingReset}
                                     />
                                 </div>
                             </div>
 
-                            {/* Password Field */}
-                            <div>
-                                <label
-                                    className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
-                                    htmlFor="reg-password"
-                                >
-                                    Password
-                                </label>
-                                <div className="relative group">
-                                    <FiKey className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors dark:text-slate-500 dark:group-focus-within:text-yellow-400" />
-                                    <input
-                                        id="reg-password"
-                                        type={regShowPassword ? "text" : "password"}
-                                        required
-                                        autoComplete="new-password"
-                                        value={regPassword}
-                                        onChange={(e) => setRegPassword(e.target.value)}
-                                        placeholder="Create a password"
-                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-14 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-yellow-500 dark:focus:ring-yellow-500/20"
-                                        disabled={isRegisterSubmitting}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setRegShowPassword((value) => !value)}
-                                        className="absolute right-4 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-xl text-slate-400 hover:bg-yellow-100 hover:text-slate-700 transition-all dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                                        aria-label={regShowPassword ? "Hide password" : "Show password"}
-                                        disabled={isRegisterSubmitting}
-                                    >
-                                        {regShowPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
-                                    </button>
-                                </div>
-
-                                {/* Password Strength */}
-                                <div className="mt-4 flex gap-2" aria-hidden="true">
-                                    {[1, 2, 3, 4].map((level) => (
-                                        <div
-                                            key={level}
-                                            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${regPasswordScore >= level
-                                                ? "bg-linear-to-r from-yellow-400 to-amber-500"
-                                                : "bg-yellow-100 dark:bg-slate-700"
-                                                }`}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Confirm Password Field */}
-                            <div>
-                                <label
-                                    className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
-                                    htmlFor="reg-confirm-password"
-                                >
-                                    Confirm Password
-                                </label>
-                                <div className="relative group">
-                                    <FiKey className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors dark:text-slate-500 dark:group-focus-within:text-yellow-400" />
-                                    <input
-                                        id="reg-confirm-password"
-                                        type={regShowPassword ? "text" : "password"}
-                                        required
-                                        autoComplete="new-password"
-                                        value={regConfirmPassword}
-                                        onChange={(e) => setRegConfirmPassword(e.target.value)}
-                                        placeholder="Re-enter your password"
-                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-5 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-yellow-500 dark:focus:ring-yellow-500/20"
-                                        disabled={isRegisterSubmitting}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Submit Button */}
-                            <button
-                                type="submit"
-                                className="mt-4 inline-flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-linear-to-r from-yellow-500 to-amber-500 px-8 text-base font-semibold text-slate-950 shadow-lg shadow-yellow-500/30 transition-all hover:brightness-110 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-70"
-                                disabled={isRegisterSubmitting}
-                            >
-                                {isRegisterSubmitting ? (
-                                    <>Creating account...</>
-                                ) : (
-                                    <>
-                                        Create account
-                                        <FiUserPlus className="transition-transform group-hover:translate-x-1" />
-                                    </>
-                                )}
+                            <button type="submit" className={primaryButtonClass} disabled={isRequestingReset}>
+                                {isRequestingReset ? "Sending..." : "Send reset link"}
                             </button>
                         </form>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </main>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={() => switchMode("signin")}
+                        className="mt-5 inline-flex items-center gap-1.5 rounded text-[13px] font-semibold text-slate-600 outline-none transition hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:text-slate-200"
+                    >
+                        <FiArrowLeft size={14} />
+                        Back to Sign In
+                    </button>
+                </>
+            )}
+        </AuthLayout>
     );
 }

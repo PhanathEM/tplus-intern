@@ -489,7 +489,6 @@ export function ServerUsageView({
                   <th colSpan={3} className={SERVER_USAGE_GROUP_CELL}>{t("Total Capacity")}</th>
                   <th colSpan={3} className={SERVER_USAGE_GROUP_CELL}>{t("Usage")}</th>
                   <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>{t("Owner")}</th>
-                  {onEdit && <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>{t("Actions")}</th>}
                 </tr>
                 <tr>
                   <th className={SERVER_USAGE_FIELD_CELL}>{t("CPU")}</th>
@@ -513,8 +512,18 @@ export function ServerUsageView({
               </thead>
               <tbody>
                 {paginatedUsage.map((record, index) => (
-                  <tr key={record.usage_id ?? index}>
-                    <td className={SERVER_USAGE_DATA_CELL}>{(page - 1) * SERVER_USAGE_PAGE_SIZE + index + 1}</td>
+                  <tr
+                    key={record.usage_id ?? index}
+                    onClick={onEdit ? () => onEdit(record) : undefined}
+                    className={
+                      onEdit
+                        ? "group relative cursor-pointer transition hover:z-10 hover:shadow-[0_1px_2px_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.35)]"
+                        : undefined
+                    }
+                  >
+                    <td className={`${SERVER_USAGE_DATA_CELL} ${onEdit ? "group-hover:relative group-hover:z-10 group-hover:rounded-l-lg" : ""}`}>
+                      {(page - 1) * SERVER_USAGE_PAGE_SIZE + index + 1}
+                    </td>
                     <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.due_date)}</td>
                     <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.device_name)}</td>
                     <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.ip_address)}</td>
@@ -524,19 +533,9 @@ export function ServerUsageView({
                     <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.cpu_usage_pct)}</td>
                     <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.memory_usage_pct)}</td>
                     <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.hdd_usage_gb)}</td>
-                    <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.owner_name)}</td>
-                    {onEdit && (
-                      <td className={`${SERVER_USAGE_DATA_CELL} text-center`}>
-                        <button
-                          type="button"
-                          onClick={() => onEdit(record)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
-                        >
-                          <Edit2 size={12} />
-                          {t("Edit")}
-                        </button>
-                      </td>
-                    )}
+                    <td className={`${SERVER_USAGE_DATA_CELL} ${onEdit ? "group-hover:relative group-hover:z-10 group-hover:rounded-r-lg" : ""}`}>
+                      {formatFieldValue(record.owner_name)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

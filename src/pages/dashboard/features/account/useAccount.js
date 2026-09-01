@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { fetchCurrentUser } from "../../../../services/authService";
-import { resetUserPassword } from "../../../../services/userService";
-import { setStoredCredentials } from "../../../../lib/apiClient";
+import { changePassword, setStoredCredentials } from "../../../../lib/apiClient";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 
 export function useAccount({ user }) {
@@ -36,12 +35,11 @@ export function useAccount({ user }) {
 
   // --- Change password (self-service) --------------------------------------
 
-  // There's no dedicated self-service change-password endpoint yet — this
-  // reuses the same admin-authority reset endpoint the Users page uses to
-  // reset someone else's password, just targeted at the logged-in user's
-  // own account_id. That means it only actually works for admins today;
-  // a non-admin will get back whatever permission error the backend sends.
+  // POST /api/auth/change-password — any logged-in user, not admin-only.
+  // Auth is Basic base64(username:current_password), proving the caller
+  // actually knows their current password (see changePassword in apiClient.js).
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSavingPassword, setIsSavingPassword] = useState(false);
@@ -49,6 +47,7 @@ export function useAccount({ user }) {
 
   function handleOpenChangePassword() {
     setIsPasswordOpen(true);
+    setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
     setPasswordError(null);
@@ -61,8 +60,12 @@ export function useAccount({ user }) {
   function handleSubmitChangePassword(event) {
     event.preventDefault();
 
-    if (!newPassword.trim()) {
-      setPasswordError("Please enter a new password.");
+    if (!currentPassword.trim()) {
+      setPasswordError("Please enter your current password.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters.");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -70,8 +73,8 @@ export function useAccount({ user }) {
       return;
     }
 
-    const userId = user?.user_id ?? user?.id;
-    if (userId == null) {
+    const username = user?.username;
+    if (!username) {
       setPasswordError("Could not identify your account. Please sign in again.");
       return;
     }
@@ -79,19 +82,19 @@ export function useAccount({ user }) {
     setIsSavingPassword(true);
     setPasswordError(null);
 
-    resetUserPassword(userId, newPassword)
+    changePassword(username, currentPassword, newPassword)
       .then(() => {
-        // This changes the same account every other request on this page
-        // authenticates as (see apiClient.js) — refresh the stored
-        // credentials immediately so this tab keeps working right away,
-        // instead of every request 401ing until the next fresh login.
-        if (user?.username) setStoredCredentials(user.username, newPassword);
+        // Every other request on this session authenticates with whatever
+        // is stored here (see apiClient.js) — refresh it immediately so
+        // this tab keeps working right away instead of 401ing until the
+        // next fresh login.
+        setStoredCredentials(username, newPassword);
         logActivity({
           actor: user,
           action: "reset_password",
           module: ACTIVITY_MODULES.USER,
-          entityId: userId,
-          entityLabel: user?.username || user?.name || "My account",
+          entityId: user?.user_id ?? user?.id,
+          entityLabel: username || user?.name || "My account",
         });
         setIsPasswordOpen(false);
       })
@@ -107,8 +110,10 @@ export function useAccount({ user }) {
     handleOpenProfile,
     handleCloseProfile,
     isPasswordOpen,
+    currentPassword,
     newPassword,
     confirmPassword,
+    setCurrentPassword,
     setNewPassword,
     setConfirmPassword,
     isSavingPassword,

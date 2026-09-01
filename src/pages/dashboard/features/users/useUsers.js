@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchUsers, resetUserPassword, updateUser } from "../../../../services/userService";
+import { deleteUser, fetchUsers, resetUserPassword, updateUser } from "../../../../services/userService";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 import {
   mergeStoredPermissionsForUser,
@@ -15,7 +15,7 @@ export function useUsers({ isActive, user }) {
   const [error, setError] = useState(null);
   const [fetchToken, setFetchToken] = useState(0);
   const [permissionsTarget, setPermissionsTarget] = useState(null);
-  const [permissionValues, setPermissionValues] = useState({ full_name: "", permissions: [] });
+  const [permissionValues, setPermissionValues] = useState({ full_name: "", email: "", permissions: [] });
   const [isSavingPermissions, setIsSavingPermissions] = useState(false);
   const [permissionsError, setPermissionsError] = useState(null);
   const [resetPasswordTarget, setResetPasswordTarget] = useState(null);
@@ -23,6 +23,9 @@ export function useUsers({ isActive, user }) {
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [resetPasswordError, setResetPasswordError] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const [deleteUserError, setDeleteUserError] = useState(null);
 
   useEffect(() => {
     if (!isActive) return;
@@ -83,6 +86,7 @@ export function useUsers({ isActive, user }) {
     setPermissionsTarget(targetUser);
     setPermissionValues({
       full_name: targetUser.full_name || "",
+      email: targetUser.email || "",
       permissions: normalizeUserPermissions(targetUser),
     });
     setPermissionsError(null);
@@ -102,11 +106,13 @@ export function useUsers({ isActive, user }) {
     const permissions = normalizeUserPermissions({ permissions: permissionValues.permissions });
     const payload = {
       full_name: permissionValues.full_name.trim(),
+      email: permissionValues.email.trim(),
       permissions,
       role: permissionsToRole(permissions),
     };
     const legacyPayload = {
       full_name: payload.full_name,
+      email: payload.email,
       role: payload.role,
     };
 
@@ -173,6 +179,39 @@ export function useUsers({ isActive, user }) {
       .finally(() => setIsResettingPassword(false));
   }
 
+  function handleOpenDeleteUser(targetUser) {
+    setUserToDelete(targetUser);
+    setDeleteUserError(null);
+  }
+
+  function handleCloseDeleteUser() {
+    setUserToDelete(null);
+    setDeleteUserError(null);
+  }
+
+  function handleConfirmDeleteUser() {
+    if (!userToDelete) return;
+
+    setIsDeletingUser(true);
+    setDeleteUserError(null);
+
+    deleteUser(userToDelete.user_id)
+      .then(() => {
+        logActivity({
+          actor: user,
+          action: "delete",
+          module: ACTIVITY_MODULES.USER,
+          entityId: userToDelete.user_id,
+          entityLabel: userToDelete.username || userToDelete.full_name,
+          before: userToDelete,
+        });
+        setUserToDelete(null);
+        handleRetry();
+      })
+      .catch((error) => setDeleteUserError(error.message || "Could not delete this account."))
+      .finally(() => setIsDeletingUser(false));
+  }
+
   return {
     users,
     pendingApprovalCount,
@@ -199,5 +238,11 @@ export function useUsers({ isActive, user }) {
     setResetPassword,
     setResetPasswordConfirm,
     handleSubmitResetPassword,
+    userToDelete,
+    isDeletingUser,
+    deleteUserError,
+    handleOpenDeleteUser,
+    handleCloseDeleteUser,
+    handleConfirmDeleteUser,
   };
 }

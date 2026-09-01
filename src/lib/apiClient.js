@@ -93,6 +93,25 @@ export async function apiPost(path, body, { skipCredentials = false } = {}) {
   return handleResponse(response);
 }
 
+// Self-service password change (POST /api/auth/change-password) has its own
+// auth model — Basic base64(username:current_password), proving the caller
+// actually knows their current password — not the Bearer token or the
+// stored temp-guard credentials every other call uses. Doesn't update
+// stored credentials itself; the caller does that via setStoredCredentials()
+// once this resolves.
+export async function changePassword(username, currentPassword, newPassword) {
+  const response = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${btoa(`${username}:${currentPassword}`)}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
+  return handleResponse(response);
+}
+
 export async function apiPatch(path, body, { skipCredentials = false } = {}) {
   const url = skipCredentials ? path : appendTempCredentials(path);
   const response = await fetch(`${API_BASE_URL}${url}`, {

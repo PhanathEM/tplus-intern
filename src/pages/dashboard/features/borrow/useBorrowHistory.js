@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { fetchBorrowHistory } from "../../../../services/borrowService";
-import { fetchEmployees } from "../../../../services/employeeService";
 import { BORROW_HISTORY_INITIAL_FILTERS } from "../../dashboard.config";
 
 export function useBorrowHistory({ isActive }) {
@@ -9,25 +8,6 @@ export function useBorrowHistory({ isActive }) {
   const [error, setError] = useState(null);
   const [fetchToken, setFetchToken] = useState(0);
   const [filters, setFilters] = useState(BORROW_HISTORY_INITIAL_FILTERS);
-  const [employeeOptions, setEmployeeOptions] = useState([]);
-
-  useEffect(() => {
-    if (!isActive) return;
-
-    let ignore = false;
-
-    fetchEmployees()
-      .then((data) => {
-        if (!ignore) setEmployeeOptions(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        if (!ignore) setEmployeeOptions([]);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [isActive]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -82,7 +62,6 @@ export function useBorrowHistory({ isActive }) {
     error,
     handleRetry,
     resetForEntry,
-    employeeOptions,
     filters,
     handleFilterChange,
     handleClearFilters,

@@ -83,8 +83,10 @@ export function ProfileModal({ isOpen, profile, isLoading, error, accessLabel, o
 
 export function ChangePasswordModal({
   isOpen,
+  currentPassword,
   newPassword,
   confirmPassword,
+  onChangeCurrentPassword,
   onChangeNewPassword,
   onChangeConfirmPassword,
   onSubmit,
@@ -131,11 +133,24 @@ export function ChangePasswordModal({
               </div>
             )}
             <div className="grid gap-4">
+              <FormField label={t("Current Password *")} htmlFor="account-current-password">
+                <input
+                  id="account-current-password"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => onChangeCurrentPassword(e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
               <FormField label={t("New Password *")} htmlFor="account-new-password">
                 <input
                   id="account-new-password"
                   type="password"
                   required
+                  minLength={8}
                   autoComplete="new-password"
                   value={newPassword}
                   onChange={(e) => onChangeNewPassword(e.target.value)}

@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut } from "../lib/apiClient";
+import { apiGet, apiPost, apiPut, apiDelete } from "../lib/apiClient";
 
 export function fetchUsers() {
   return apiGet("/api/users");
@@ -14,4 +14,8 @@ export function updateUser(userId, payload) {
 
 export function resetUserPassword(userId, newPassword) {
   return apiPost(`/api/users/${userId}/reset-password`, { new_password: newPassword });
+}
+
+export function deleteUser(userId) {
+  return apiDelete(`/api/users/${userId}`);
 }

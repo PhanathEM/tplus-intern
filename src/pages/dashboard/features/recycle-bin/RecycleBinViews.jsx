@@ -153,6 +153,8 @@ function RecycleBinRow({ entry, onRestore, onDeleteForever, isRestoring, isDelet
   );
 }
 
+const RECYCLE_BIN_PAGE_SIZE = 15;
+
 export function RecycleBinView({
   entries,
   isLoading,
@@ -170,6 +172,27 @@ export function RecycleBinView({
   actionError,
 }) {
   const { t, i18n } = useTranslation();
+  const [page, setPage] = useState(1);
+
+  // A new type filter means a whole new result set — start back on page 1
+  // rather than stranding the user on a page number that may not exist.
+  // Adjusted during render (not an effect) per React's guidance for
+  // resetting state when a prop changes.
+  const [prevTypeFilter, setPrevTypeFilter] = useState(typeFilter);
+  if (typeFilter !== prevTypeFilter) {
+    setPrevTypeFilter(typeFilter);
+    setPage(1);
+  }
+
+  const pageCount = Math.max(1, Math.ceil(entries.length / RECYCLE_BIN_PAGE_SIZE));
+  // Clamped rather than reset via state — a restore/delete can shrink the
+  // list out from under whatever page you were on (e.g. purging the last
+  // item on page 3), so this just settles on the nearest valid page instead.
+  const currentPage = Math.min(page, pageCount);
+  const paginatedEntries = entries.slice(
+    (currentPage - 1) * RECYCLE_BIN_PAGE_SIZE,
+    currentPage * RECYCLE_BIN_PAGE_SIZE
+  );
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -204,7 +227,7 @@ export function RecycleBinView({
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3.5 text-[13px] font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-800 dark:bg-slate-800 dark:text-rose-400 dark:hover:border-rose-700 dark:hover:bg-rose-950/40 dark:focus-visible:ring-offset-slate-900"
               >
                 <Trash2 size={14} />
-                {isPurging ? t("Purging...") : t("Purge All")}
+                {isPurging ? t("Deleting...") : t("Purge All")}
               </button>
             )}
           </div>
@@ -250,7 +273,7 @@ export function RecycleBinView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
-                {entries.map((entry) => {
+                {paginatedEntries.map((entry) => {
                   const id = getEntryId(entry);
                   return (
                     <RecycleBinRow
@@ -265,6 +288,37 @@ export function RecycleBinView({
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!isLoading && !error && entries.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            <span>
+              {t("Showing")} {(currentPage - 1) * RECYCLE_BIN_PAGE_SIZE + 1}
+              {"–"}
+              {Math.min(currentPage * RECYCLE_BIN_PAGE_SIZE, entries.length)} {t("of")} {entries.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() => setPage(Math.max(1, currentPage - 1))}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
+              >
+                {t("Previous")}
+              </button>
+              <span className="tabular-nums text-slate-400 dark:text-slate-500">
+                {currentPage} / {pageCount}
+              </span>
+              <button
+                type="button"
+                disabled={currentPage === pageCount}
+                onClick={() => setPage(Math.min(pageCount, currentPage + 1))}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
+              >
+                {t("Next")}
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -273,7 +273,6 @@ export const borrowHistoryColumns = [
 ];
 
 export const BORROW_HISTORY_INITIAL_FILTERS = {
-  borrower_id: "",
   from: "",
   to: "",
 };

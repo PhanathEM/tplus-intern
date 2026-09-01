@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   FiAlertTriangle as AlertTriangle,
   FiRefreshCw as RefreshCw,
+  FiTrash2 as Trash2,
   FiUsers as Users,
   FiX as X,
 } from "react-icons/fi";
@@ -24,6 +25,8 @@ export function UsersView({
   onApprove,
   onEditPermissions,
   onResetPassword,
+  onDelete,
+  currentUserId,
 }) {
   const { t, i18n } = useTranslation();
 
@@ -74,7 +77,7 @@ export function UsersView({
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
                   <th className="px-5 py-3 font-semibold">{t("Username")}</th>
-                  <th className="px-5 py-3 font-semibold">{t("Full Name")}</th>
+                  <th className="px-5 py-3 font-semibold">{t("Email")}</th>
                   <th className="px-5 py-3 font-semibold">{t("Permissions")}</th>
                   <th className="px-5 py-3 font-semibold">{t("Status")}</th>
                   <th className="px-5 py-3 font-semibold text-right">{t("Actions")}</th>
@@ -86,7 +89,9 @@ export function UsersView({
                     <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-950 dark:text-white">
                       {user.username}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">{user.full_name || "—"}</td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">
+                      {user.email || "—"}
+                    </td>
                     <td className="min-w-64 px-5 py-3.5 text-slate-600 dark:text-slate-300">
                       <span className="inline-flex max-w-72 items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                         <span className="truncate">{getPermissionSummary(user, 3, t)}</span>
@@ -127,6 +132,16 @@ export function UsersView({
                         >
                           {t("Reset Password")}
                         </button>
+                        {onDelete && String(user.user_id) !== String(currentUserId) && (
+                          <button
+                            type="button"
+                            onClick={() => onDelete(user)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-rose-800 dark:bg-slate-800 dark:text-rose-400 dark:hover:border-rose-700 dark:hover:bg-rose-950/40 dark:focus-visible:ring-offset-slate-900"
+                          >
+                            <Trash2 size={12} />
+                            {t("Delete")}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -215,6 +230,18 @@ export function UserPermissionsModal({ isOpen, user, values, onChange, onSubmit,
                   autoComplete="off"
                   value={values.full_name}
                   onChange={(e) => onChange("full_name", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+              <FormField label={t("Email")} htmlFor="user-email">
+                <input
+                  id="user-email"
+                  type="email"
+                  autoComplete="off"
+                  value={values.email}
+                  onChange={(e) => onChange("email", e.target.value)}
+                  placeholder="you@company.com"
                   className={formInputClass}
                   disabled={isSubmitting}
                 />

@@ -11,10 +11,26 @@ export function fetchCurrentUser() {
   return apiGet("/api/auth/me");
 }
 
-export function signup({ fullName, username, password }) {
+// email is accepted by the endpoint (no error), but the 201 response never
+// echoes it back the way it does username/full_name/role — a strong signal
+// backend isn't storing it yet. Sending it anyway so accounts are ready to
+// have a real email on file the moment backend does persist it.
+export function signup({ fullName, username, email, password }) {
   return apiPost(
     "/api/auth/signup",
-    { full_name: fullName, username, password },
+    { full_name: fullName, username, email, password },
     { skipCredentials: true }
   );
+}
+
+// Both pre-auth, like login/signup — no credentials to attach yet. Paths and
+// body shape are provisional pending backend actually building these (see
+// the "Need: real self-service forgot password flow" spec); update if
+// backend's real endpoints differ.
+export function requestPasswordReset(username) {
+  return apiPost("/api/auth/forgot-password", { username }, { skipCredentials: true });
+}
+
+export function confirmPasswordReset(token, newPassword) {
+  return apiPost("/api/auth/reset-password", { token, new_password: newPassword }, { skipCredentials: true });
 }

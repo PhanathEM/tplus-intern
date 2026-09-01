@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { FiAlertTriangle as AlertTriangle, FiChevronDown as ChevronDown, FiMonitor as Monitor, FiPlusCircle as PlusCircle, FiRefreshCw as RefreshCw, FiSearch as Search, FiX as X } from "react-icons/fi";
 import { PART_ACTION_OPTIONS } from "../../dashboard.config";
-import { formatFieldValue } from "../../dashboard.utils";
+import { formatFieldValue, getEquipmentDisplayName } from "../../dashboard.utils";
 import { EmptyState, formInputClass, RadioSelect } from "../../components/SharedControls";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
@@ -676,6 +676,7 @@ export function ReplaceDeviceDialog({
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Replace this device")}</h2>
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">{getEquipmentDisplayName(device)}</p>
           </div>
           <button
             type="button"

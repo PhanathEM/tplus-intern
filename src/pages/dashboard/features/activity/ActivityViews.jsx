@@ -194,6 +194,8 @@ function ActivityTable({ entries, showActor, emptyDescription }) {
   );
 }
 
+const ACTIVITY_LOG_PAGE_SIZE = 15;
+
 export function ActivityLogView({
   entries,
   totalCount,
@@ -203,6 +205,28 @@ export function ActivityLogView({
   actionOptions,
 }) {
   const { t } = useTranslation();
+  const [page, setPage] = useState(1);
+
+  // A filter change means a whole new result set — start back on page 1
+  // rather than stranding the user on a page number that may not exist.
+  // Adjusted during render (not an effect) per React's guidance for
+  // resetting state when a prop changes.
+  const [prevFilters, setPrevFilters] = useState(filters);
+  if (
+    filters.module !== prevFilters.module ||
+    filters.action !== prevFilters.action ||
+    filters.search !== prevFilters.search
+  ) {
+    setPrevFilters(filters);
+    setPage(1);
+  }
+
+  const pageCount = Math.max(1, Math.ceil(entries.length / ACTIVITY_LOG_PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const paginatedEntries = entries.slice(
+    (currentPage - 1) * ACTIVITY_LOG_PAGE_SIZE,
+    currentPage * ACTIVITY_LOG_PAGE_SIZE
+  );
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -257,7 +281,38 @@ export function ActivityLogView({
           </div>
         </div>
 
-        <ActivityTable entries={entries} showActor emptyDescription={t("No activity matches these filters.")} />
+        <ActivityTable entries={paginatedEntries} showActor emptyDescription={t("No activity matches these filters.")} />
+
+        {entries.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            <span>
+              {t("Showing")} {(currentPage - 1) * ACTIVITY_LOG_PAGE_SIZE + 1}
+              {"–"}
+              {Math.min(currentPage * ACTIVITY_LOG_PAGE_SIZE, entries.length)} {t("of")} {entries.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() => setPage(Math.max(1, currentPage - 1))}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
+              >
+                {t("Previous")}
+              </button>
+              <span className="tabular-nums text-slate-400 dark:text-slate-500">
+                {currentPage} / {pageCount}
+              </span>
+              <button
+                type="button"
+                disabled={currentPage === pageCount}
+                onClick={() => setPage(Math.min(pageCount, currentPage + 1))}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
+              >
+                {t("Next")}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
