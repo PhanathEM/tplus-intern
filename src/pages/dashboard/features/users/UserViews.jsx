@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FiAlertTriangle as AlertTriangle,
   FiRefreshCw as RefreshCw,
@@ -7,6 +8,7 @@ import {
 } from "react-icons/fi";
 import { EmptyState, FormField, formInputClass } from "../../components/SharedControls";
 import { userPermissionSections } from "../../dashboard.config";
+import { translateLabel } from "../../../../lib/i18nLabel";
 import {
   ALL_PERMISSION_VALUES,
   getPermissionSummary,
@@ -23,44 +25,37 @@ export function UsersView({
   onEditPermissions,
   onResetPassword,
 }) {
+  const { t, i18n } = useTranslation();
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">User accounts</h2>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("User accounts")}</h2>
             {!isLoading && !error && (
               <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-                {users.length} account{users.length === 1 ? "" : "s"}
-                {pendingCount > 0 && ` · ${pendingCount} pending approval`}
+                {t("account_count", { count: users.length })}
+                {pendingCount > 0 && ` · ${t("pending_approval_suffix", { count: pendingCount })}`}
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onRetry}
-            disabled={isLoading}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
-          >
-            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-            Refresh
-          </button>
         </div>
 
         {pendingCount > 0 && !isLoading && !error && (
           <div className="border-b border-amber-100 bg-amber-50 px-5 py-3 text-[13px] font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
-            {pendingCount} account{pendingCount === 1 ? "" : "s"} waiting for approval.
+            {t("accounts_waiting_approval", { count: pendingCount })}
           </div>
         )}
 
         {isLoading ? (
-          <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading user accounts...</div>
+          <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">{t("Loading user accounts...")}</div>
         ) : error ? (
           <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
             <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
               <AlertTriangle size={18} />
             </div>
-            <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Couldn&apos;t load user accounts</p>
+            <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">{t("Couldn't load user accounts")}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
             <button
               type="button"
@@ -68,21 +63,21 @@ export function UsersView({
               className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               <RefreshCw size={13} />
-              Retry
+              {t("Retry")}
             </button>
           </div>
         ) : users.length === 0 ? (
-          <EmptyState icon={Users} title="No accounts found" description="Registered accounts will appear here." />
+          <EmptyState icon={Users} title={t("No accounts found")} description={t("Registered accounts will appear here.")} />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
-                  <th className="px-5 py-3 font-semibold">Username</th>
-                  <th className="px-5 py-3 font-semibold">Full Name</th>
-                  <th className="px-5 py-3 font-semibold">Permissions</th>
-                  <th className="px-5 py-3 font-semibold">Status</th>
-                  <th className="px-5 py-3 font-semibold text-right">Actions</th>
+                  <th className="px-5 py-3 font-semibold">{t("Username")}</th>
+                  <th className="px-5 py-3 font-semibold">{t("Full Name")}</th>
+                  <th className="px-5 py-3 font-semibold">{t("Permissions")}</th>
+                  <th className="px-5 py-3 font-semibold">{t("Status")}</th>
+                  <th className="px-5 py-3 font-semibold text-right">{t("Actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
@@ -94,7 +89,7 @@ export function UsersView({
                     <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">{user.full_name || "—"}</td>
                     <td className="min-w-64 px-5 py-3.5 text-slate-600 dark:text-slate-300">
                       <span className="inline-flex max-w-72 items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                        <span className="truncate">{getPermissionSummary(user)}</span>
+                        <span className="truncate">{getPermissionSummary(user, 3, t)}</span>
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5">
@@ -104,7 +99,7 @@ export function UsersView({
                           : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
                           }`}
                       >
-                        {user.is_active ? "Active" : "Pending"}
+                        {user.is_active ? translateLabel(t, i18n, "Active") : translateLabel(t, i18n, "Pending")}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-right">
@@ -115,7 +110,7 @@ export function UsersView({
                             onClick={() => onApprove(user)}
                             className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-emerald-700 outline-none transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-emerald-800 dark:bg-slate-800 dark:text-emerald-300 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40 dark:focus-visible:ring-offset-slate-900"
                           >
-                            Approve
+                            {t("Approve")}
                           </button>
                         )}
                         <button
@@ -123,14 +118,14 @@ export function UsersView({
                           onClick={() => onEditPermissions(user)}
                           className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
                         >
-                          Permissions
+                          {t("Permissions")}
                         </button>
                         <button
                           type="button"
                           onClick={() => onResetPassword(user)}
                           className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
                         >
-                          Reset Password
+                          {t("Reset Password")}
                         </button>
                       </div>
                     </td>
@@ -146,6 +141,8 @@ export function UsersView({
 }
 
 export function UserPermissionsModal({ isOpen, user, values, onChange, onSubmit, onClose, isSubmitting, error }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -185,19 +182,19 @@ export function UserPermissionsModal({ isOpen, user, values, onChange, onSubmit,
         type="button"
         className="absolute inset-0 bg-slate-950/60"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={t("Close")}
       />
       <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Edit account</h2>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Edit account")}</h2>
             <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">{user.username}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X size={16} />
           </button>
@@ -211,7 +208,7 @@ export function UserPermissionsModal({ isOpen, user, values, onChange, onSubmit,
               </div>
             )}
             <div className="grid gap-4">
-              <FormField label="Full Name" htmlFor="user-full_name">
+              <FormField label={t("Full Name")} htmlFor="user-full_name">
                 <input
                   id="user-full_name"
                   type="text"
@@ -224,7 +221,7 @@ export function UserPermissionsModal({ isOpen, user, values, onChange, onSubmit,
               </FormField>
               <div>
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">Permissions</p>
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">{t("Permissions")}</p>
                   <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
                     <input
                       type="checkbox"
@@ -233,7 +230,7 @@ export function UserPermissionsModal({ isOpen, user, values, onChange, onSubmit,
                       className="h-4 w-4 rounded border-slate-300 text-orange-500 accent-orange-500 focus:ring-orange-400 dark:border-slate-600 dark:bg-slate-800"
                       disabled={isSubmitting}
                     />
-                    All permissions
+                    {t("All permissions")}
                   </label>
                 </div>
 
@@ -241,7 +238,7 @@ export function UserPermissionsModal({ isOpen, user, values, onChange, onSubmit,
                   {userPermissionSections.map((section) => (
                     <div key={section.label} className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/50">
                       <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        {section.label}
+                        {t(section.label)}
                       </p>
                       <div className="grid gap-2">
                         {section.permissions.map((permission) => (
@@ -258,7 +255,7 @@ export function UserPermissionsModal({ isOpen, user, values, onChange, onSubmit,
                               className="h-4 w-4 rounded border-slate-300 text-orange-500 accent-orange-500 focus:ring-orange-400 dark:border-slate-600 dark:bg-slate-800"
                               disabled={isSubmitting}
                             />
-                            <span>{permission.label}</span>
+                            <span>{t(permission.label)}</span>
                           </label>
                         ))}
                       </div>
@@ -276,14 +273,14 @@ export function UserPermissionsModal({ isOpen, user, values, onChange, onSubmit,
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? "Saving..." : "Save changes"}
+              {isSubmitting ? t("Saving...") : t("Save changes")}
             </button>
           </div>
         </form>
@@ -304,6 +301,8 @@ export function ResetPasswordModal({
   isSubmitting,
   error,
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -320,19 +319,19 @@ export function ResetPasswordModal({
         type="button"
         className="absolute inset-0 bg-slate-950/60"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={t("Close")}
       />
       <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Reset password</h2>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Reset password")}</h2>
             <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">{user.username}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X size={16} />
           </button>
@@ -346,7 +345,7 @@ export function ResetPasswordModal({
               </div>
             )}
             <div className="grid gap-4">
-              <FormField label="New Password *" htmlFor="reset-password">
+              <FormField label={t("New Password *")} htmlFor="reset-password">
                 <input
                   id="reset-password"
                   type="password"
@@ -358,7 +357,7 @@ export function ResetPasswordModal({
                   disabled={isSubmitting}
                 />
               </FormField>
-              <FormField label="Confirm Password *" htmlFor="reset-confirm-password">
+              <FormField label={t("Confirm Password *")} htmlFor="reset-confirm-password">
                 <input
                   id="reset-confirm-password"
                   type="password"
@@ -380,14 +379,14 @@ export function ResetPasswordModal({
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? "Saving..." : "Reset password"}
+              {isSubmitting ? t("Saving...") : t("Reset password")}
             </button>
           </div>
         </form>

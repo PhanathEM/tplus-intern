@@ -3,6 +3,7 @@ import { fetchAssignFormData } from "../../../../services/assignService";
 import { fetchEquipmentByCategory } from "../../../../services/equipmentService";
 import { fetchPartTypes, fetchStockColumnOptions } from "../../../../services/partTypeService";
 import { fetchPartReplacements, submitPartReplacement } from "../../../../services/partReplacementService";
+import { fetchPartStatuses } from "../../../../services/partStatusService";
 import { addPartStock, fetchAvailablePartStock } from "../../../../services/partStockService";
 import { DEFAULT_PART_STOCK_STATUS } from "../../dashboard.config";
 import { buildPartStockPayload } from "../../dashboard.utils";
@@ -188,6 +189,11 @@ export function useReplacements({ isActive, user }) {
   // configured column's type (text/number/date/boolean) when it's not one
   // of the built-ins with a dedicated widget. Fetched once.
   const [stockColumnCustomFieldOptions, setStockColumnCustomFieldOptions] = useState([]);
+  // Options for the "old part status" field — admin-configurable via
+  // GET /api/part-statuses, so this stays in sync without a redeploy if the
+  // list ever changes. Fetched once (only the active ones; that's the
+  // endpoint's default).
+  const [partStatuses, setPartStatuses] = useState([]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -200,6 +206,14 @@ export function useReplacements({ isActive, user }) {
       })
       .catch(() => {
         if (!ignore) setStockColumnCustomFieldOptions([]);
+      });
+
+    fetchPartStatuses()
+      .then((data) => {
+        if (!ignore) setPartStatuses(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!ignore) setPartStatuses([]);
       });
 
     return () => {
@@ -236,7 +250,8 @@ export function useReplacements({ isActive, user }) {
   const [partAction, setPartAction] = useState("replace");
   const [partNewValue, setPartNewValue] = useState("");
   // Only meaningful for "replace" — an "add" doesn't displace an old part.
-  // The API rejects anything other than the two OLD_PART_STATUS_OPTIONS values.
+  // The API rejects anything other than one of the fetched partStatuses'
+  // status_name values.
   const [oldPartStatus, setOldPartStatus] = useState("");
   const [isSubmittingPart, setIsSubmittingPart] = useState(false);
   const [submitPartError, setSubmitPartError] = useState(null);
@@ -468,6 +483,7 @@ export function useReplacements({ isActive, user }) {
     handleSelectCategory,
     partTypes,
     stockColumnCustomFieldOptions,
+    partStatuses,
 
     replaceableDevices: filteredReplaceableDevices,
     replaceableColumns,

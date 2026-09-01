@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FiBox as Box,
   FiLayers as Layers,
@@ -45,7 +46,11 @@ function getResultLabel(type, item) {
   }
   if (type === "departments") return item.department_name || item.department_code || "Department";
   if (type === "equipment") {
+    // Same priority order as getEquipmentDisplayName — device_name is the
+    // one nearly every record actually has set, computer_name often isn't.
     return (
+      item.device_name ||
+      item.name ||
       item.computer_name ||
       item.device_model ||
       item.asset_code ||
@@ -85,10 +90,11 @@ export function GlobalSearch({
   isLoading,
   onSelect,
   autoFocus = false,
-  placeholder = "Search...",
+  placeholder,
   inputClassName,
   className = "w-full lg:w-72",
 }) {
+  const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
@@ -136,7 +142,7 @@ export function GlobalSearch({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onFocus={() => setIsFocused(true)}
-          placeholder={placeholder}
+          placeholder={placeholder || t("Search...")}
           className={
             inputClassName ||
             "h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-14 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
@@ -152,9 +158,11 @@ export function GlobalSearch({
       {showDropdown && (
         <div className="absolute left-0 right-0 top-full z-30 mt-2 max-h-96 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
           {isLoading && !hasAnyResults ? (
-            <div className="px-4 py-6 text-center text-[13px] text-slate-500 dark:text-slate-400">Searching...</div>
+            <div className="px-4 py-6 text-center text-[13px] text-slate-500 dark:text-slate-400">{t("Searching...")}</div>
           ) : !hasAnyResults ? (
-            <div className="px-4 py-6 text-center text-[13px] text-slate-500 dark:text-slate-400">No results for "{term}"</div>
+            <div className="px-4 py-6 text-center text-[13px] text-slate-500 dark:text-slate-400">
+              {t("No results for", { term })}
+            </div>
           ) : (
             sectionKeys.map((key) => {
               const meta = SECTION_META[key];
@@ -162,7 +170,7 @@ export function GlobalSearch({
               return (
                 <div key={key} className="border-b border-slate-50 py-1.5 last:border-b-0 dark:border-slate-700/60">
                   <p className="px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                    {meta.label}
+                    {t(meta.label)}
                   </p>
                   {safeResults[key].map((item, index) => {
                     const detail = getResultDetail(key, item);

@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FiEdit2 as Edit2,
   FiFileText as FileText,
@@ -28,6 +29,8 @@ export function DepartmentsView({
   canManage = true,
   canCreate = true,
 }) {
+  const { t } = useTranslation();
+
   // department_id is the raw database id — new departments don't land at the
   // end of that sequence, so number rows ourselves instead of showing it.
   const numberedDepartments = useMemo(
@@ -43,13 +46,13 @@ export function DepartmentsView({
     <RecordsTableView
       records={numberedDepartments}
       columnsConfig={numberedColumns}
-      title="Departments"
+      title={t("Departments")}
       recordLabel="department"
-      loadingText="Loading departments..."
-      errorTitle="Couldn't load departments"
+      loadingText={t("Loading departments...")}
+      errorTitle={t("Couldn't load departments")}
       emptyIcon={Users}
-      emptyTitle="No departments found"
-      emptyDescription={search ? `No department matches "${search}".` : "Department records will appear here."}
+      emptyTitle={t("No departments found")}
+      emptyDescription={search ? t("No department matches", { term: search }) : t("Department records will appear here.")}
       rowKey={(department, index) => department.department_id ?? department.department_code ?? index}
       isLoading={isLoading}
       error={error}
@@ -58,8 +61,8 @@ export function DepartmentsView({
       actionsHeader={
         <RowActionsMenu
           items={[
-            { icon: FileText, label: "Download All PDFs", onClick: onDownloadAllPdf },
-            { icon: Grid, label: "Download All Excel", onClick: onDownloadAllExcel },
+            { icon: FileText, label: t("Download All PDFs"), onClick: onDownloadAllPdf },
+            { icon: Grid, label: t("Download All Excel"), onClick: onDownloadAllExcel },
           ]}
         />
       }
@@ -74,18 +77,22 @@ export function DepartmentsView({
                 autoComplete="off"
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search Department"
-                className="h-9 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:ring-slate-700"
+                placeholder={t("Search...")}
+                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-14 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
               />
-              {search && (
+              {search ? (
                 <button
                   type="button"
                   onClick={() => onSearchChange("")}
-                  aria-label="Clear search"
-                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                  aria-label={t("Clear search")}
+                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                 >
                   <X size={13} />
                 </button>
+              ) : (
+                <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
+                  Ctrl K
+                </kbd>
               )}
             </div>
           )}
@@ -97,7 +104,7 @@ export function DepartmentsView({
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               <PlusCircle size={14} />
-              New Department
+              {t("New Department")}
             </button>
           )}
         </>
@@ -108,8 +115,8 @@ export function DepartmentsView({
           <div className="flex items-center justify-end">
             <RowActionsMenu
               items={[
-                { icon: Edit2, label: "Edit", onClick: () => onEdit(department) },
-                { icon: Trash2, label: "Delete", onClick: () => onDelete(department), destructive: true },
+                { icon: Edit2, label: t("Edit"), onClick: () => onEdit(department) },
+                { icon: Trash2, label: t("Delete"), onClick: () => onDelete(department), destructive: true },
               ]}
             />
           </div>
@@ -129,6 +136,8 @@ export function DepartmentFormModal({
   isSubmitting,
   error,
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -147,23 +156,23 @@ return (
         type="button"
         className="absolute inset-0 bg-slate-950/60"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={t("Close")}
       />
       <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">
-              {isEdit ? "Edit department" : "Add new department"}
+              {isEdit ? t("Edit department") : t("Add new department")}
             </h2>
             <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-              {isEdit ? "Update this department's details." : "Create a new department."}
+              {isEdit ? t("Update this department's details.") : t("Create a new department.")}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X size={16} />
           </button>
@@ -177,7 +186,7 @@ return (
               </div>
             )}
             <div className="grid gap-4">
-              <FormField label="Department Code *" htmlFor="department-code">
+              <FormField label={t("Department Code *")} htmlFor="department-code">
                 <input
                   id="department-code"
                   type="text"
@@ -189,7 +198,7 @@ return (
                   disabled={isSubmitting}
                 />
               </FormField>
-              <FormField label="Department Name *" htmlFor="department-name">
+              <FormField label={t("Department Name *")} htmlFor="department-name">
                 <input
                   id="department-name"
                   type="text"
@@ -211,14 +220,14 @@ return (
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add department"}
+              {isSubmitting ? t("Saving...") : isEdit ? t("Save changes") : t("Add department")}
             </button>
           </div>
         </form>
@@ -237,6 +246,8 @@ export function CategoryFormModal({
   isSubmitting,
   error,
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -255,23 +266,23 @@ return (
         type="button"
         className="absolute inset-0 bg-slate-950/60"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={t("Close")}
       />
       <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">
-              {isEdit ? "Edit category" : "Add new category"}
+              {isEdit ? t("Edit category") : t("Add new category")}
             </h2>
             <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-              {isEdit ? "Update this category's details." : "Create a new category."}
+              {isEdit ? t("Update this category's details.") : t("Create a new category.")}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X size={16} />
           </button>
@@ -285,7 +296,7 @@ return (
               </div>
             )}
             <div className="grid gap-4">
-              <FormField label="Category Name *" htmlFor="category-name">
+              <FormField label={t("Category Name *")} htmlFor="category-name">
                 <input
                   id="category-name"
                   type="text"
@@ -298,7 +309,7 @@ return (
                 />
               </FormField>
 
-<FormField label="Description" htmlFor="category-description">
+<FormField label={t("Description")} htmlFor="category-description">
                 <input
                   id="category-description"
                   type="text"
@@ -319,14 +330,14 @@ return (
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add category"}
+              {isSubmitting ? t("Saving...") : isEdit ? t("Save changes") : t("Add category")}
             </button>
           </div>
         </form>

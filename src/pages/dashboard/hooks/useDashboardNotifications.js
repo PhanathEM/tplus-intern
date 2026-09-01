@@ -7,7 +7,7 @@ import { navItemsByLabel } from "../dashboard.config";
 import { canAccessDashboardView } from "../../../lib/permissions";
 import { buildDashboardNotifications, getLicenseExpiryAlerts } from "../dashboard.notifications";
 
-export function useDashboardNotifications({ user, onSelectView }) {
+export function useDashboardNotifications({ user, onSelectView, onSelectEquipmentCategory }) {
   const [readIds, setReadIds] = useState(() => new Set());
   const [data, setData] = useState({
     currentBorrows: [],
@@ -110,6 +110,9 @@ export function useDashboardNotifications({ user, onSelectView }) {
     setReadIds((current) => new Set(current).add(notification.id));
     if (notification.targetView) {
       onSelectView?.(notification.targetView);
+    }
+    if (notification.targetCategory) {
+      onSelectEquipmentCategory?.(notification.targetCategory, notification.targetEquipmentIds);
     }
     setIsOpen(false);
   }

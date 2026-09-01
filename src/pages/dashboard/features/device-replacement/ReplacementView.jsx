@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import { FiAlertTriangle as AlertTriangle, FiChevronDown as ChevronDown, FiMonitor as Monitor, FiPlusCircle as PlusCircle, FiRefreshCw as RefreshCw, FiSearch as Search, FiX as X } from "react-icons/fi";
-import { OLD_PART_STATUS_OPTIONS, PART_ACTION_OPTIONS } from "../../dashboard.config";
+import { PART_ACTION_OPTIONS } from "../../dashboard.config";
 import { formatFieldValue } from "../../dashboard.utils";
 import { EmptyState, formInputClass, RadioSelect } from "../../components/SharedControls";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
@@ -10,11 +11,11 @@ import { AddStockDialog } from "../../components/AddStockDialog";
 
 // "16 GB · DDR5 (412 available)" — whichever identifying fields this stock
 // line has (part_value/ram_type for RAM, model_name/number for CPU etc.).
-function getStockOptionLabel(item) {
+function getStockOptionLabel(item, t) {
   const bits = [item.part_value, item.ram_type, item.model_name, item.model_number, item.disk_type, item.disk_interface].filter(
     (value) => value && String(value).trim()
   );
-  const label = bits.length ? bits.join(" · ") : "Unlabeled";
+  const label = bits.length ? bits.join(" · ") : t("Unlabeled");
   return `${label} (${item.quantity} available)`;
 }
 
@@ -22,7 +23,9 @@ function getStockOptionLabel(item) {
 // lists are short (a handful of lines per part). Rendered through a portal
 // with fixed positioning so it isn't clipped by the dialog's own scrolling
 // content area, the way an absolutely-positioned panel would be.
-function StockLineSelect({ id, options, selectedId, onSelect, placeholder = "Select a stock line..." }) {
+function StockLineSelect({ id, options, selectedId, onSelect, placeholder }) {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t("Select a stock line...");
   const [isOpen, setIsOpen] = useState(false);
   const [menuRect, setMenuRect] = useState(null);
   const containerRef = useRef(null);
@@ -77,7 +80,7 @@ function StockLineSelect({ id, options, selectedId, onSelect, placeholder = "Sel
         className={`${formInputClass} flex items-center justify-between text-left`}
       >
         <span className={`truncate ${selectedOption ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"}`}>
-          {selectedOption ? getStockOptionLabel(selectedOption) : placeholder}
+          {selectedOption ? getStockOptionLabel(selectedOption, t) : resolvedPlaceholder}
         </span>
         <ChevronDown size={14} className={`shrink-0 text-slate-400 transition-transform dark:text-slate-500 ${isOpen ? "rotate-180" : ""}`} />
       </button>
@@ -110,7 +113,7 @@ function StockLineSelect({ id, options, selectedId, onSelect, placeholder = "Sel
                     >
                       {isSelected && <span className="h-2 w-2 rounded-full bg-orange-500" />}
                     </span>
-                    <span className="truncate">{getStockOptionLabel(option)}</span>
+                    <span className="truncate">{getStockOptionLabel(option, t)}</span>
                   </button>
                 );
               })}
@@ -149,6 +152,7 @@ export function ReplaceableDevicesView({
   onSearchChange,
   selectedCategory,
 }) {
+  const { t } = useTranslation();
   const [page, setPage] = useState(1);
 
   // A new search or category means a whole new result set — start back on
@@ -182,11 +186,11 @@ export function ReplaceableDevicesView({
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Devices you can replace</h2>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Devices you can replace")}</h2>
             {!isLoading && !error && (
               <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-                {devices.length} device{devices.length === 1 ? "" : "s"}
-                {canManage && devices.length > 0 ? " · These devices have owners, click to replace devices" : ""}
+                {t("device_count", { count: devices.length })}
+                {canManage && devices.length > 0 ? ` · ${t("These devices have owners, click to replace devices")}` : ""}
               </p>
             )}
           </div>
@@ -200,14 +204,14 @@ export function ReplaceableDevicesView({
                 autoComplete="off"
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search Employee"
+                placeholder={t("Search Employee")}
                 className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:ring-slate-700"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => onSearchChange("")}
-                  aria-label="Clear search"
+                  aria-label={t("Clear search")}
                   className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                 >
                   <X size={13} />
@@ -222,13 +226,13 @@ export function ReplaceableDevicesView({
           records={paginatedDevices}
           rowKey={(device, index) => device.equipment_id ?? index}
           isLoading={isLoading}
-          loadingText="Loading devices..."
+          loadingText={t("Loading devices...")}
           error={error}
-          errorTitle="Couldn't load devices"
+          errorTitle={t("Couldn't load devices")}
           onRetry={onRetry}
           emptyIcon={Search}
-          emptyTitle="No devices found"
-          emptyDescription="Owned devices will appear here."
+          emptyTitle={t("No devices found")}
+          emptyDescription={t("Owned devices will appear here.")}
           onRowClick={canManage ? onOpenReplaceDialog : undefined}
           elevatedRowHover={canManage}
         />
@@ -236,9 +240,9 @@ export function ReplaceableDevicesView({
         {!isLoading && !error && numberedDevices.length > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
             <span>
-              Showing {(page - 1) * REPLACEABLE_PAGE_SIZE + 1}
+              {t("Showing")} {(page - 1) * REPLACEABLE_PAGE_SIZE + 1}
               {"–"}
-              {Math.min(page * REPLACEABLE_PAGE_SIZE, numberedDevices.length)} of {numberedDevices.length}
+              {Math.min(page * REPLACEABLE_PAGE_SIZE, numberedDevices.length)} {t("of")} {numberedDevices.length}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -247,7 +251,7 @@ export function ReplaceableDevicesView({
                 onClick={() => setPage(Math.max(1, page - 1))}
                 className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
               >
-                Previous
+                {t("Previous")}
               </button>
               <span className="tabular-nums text-slate-400 dark:text-slate-500">
                 {page} / {pageCount}
@@ -258,7 +262,7 @@ export function ReplaceableDevicesView({
                 onClick={() => setPage(Math.min(pageCount, page + 1))}
                 className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
               >
-                Next
+                {t("Next")}
               </button>
             </div>
           </div>
@@ -282,8 +286,8 @@ function getInitials(name) {
 // RAM's value is a bare number ("16") everywhere else in the app (device
 // fields, stock lines) — only here, next to an arrow with no other context,
 // does it need the unit spelled out to read as a capacity at a glance.
-function formatPartValue(partName, value) {
-  if (value === null || value === undefined || value === "") return "Empty";
+function formatPartValue(partName, value, t) {
+  if (value === null || value === undefined || value === "") return t("Empty");
   if (partName?.trim().toLowerCase() === "ram" && /^\d+(\.\d+)?$/.test(String(value).trim())) {
     return `${value} GB`;
   }
@@ -327,6 +331,7 @@ function formatOrdinal(n) {
 // recent replacement, used for the row's Computer/Asset Code/Category/Date.
 // The full chronological list lives in the detail popup.
 function ReplacementHistoryRow({ group, onViewDetails }) {
+  const { t } = useTranslation();
   const latest = group.latestEntry;
   const deviceLabel = latest.computer_name || latest.device_name || latest.device_model || latest.asset_code || "—";
 
@@ -358,16 +363,16 @@ function ReplacementHistoryRow({ group, onViewDetails }) {
       <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{latest.category_name || "—"}</td>
       <td className={`${cellClass} rounded-r-lg`}>
         <div className="inline-flex items-center gap-2 text-[13px]">
-          <span className="font-semibold text-slate-700 dark:text-slate-300">{latest.part_name || "Part"}</span>
+          <span className="font-semibold text-slate-700 dark:text-slate-300">{latest.part_name || t("Part")}</span>
           <span className="rounded-md bg-rose-50 px-2 py-0.5 font-mono text-xs font-semibold text-rose-600 line-through dark:bg-rose-950/40 dark:text-rose-400">
-            {formatPartValue(latest.part_name, latest.old_value)}
+            {formatPartValue(latest.part_name, latest.old_value, t)}
           </span>
           <span className="text-slate-300 dark:text-slate-600">&rarr;</span>
           <span className="rounded-md bg-emerald-50 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-            {formatPartValue(latest.part_name, latest.new_value)}
+            {formatPartValue(latest.part_name, latest.new_value, t)}
           </span>
           {group.count > 1 && (
-            <span className="text-xs font-medium text-slate-400 dark:text-slate-500">+{group.count - 1} more</span>
+            <span className="text-xs font-medium text-slate-400 dark:text-slate-500">{t("more_count", { count: group.count - 1 })}</span>
           )}
         </div>
       </td>
@@ -379,6 +384,7 @@ function ReplacementHistoryRow({ group, onViewDetails }) {
 // table row, plus whichever real detail fields (action/reason/remark/
 // replaced_by) this specific replacement has.
 function ReplacementHistoryEntry({ entry }) {
+  const { t } = useTranslation();
   const deviceLabel = entry.computer_name || entry.device_name || entry.device_model || entry.asset_code || "—";
   const detailEntries = REPLACEMENT_DETAIL_FIELDS.map(([key, label]) => [key, label, formatDetailValue(key, entry[key])]).filter(
     ([, , value]) => value !== null
@@ -388,19 +394,19 @@ function ReplacementHistoryEntry({ entry }) {
     <div className="px-6 py-4">
       <div className="mb-1.5 flex items-center justify-between gap-3">
         <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-          {formatOrdinal(entry._occurrence)} replacement
+          {formatOrdinal(entry._occurrence)} {t("Replacement")}
         </span>
         <span className="text-xs text-slate-400 dark:text-slate-500">{formatReplacementDate(entry.replacement_date)}</span>
       </div>
 
       <div className="mb-2 flex flex-wrap items-center gap-2 text-[13px]">
-        <span className="font-semibold text-slate-700 dark:text-slate-300">{entry.part_name || "Part"}</span>
+        <span className="font-semibold text-slate-700 dark:text-slate-300">{entry.part_name || t("Part")}</span>
         <span className="rounded-md bg-rose-50 px-2 py-0.5 font-mono text-xs font-semibold text-rose-600 line-through dark:bg-rose-950/40 dark:text-rose-400">
-          {formatPartValue(entry.part_name, entry.old_value)}
+          {formatPartValue(entry.part_name, entry.old_value, t)}
         </span>
         <span className="text-slate-300 dark:text-slate-600">&rarr;</span>
         <span className="rounded-md bg-emerald-50 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-          {formatPartValue(entry.part_name, entry.new_value)}
+          {formatPartValue(entry.part_name, entry.new_value, t)}
         </span>
       </div>
 
@@ -414,7 +420,7 @@ function ReplacementHistoryEntry({ entry }) {
         <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-xs">
           {detailEntries.map(([key, label, value]) => (
             <Fragment key={key}>
-              <dt className="font-semibold text-slate-600 dark:text-slate-400">{label}</dt>
+              <dt className="font-semibold text-slate-600 dark:text-slate-400">{t(label)}</dt>
               <dd className="min-w-0 truncate text-slate-500 dark:text-slate-400">{value}</dd>
             </Fragment>
           ))}
@@ -425,6 +431,8 @@ function ReplacementHistoryEntry({ entry }) {
 }
 
 function ReplacementDetailModal({ group, onClose }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -440,14 +448,14 @@ function ReplacementDetailModal({ group, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label="Close" />
+      <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label={t("Close")} />
       <div className="relative flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{group.owner_name || "Replacement"}</h2>
+              <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{group.owner_name || t("Replacement")}</h2>
               <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                {group.count} replacement{group.count === 1 ? "" : "s"}
+                {t("replacement_count", { count: group.count })}
               </span>
             </div>
             <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
@@ -459,7 +467,7 @@ function ReplacementDetailModal({ group, onClose }) {
             type="button"
             onClick={onClose}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X size={16} />
           </button>
@@ -489,6 +497,7 @@ export function ReplacementHistoryView({
   error,
   onRetry,
 }) {
+  const { t } = useTranslation();
   const [selectedGroup, setSelectedGroup] = useState(null);
 
   // One row per employee — repeated replacements for the same person are
@@ -531,23 +540,22 @@ export function ReplacementHistoryView({
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-          <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Device Replacement History</h2>
+          <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Device Replacement History")}</h2>
           {!isLoading && !error && (
             <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-              {employeeGroups.length} employee{employeeGroups.length === 1 ? "" : "s"} · {replacements.length} replacement
-              {replacements.length === 1 ? "" : "s"}
+              {t("employee_count", { count: employeeGroups.length })} · {t("replacement_count", { count: replacements.length })}
             </p>
           )}
         </div>
 
         {isLoading ? (
-          <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading replacements...</div>
+          <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">{t("Loading replacements...")}</div>
         ) : error ? (
           <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
             <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
               <AlertTriangle size={18} />
             </div>
-            <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Couldn&apos;t load replacements</p>
+            <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">{t("Couldn't load replacements")}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
             <button
               type="button"
@@ -555,26 +563,26 @@ export function ReplacementHistoryView({
               className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
               <RefreshCw size={13} />
-              Retry
+              {t("Retry")}
             </button>
           </div>
         ) : employeeGroups.length === 0 ? (
           <EmptyState
             icon={RefreshCw}
-            title="No replacements found"
-            description="Replacement records will appear here."
+            title={t("No replacements found")}
+            description={t("Replacement records will appear here.")}
           />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Employee</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Staff Code</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Computer</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Asset Code</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Category</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">Replacement</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Employee")}</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Staff Code")}</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Computer")}</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Asset Code")}</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Category")}</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Replacement")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
@@ -599,6 +607,7 @@ export function ReplaceDeviceDialog({
   // "Replace a part" tab
   partTypes = [],
   stockColumnCustomFieldOptions = [],
+  partStatuses = [],
   selectedPartTypeId,
   onSelectPartType,
   partAction,
@@ -628,6 +637,8 @@ export function ReplaceDeviceDialog({
   onQuickAddFormChange,
   onSubmitQuickAdd,
 }) {
+  const { t } = useTranslation();
+
   if (!device) return null;
 
   const selectedPartType = partTypes.find((item) => String(item.part_type_id) === String(selectedPartTypeId));
@@ -660,17 +671,17 @@ export function ReplaceDeviceDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label="Close" />
+      <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label={t("Close")} />
       <div className="relative flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Replace this device</h2>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Replace this device")}</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X size={16} />
           </button>
@@ -685,7 +696,7 @@ export function ReplaceDeviceDialog({
             )}
 
             <div>
-              <p className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400">Part</p>
+              <p className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400">{t("Part")}</p>
               <div className="flex flex-wrap gap-2">
                 {partTypes.map((partType) => {
                   const isSelected = String(partType.part_type_id) === String(selectedPartTypeId);
@@ -708,13 +719,13 @@ export function ReplaceDeviceDialog({
 
             {!selectedPartType ? (
               <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-slate-200 py-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                Select a part above to continue
+                {t("Select a part above to continue")}
               </div>
             ) : (
               <>
                 {availablePartActions.length > 1 && (
                   <div>
-                    <p className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400">Action</p>
+                    <p className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400">{t("Action")}</p>
                     <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800">
                       {availablePartActions.map((option) => {
                         const isSelected = partAction === option.value;
@@ -728,7 +739,7 @@ export function ReplaceDeviceDialog({
                               : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                               }`}
                           >
-                            {option.label}
+                            {t(option.label)}
                           </button>
                         );
                       })}
@@ -740,21 +751,23 @@ export function ReplaceDeviceDialog({
                   {partAction === "replace" && (
                     <div>
                       <label htmlFor="replace-part-old-status" className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-400">
-                        Old {selectedPartType.part_name} Status
+                        {t("old_part_status_label", { name: selectedPartType.part_name })}
                       </label>
                       <RadioSelect
                         id="replace-part-old-status"
-                        options={OLD_PART_STATUS_OPTIONS}
+                        options={[...partStatuses]
+                          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+                          .map((status) => ({ value: status.status_name, label: t(status.status_name) }))}
                         value={oldPartStatus}
                         onSelect={onSelectOldPartStatus}
-                        placeholder="Select a status..."
+                        placeholder={t("Select a status...")}
                       />
                     </div>
                   )}
 
                   <div>
                     <label htmlFor="replace-part-current" className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-400">
-                      Current {selectedPartType.part_name}
+                      {t("current_part_label", { name: selectedPartType.part_name })}
                     </label>
                     <div
                       id="replace-part-current"
@@ -766,12 +779,12 @@ export function ReplaceDeviceDialog({
 
                   <div>
                     <label htmlFor="replace-part-stock" className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-400">
-                      New {selectedPartType.part_name}
+                      {t("new_part_button", { name: selectedPartType.part_name })}
                     </label>
 
                     {isAvailableStockLoading ? (
                       <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
-                        Loading stock...
+                        {t("Loading stock...")}
                       </div>
                     ) : availableStockError ? (
                       <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 dark:border-rose-800 dark:bg-rose-950/40">
@@ -782,13 +795,13 @@ export function ReplaceDeviceDialog({
                           className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-700 outline-none transition hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 dark:border-rose-800 dark:bg-slate-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
                         >
                           <RefreshCw size={13} />
-                          Retry
+                          {t("Retry")}
                         </button>
                       </div>
                     ) : availableStock.length === 0 ? (
                       <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-800 dark:bg-amber-950/40">
                         <span className="text-sm text-amber-800 dark:text-amber-300">
-                          No {selectedPartType.part_name} in stock right now.
+                          {t("no_part_in_stock", { name: selectedPartType.part_name })}
                         </span>
                         <button
                           type="button"
@@ -796,7 +809,7 @@ export function ReplaceDeviceDialog({
                           className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-800 outline-none transition hover:bg-amber-100 focus-visible:ring-2 focus-visible:ring-amber-400 dark:border-amber-700 dark:bg-slate-800 dark:text-amber-300 dark:hover:bg-amber-950/40"
                         >
                           <PlusCircle size={13} />
-                          Add to stock
+                          {t("Add to stock")}
                         </button>
                       </div>
                     ) : (
@@ -820,14 +833,14 @@ export function ReplaceDeviceDialog({
               disabled={isSubmittingPart}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={!canSubmitPart || isSubmittingPart}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmittingPart ? "Saving..." : "Save"}
+              {isSubmittingPart ? t("Saving...") : t("Save")}
             </button>
           </div>
         </form>

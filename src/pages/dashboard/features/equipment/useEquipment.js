@@ -6,6 +6,7 @@ import {
   fetchEquipmentDetail,
   createEquipmentByView,
   updateEquipmentByView,
+  updateEquipmentOwner,
   deleteEquipmentItem,
   fetchViewColumnsSummary,
   fetchAvailableViewFields,
@@ -41,6 +42,7 @@ import {
   buildEquipmentDisplayColumns,
   slugifyEquipmentView,
   getEquipmentDisplayName,
+  OWNER_DERIVED_FIELDS,
 } from "../../dashboard.utils";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 import { exportAllEquipmentToExcel, exportAllEquipmentToPdf } from "./equipmentExport";
@@ -542,12 +544,19 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     // "category" is implied by the view/URL, not a real per-item field — the
     // backend rejects it as an unknown column if it's included in the body.
     // "owner_name" is the column key (a display string), but the picker's
-    // value is really the selected employee's id — the API wants that sent
-    // as owner_id instead.
+    // value is really the selected employee's id. It's pulled out here
+    // rather than sent as owner_id on this request — the category update
+    // endpoint silently ignores owner_id in its body (confirmed via direct
+    // API testing); owner has its own dedicated endpoint, called separately
+    // below once we have the equipment_id. The other owner_* fields (Sex,
+    // Department, Position, Location, Staff Code) are read-only in the
+    // form — auto-filled from the picked employee — and are dropped here
+    // too, since the backend derives them itself from owner_id.
+    const ownerId = payload.owner_name;
     const requestPayload = Object.fromEntries(
-      Object.entries(payload)
-        .filter(([key]) => key !== "category")
-        .map(([key, value]) => (key === "owner_name" ? ["owner_id", value] : [key, value]))
+      Object.entries(payload).filter(
+        ([key]) => key !== "category" && key !== "owner_name" && !(key in OWNER_DERIVED_FIELDS)
+      )
     );
 
     const request = isEdit
@@ -557,6 +566,11 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     request
       .then((data) => {
         const savedEquipmentId = isEdit ? formTarget.equipment_id : data?.equipment_id;
+
+        const ownerSync =
+          ownerId != null && savedEquipmentId != null
+            ? updateEquipmentOwner(savedEquipmentId, ownerId)
+            : Promise.resolve();
 
         const licenseIdsToAdd = licenseSelectedIds.filter(
           (id) => !licenseInitialIds.some((initialId) => String(initialId) === String(id))
@@ -573,10 +587,14 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
               ])
             : Promise.resolve();
 
-        return licenseSync
-          .catch((licenseError) => {
+        return Promise.all([
+          ownerSync.catch((ownerError) => {
+            console.error("Could not update owner:", ownerError);
+          }),
+          licenseSync.catch((licenseError) => {
             console.error("Could not update software license assignments:", licenseError);
-          })
+          }),
+        ])
           .then(() => {
             logActivity({
               actor: user,

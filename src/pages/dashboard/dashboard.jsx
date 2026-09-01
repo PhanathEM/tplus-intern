@@ -1,4 +1,5 @@
 ﻿import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FiBell as Bell,
   FiBox as Box,
@@ -7,7 +8,6 @@ import {
   FiMenu as Menu,
   FiGlobe as Globe,
   FiMoon as Moon,
-  FiRefreshCw as RefreshCw,
   FiSearch as Search,
   FiSettings as Settings,
   FiUser as UserIcon,
@@ -24,6 +24,8 @@ import { useGlobalSearch } from "./hooks/useGlobalSearch";
 import { useUsers } from "./features/users/useUsers";
 import { useDepartments } from "./features/departments/useDepartments";
 import { useStatuses } from "./features/statuses/useStatuses";
+import { usePartStatuses } from "./features/part-statuses/usePartStatuses";
+import { useAccount } from "./features/account/useAccount";
 import { useDashboardNotifications } from "./hooks/useDashboardNotifications";
 import { useDashboardRouting } from "./hooks/useDashboardRouting";
 import { useDashboardHome } from "./hooks/useDashboardHome";
@@ -41,13 +43,10 @@ import {
   ReturnEquipmentModal,
 } from "./features/equipment/EquipmentViews";
 import {
-  CloudRatesView,
-  CloudUsageView,
   LicenseFormModal,
   LicensesView,
+  ServerUsageEditModal,
   ServerUsageView,
-  SsdProcurementView,
-  SsdUpgradesView,
 } from "./features/records/OperationalRecordViews";
 import {
   DeviceReplacementCategoryBar,
@@ -60,11 +59,7 @@ import { PartStockView, PartTypeFormModal, PartTypeManagementView } from "./feat
 import { BorrowPartDialog, DeleteBorrowDialog, PartBorrowView, ReturnPartDialog } from "./features/part-borrow/PartBorrowView";
 import { usePartStock } from "./features/part-stock/usePartStock";
 import { usePartBorrow } from "./features/part-borrow/usePartBorrow";
-import { useSsdUpgrades } from "./features/records/useSsdUpgrades";
-import { useSsdProcurement } from "./features/records/useSsdProcurement";
-import { useCloudRates } from "./features/records/useCloudRates";
 import { useServerUsage } from "./features/records/useServerUsage";
-import { useCloudUsage } from "./features/records/useCloudUsage";
 import { useLicenses } from "./features/records/useLicenses";
 import {
   CategoryFormModal,
@@ -79,6 +74,8 @@ import {
 } from "./features/employees/EmployeeViews";
 import { ResetPasswordModal, UserPermissionsModal, UsersView } from "./features/users/UserViews";
 import { StatusesView, StatusFormModal } from "./features/statuses/StatusViews";
+import { PartStatusesView, PartStatusFormModal } from "./features/part-statuses/PartStatusViews";
+import { ProfileModal, ChangePasswordModal } from "./features/account/AccountViews";
 import { AssignEquipmentView } from "./features/assign/AssignView";
 import { ActivityLogView } from "./features/activity/ActivityViews";
 import { useActivityLog } from "./features/activity/useActivityLog";
@@ -102,6 +99,7 @@ function readStoredSidebarWidth() {
 }
 
 function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLanguage }) {
+  const { t } = useTranslation();
   const permissions = useDashboardPermissions({ user });
   const {
     canCreateRecords,
@@ -117,11 +115,13 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     canManageStatuses,
     canManageCategory,
     canManagePartTypes,
+    canManagePartStatuses,
     canManageAssign,
     visibleHomeNavSections,
   } = permissions;
   const activityLog = useActivityLog();
   const myActivity = useMyActivity({ entries: activityLog.entries, user });
+  const account = useAccount({ user });
 
   const routing = useDashboardRouting({
     user,
@@ -134,6 +134,10 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(readStoredSidebarWidth);
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  // Set by a "Low stock" notification to pin the Equipments table down to
+  // exactly those equipment_ids — cleared whenever the category is changed
+  // by any other means (see handleSelectEquipmentCategory below).
+  const [equipmentIdFilter, setEquipmentIdFilter] = useState(null);
 
   function handleSidebarResizeStart(event) {
     event.preventDefault();
@@ -170,7 +174,11 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     if (typeof window === "undefined") return;
     window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth));
   }, [sidebarWidth]);
-  const notifications = useDashboardNotifications({ user, onSelectView: handleSelectView });
+  const notifications = useDashboardNotifications({
+    user,
+    onSelectView: handleSelectView,
+    onSelectEquipmentCategory: handleSelectEquipmentCategory,
+  });
   const isDashboardHomeView = activeView === "Dashboard" && hasActiveViewAccess;
   const home = useDashboardHome({ isActive: isDashboardHomeView, accessibleDashboardViews });
 
@@ -181,7 +189,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     user,
     onSelectView: handleSelectView,
     onSelectEmployee: (item) => employees.handleSelectFromGlobalSearch(item),
-    onSelectEquipmentCategory: (category) => equipment.handleViewCategory(equipment.resolveView(category)),
+    onSelectEquipmentCategory: handleSelectEquipmentCategory,
   });
 
   function handleSelectGlobalSearchResult(type, item) {
@@ -211,13 +219,10 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
       "Stock of Replace a Part": partStock.resetForEntry,
       "Part Types": partStock.resetForEntry,
       "Borrow a Part": partBorrow.resetForEntry,
-      "SSD Upgrade": ssdUpgrades.resetForEntry,
-      "SSD Procurement": ssdProcurement.resetForEntry,
       "Software License": licenses.resetForEntry,
-      "Cloud Rate": cloudRates.resetForEntry,
       "Server Usage": serverUsage.resetForEntry,
       Statuses: statuses.resetForEntry,
-      "Cloud Usage": cloudUsage.resetForEntry,
+      "Part Types Statuses": partStatuses.resetForEntry,
       "Currently Borrowed": currentBorrows.resetForEntry,
       "Borrow History": borrowHistory.resetForEntry,
       Employees: employees.resetForEntry,
@@ -230,6 +235,22 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
 
     const changed = routing.setActiveView(label, options);
     if (changed) setIsMobileSidebarOpen(false);
+  }
+
+  // Shared by Global Search and the notification bell — both jump the
+  // Equipments page to a specific category. `equipmentIds`, when given
+  // (only the "Low stock" notification passes it), also pins the table down
+  // to exactly those items instead of showing the whole category.
+  function handleSelectEquipmentCategory(category, equipmentIds) {
+    equipment.handleViewCategory(equipment.resolveView(category));
+    setEquipmentIdFilter(Array.isArray(equipmentIds) && equipmentIds.length > 0 ? new Set(equipmentIds) : null);
+  }
+
+  // Manually picking a category tab always means "show the whole category
+  // again" — clears any id-pin left over from a "Low stock" notification.
+  function handleManualEquipmentCategorySelect(category) {
+    setEquipmentIdFilter(null);
+    equipment.handleSelectCategory(category);
   }
 
   useEffect(() => {
@@ -270,17 +291,14 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   const isPartStockView = activeView === "Stock of Replace a Part" && hasActiveViewAccess;
   const isPartTypeView = activeView === "Part Types" && hasActiveViewAccess;
   const isPartBorrowView = activeView === "Borrow a Part" && hasActiveViewAccess;
-  const isSsdUpgradeView = activeView === "SSD Upgrade" && hasActiveViewAccess;
-  const isSsdProcurementView = activeView === "SSD Procurement" && hasActiveViewAccess;
   const isLicenseView = activeView === "Software License" && hasActiveViewAccess;
-  const isCloudRateView = activeView === "Cloud Rate" && hasActiveViewAccess;
   const isServerUsageView = activeView === "Server Usage" && hasActiveViewAccess;
-  const isCloudUsageView = activeView === "Cloud Usage" && hasActiveViewAccess;
   const isAssignView = activeView === "Assign" && hasActiveViewAccess;
   const isCurrentBorrowsView = activeView === "Currently Borrowed" && hasActiveViewAccess;
   const isBorrowHistoryView = activeView === "Borrow History" && hasActiveViewAccess;
   const isUsersView = activeView === "Users" && hasActiveViewAccess;
   const isStatusView = activeView === "Statuses" && hasActiveViewAccess;
+  const isPartStatusView = activeView === "Part Types Statuses" && hasActiveViewAccess;
   const isCategoryView = activeView === "Category" && hasActiveViewAccess;
   const isActivityLogView = activeView === "Activity Log" && hasActiveViewAccess;
   const isRecycleBinView = activeView === "Recycle Bin" && hasActiveViewAccess;
@@ -299,17 +317,14 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   const replacements = useReplacements({ isActive: isReplacementView || isReplacementHistoryView, user });
   const partStock = usePartStock({ isActive: isPartStockView || isPartTypeView, user });
   const partBorrow = usePartBorrow({ isActive: isPartBorrowView, user });
-  const ssdUpgrades = useSsdUpgrades({ isActive: isSsdUpgradeView });
-  const ssdProcurement = useSsdProcurement({ isActive: isSsdProcurementView });
-  const cloudRates = useCloudRates({ isActive: isCloudRateView });
-  const serverUsage = useServerUsage({ isActive: isServerUsageView });
-  const cloudUsage = useCloudUsage({ isActive: isCloudUsageView });
+  const serverUsage = useServerUsage({ isActive: isServerUsageView, user });
   const licenses = useLicenses({
     isActive: isLicenseView,
     user,
     onLicensesLoaded: notifications.onLicensesLoaded,
   });
   const statuses = useStatuses({ isActive: isStatusView, user });
+  const partStatuses = usePartStatuses({ isActive: isPartStatusView, user });
   const users = useUsers({ isActive: isUsersView, user });
 
   const equipment = useEquipment({
@@ -446,11 +461,11 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                     <h1 className="truncate text-[17px] font-semibold text-slate-950 dark:text-white">
                       {activeViewParentLabel && (
                         <>
-                          <span className="text-[20px]">{activeViewParentLabel}</span>
+                          <span className="text-[20px]">{t(activeViewParentLabel)}</span>
                           <span className="mx-1.5 text-[22px]">&rsaquo;</span>
                         </>
                       )}
-                      {activeView}
+                      {t(activeView)}
                     </h1>
                   </div>
 
@@ -509,16 +524,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={notifications.handleRetry}
-                              disabled={notifications.isLoading}
-                              className="grid h-7 w-7 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-700"
-                              aria-label="Refresh notifications"
-                              title="Refresh notifications"
-                            >
-                              <RefreshCw size={13} className={notifications.isLoading ? "animate-spin" : ""} />
-                            </button>
                             <button
                               type="button"
                               onClick={notifications.handleMarkAllRead}
@@ -605,7 +610,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                       <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-700 dark:bg-slate-800">
                         <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-700">
                           <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{displayName}</p>
-                          <p className="truncate text-xs text-slate-500 dark:text-slate-400">{getAccessProfileLabel(user)}</p>
+                          <p className="truncate text-xs text-slate-500 dark:text-slate-400">{getAccessProfileLabel(user, t)}</p>
                         </div>
                         <div className="flex items-center justify-between gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-300 sm:hidden">
                           <span className="flex items-center gap-2.5">
@@ -623,17 +628,25 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                         </div>
                         <button
                           type="button"
+                          onClick={() => {
+                            setIsProfileMenuOpen(false);
+                            account.handleOpenProfile();
+                          }}
                           className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-300 dark:hover:bg-slate-700"
                         >
                           <UserIcon size={15} />
-                          View profile
+                          {t("View profile")}
                         </button>
                         <button
                           type="button"
+                          onClick={() => {
+                            setIsProfileMenuOpen(false);
+                            account.handleOpenChangePassword();
+                          }}
                           className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-300 dark:hover:bg-slate-700"
                         >
                           <Settings size={15} />
-                          Account settings
+                          {t("Account settings")}
                         </button>
                         <button
                           type="button"
@@ -641,7 +654,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                           className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-rose-600 outline-none transition hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-rose-400 dark:hover:bg-rose-950/40"
                         >
                           <LogOut size={15} />
-                          Sign out
+                          {t("Sign out")}
                         </button>
                       </div>
                     )}
@@ -678,7 +691,9 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
               error={equipment.error}
               onRetry={equipment.handleRetry}
               selectedCategory={equipment.category}
-              onSelectCategory={equipment.handleSelectCategory}
+              onSelectCategory={handleManualEquipmentCategorySelect}
+              idFilter={equipmentIdFilter}
+              onClearIdFilter={() => setEquipmentIdFilter(null)}
               items={equipment.items}
               columns={equipment.tableColumns}
               isItemsLoading={equipment.isItemsLoading}
@@ -739,6 +754,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
               selectedPartTypeId={partStock.selectedPartTypeId}
               onSelectPart={partStock.handleSelectPart}
               stockColumnCustomFieldOptions={partStock.stockColumnCustomFieldOptions}
+              partStatuses={partStock.partStatuses}
               isAddDialogOpen={partStock.isAddDialogOpen}
               addFormValues={partStock.addFormValues}
               isSubmittingAdd={partStock.isSubmittingAdd}
@@ -797,24 +813,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
             />
           )}
 
-          {isSsdUpgradeView && (
-            <SsdUpgradesView
-              upgrades={ssdUpgrades.ssdUpgrades}
-              isLoading={ssdUpgrades.isLoading}
-              error={ssdUpgrades.error}
-              onRetry={ssdUpgrades.handleRetry}
-            />
-          )}
-
-          {isSsdProcurementView && (
-            <SsdProcurementView
-              procurements={ssdProcurement.ssdProcurements}
-              isLoading={ssdProcurement.isLoading}
-              error={ssdProcurement.error}
-              onRetry={ssdProcurement.handleRetry}
-            />
-          )}
-
           {isLicenseView && (
             <LicensesView
               licenses={licenses.licenses}
@@ -847,30 +845,16 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
             />
           )}
 
-          {isCloudRateView && (
-            <CloudRatesView
-              rates={cloudRates.cloudRates}
-              isLoading={cloudRates.isLoading}
-              error={cloudRates.error}
-              onRetry={cloudRates.handleRetry}
-            />
-          )}
-
           {isServerUsageView && (
             <ServerUsageView
               usage={serverUsage.serverUsage}
               isLoading={serverUsage.isLoading}
               error={serverUsage.error}
               onRetry={serverUsage.handleRetry}
-            />
-          )}
-
-          {isCloudUsageView && (
-            <CloudUsageView
-              usage={cloudUsage.cloudUsage}
-              isLoading={cloudUsage.isLoading}
-              error={cloudUsage.error}
-              onRetry={cloudUsage.handleRetry}
+              onEdit={serverUsage.handleOpenEdit}
+              dateRange={serverUsage.dateRange}
+              onDateRangeChange={serverUsage.handleDateRangeChange}
+              onClearDateRange={serverUsage.handleClearDateRange}
             />
           )}
 
@@ -920,17 +904,14 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
             !isPartStockView &&
             !isPartTypeView &&
             !isPartBorrowView &&
-            !isSsdUpgradeView &&
-            !isSsdProcurementView &&
             !isLicenseView &&
-            !isCloudRateView &&
             !isServerUsageView &&
-            !isCloudUsageView &&
             !isAssignView &&
             !isCurrentBorrowsView &&
             !isBorrowHistoryView &&
             !isUsersView &&
             !isStatusView &&
+            !isPartStatusView &&
             !isCategoryView &&
             !isActivityLogView &&
             !isRecycleBinView && (
@@ -1019,6 +1000,38 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                 isDownloadingAllPdf={statuses.isDownloadingAllPdf}
                 isDownloadingAllExcel={statuses.isDownloadingAllExcel}
                 downloadError={statuses.downloadError}
+              />
+            ) : (
+              <div className="px-4 py-6 sm:px-6 lg:px-8">
+                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+                  <EmptyState
+                    icon={Box}
+                    title="Not available"
+                    description="This page is admin-only."
+                  />
+                </div>
+              </div>
+            ))}
+
+          {isPartStatusView &&
+            (canManagePartStatuses ? (
+              <PartStatusesView
+                statuses={partStatuses.statuses}
+                isLoading={partStatuses.isLoading}
+                error={partStatuses.error}
+                onRetry={partStatuses.handleRetry}
+                onAddNew={partStatuses.handleOpenAdd}
+                onEdit={partStatuses.handleOpenEdit}
+                onDelete={partStatuses.handleOpenDelete}
+                onDownloadStatusPdf={partStatuses.handleDownloadStatusPdf}
+                onDownloadStatusExcel={partStatuses.handleDownloadStatusExcel}
+                downloadingPdfId={partStatuses.downloadingPdfId}
+                downloadingExcelId={partStatuses.downloadingExcelId}
+                onDownloadAllPdf={partStatuses.handleDownloadAllPdf}
+                onDownloadAllExcel={partStatuses.handleDownloadAllExcel}
+                isDownloadingAllPdf={partStatuses.isDownloadingAllPdf}
+                isDownloadingAllExcel={partStatuses.isDownloadingAllExcel}
+                downloadError={partStatuses.downloadError}
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -1253,6 +1266,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
       <ReturnPartDialog
         borrow={partBorrow.returnTarget}
         values={partBorrow.returnValues}
+        partStatuses={partBorrow.partStatuses}
         onChange={partBorrow.handleReturnFieldChange}
         onSubmit={partBorrow.handleSubmitReturn}
         onClose={partBorrow.handleCloseReturnDialog}
@@ -1376,6 +1390,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         onClose={replacements.handleCloseReplaceDialog}
         partTypes={replacements.partTypes}
         stockColumnCustomFieldOptions={replacements.stockColumnCustomFieldOptions}
+        partStatuses={replacements.partStatuses}
         selectedPartTypeId={replacements.selectedPartTypeId}
         onSelectPartType={replacements.handleSelectPartType}
         partAction={replacements.partAction}
@@ -1411,6 +1426,16 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         onClose={licenses.handleCloseForm}
         isSubmitting={licenses.isSaving}
         error={licenses.formError}
+      />
+
+      <ServerUsageEditModal
+        target={serverUsage.editTarget}
+        values={serverUsage.editValues}
+        onChange={serverUsage.handleEditFieldChange}
+        onSubmit={serverUsage.handleSubmitEdit}
+        onClose={serverUsage.handleCloseEdit}
+        isSubmitting={serverUsage.isSavingEdit}
+        error={serverUsage.editError}
       />
 
       <ConfirmDialog
@@ -1455,6 +1480,35 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         blocked={statuses.deleteBlocked}
         blockedActionLabel="Hide instead"
         onBlockedAction={statuses.handleHideInstead}
+      />
+
+      <PartStatusFormModal
+        isOpen={partStatuses.isFormOpen}
+        mode={partStatuses.formMode}
+        values={partStatuses.formValues}
+        onChange={partStatuses.handleFormFieldChange}
+        onSubmit={partStatuses.handleSubmitForm}
+        onClose={partStatuses.handleCloseForm}
+        isSubmitting={partStatuses.isSaving}
+        error={partStatuses.formError}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(partStatuses.statusToDelete)}
+        title="Delete this status?"
+        message={
+          partStatuses.statusToDelete
+            ? `"${partStatuses.statusToDelete.status_name}" will be permanently removed. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete status"
+        onConfirm={partStatuses.handleConfirmDelete}
+        onCancel={partStatuses.handleCloseDelete}
+        isConfirming={partStatuses.isDeleting}
+        error={partStatuses.deleteError}
+        blocked={partStatuses.deleteBlocked}
+        blockedActionLabel="Hide instead"
+        onBlockedAction={partStatuses.handleHideInstead}
       />
 
       <ConfirmDialog
@@ -1558,6 +1612,27 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         onCancel={recycleBin.handleClosePurge}
         isConfirming={recycleBin.isPurging}
         error={recycleBin.actionError}
+      />
+
+      <ProfileModal
+        isOpen={account.isProfileOpen}
+        profile={account.profile}
+        isLoading={account.isProfileLoading}
+        error={account.profileError}
+        accessLabel={getAccessProfileLabel(user, t)}
+        onClose={account.handleCloseProfile}
+      />
+
+      <ChangePasswordModal
+        isOpen={account.isPasswordOpen}
+        newPassword={account.newPassword}
+        confirmPassword={account.confirmPassword}
+        onChangeNewPassword={account.setNewPassword}
+        onChangeConfirmPassword={account.setConfirmPassword}
+        onSubmit={account.handleSubmitChangePassword}
+        onClose={account.handleCloseChangePassword}
+        isSubmitting={account.isSavingPassword}
+        error={account.passwordError}
       />
     </div>
   );

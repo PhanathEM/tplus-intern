@@ -27,6 +27,7 @@ export function useDashboardPermissions({ user }) {
   const canManageStatuses = canAccessDashboardView(user, "Statuses", navItemsByLabel);
   const canManageCategory = canAccessDashboardView(user, "Category", navItemsByLabel);
   const canManagePartTypes = canAccessDashboardView(user, "Part Types", navItemsByLabel);
+  const canManagePartStatuses = canAccessDashboardView(user, "Part Types Statuses", navItemsByLabel);
   const canManageAssign = canAccessDashboardView(user, "Assign", navItemsByLabel);
 
   const visibleHomeNavSections = useMemo(
@@ -48,6 +49,7 @@ export function useDashboardPermissions({ user }) {
     canManageStatuses,
     canManageCategory,
     canManagePartTypes,
+    canManagePartStatuses,
     canManageAssign,
     visibleHomeNavSections,
   };

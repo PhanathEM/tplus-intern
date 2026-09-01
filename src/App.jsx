@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Dashboard from "./pages/dashboard/dashboard";
 import Login from "./pages/auth/login";
-import { setAuthToken } from "./lib/apiClient";
+import { setAuthToken, setStoredCredentials } from "./lib/apiClient";
 import { mergeStoredPermissionsForUser } from "./lib/permissions";
 import { useTheme } from "./hooks/useTheme";
 import { useLanguage } from "./hooks/useLanguage";
@@ -40,6 +40,7 @@ function App() {
 
   function handleLogout() {
     setAuthToken(null);
+    setStoredCredentials(null, null);
     localStorage.removeItem(SESSION_STORAGE_KEY);
     setSession(null);
   }

@@ -1,15 +1,40 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 const TOKEN_STORAGE_KEY = "tplus_auth_token";
+const CREDENTIALS_STORAGE_KEY = "tplus_api_credentials";
 
 // TODO: several GET endpoints (equipment categories, employee search) currently
 // require these on every request instead of trusting the logged-in session.
 // Remove once the backend accepts the session/token instead.
-const TEMP_API_USERNAME = "Tplus";
-const TEMP_API_PASSWORD = "Tplus123@99";
+//
+// These used to be a single hardcoded username/password baked into this
+// file — meaning the moment anyone changed their real password (e.g. via
+// Account settings), every request across the whole app started failing
+// with 401s for everyone, since the hardcoded pair no longer matched what
+// the backend actually had on file. Now captured fresh at login instead
+// (see setStoredCredentials calls in login.jsx and useAccount.js), so a
+// changed password keeps working automatically instead of needing a code
+// change here.
+export function getStoredCredentials() {
+  try {
+    const raw = localStorage.getItem(CREDENTIALS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredCredentials(username, password) {
+  if (username && password) {
+    localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify({ username, password }));
+  } else {
+    localStorage.removeItem(CREDENTIALS_STORAGE_KEY);
+  }
+}
 
 function appendTempCredentials(path) {
+  const stored = getStoredCredentials();
   const separator = path.includes("?") ? "&" : "?";
-  return `${path}${separator}username=${encodeURIComponent(TEMP_API_USERNAME)}&password=${encodeURIComponent(TEMP_API_PASSWORD)}`;
+  return `${path}${separator}username=${encodeURIComponent(stored?.username || "")}&password=${encodeURIComponent(stored?.password || "")}`;
 }
 
 export function getAuthToken() {
@@ -62,6 +87,16 @@ export async function apiPost(path, body, { skipCredentials = false } = {}) {
   const url = skipCredentials ? path : appendTempCredentials(path);
   const response = await fetch(`${API_BASE_URL}${url}`, {
     method: "POST",
+    headers: buildHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(body),
+  });
+  return handleResponse(response);
+}
+
+export async function apiPatch(path, body, { skipCredentials = false } = {}) {
+  const url = skipCredentials ? path : appendTempCredentials(path);
+  const response = await fetch(`${API_BASE_URL}${url}`, {
+    method: "PATCH",
     headers: buildHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
   });

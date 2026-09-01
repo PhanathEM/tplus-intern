@@ -11,14 +11,11 @@ export const PERMISSIONS = {
   REPLACEMENT_HISTORY: "replacement_history",
   PART_STOCK: "part_stock",
   PART_BORROW: "part_borrow",
-  SSD_UPGRADE: "ssd_upgrade",
-  SSD_PROCUREMENT: "ssd_procurement",
   LICENSE: "license",
   EQUIPMENT_STATUS: "equipment_status",
   EQUIPMENT_CATEGORY: "equipment_category",
   PART_TYPE: "part_type",
-  CLOUD_RATE: "cloud_rate",
-  CLOUD_USAGE: "cloud_usage",
+  PART_STATUS: "part_status",
   SERVICE_USAGE: "service_usage",
   USERS: "users",
   ACTIVITY_LOG: "activity_log",
@@ -36,11 +33,7 @@ export const PERMISSION_DEFINITIONS = [
   { value: PERMISSIONS.PART_BORROW, label: "Borrow a Part" },
   { value: PERMISSIONS.DEVICE_REPLACEMENT, label: "Device Replacement" },
   { value: PERMISSIONS.REPLACEMENT_HISTORY, label: "Device Replacement History" },
-  { value: PERMISSIONS.SSD_UPGRADE, label: "SSD Upgrade" },
-  { value: PERMISSIONS.SSD_PROCUREMENT, label: "SSD Procurement" },
   { value: PERMISSIONS.LICENSE, label: "Software License" },
-  { value: PERMISSIONS.CLOUD_RATE, label: "Cloud Rate" },
-  { value: PERMISSIONS.CLOUD_USAGE, label: "Cloud Usage" },
   { value: PERMISSIONS.SERVICE_USAGE, label: "Server Usage" },
   { value: PERMISSIONS.USERS, label: "Users" },
   { value: PERMISSIONS.ACTIVITY_LOG, label: "Activity Log" },
@@ -48,6 +41,7 @@ export const PERMISSION_DEFINITIONS = [
   { value: PERMISSIONS.EQUIPMENT_STATUS, label: "Status" },
   { value: PERMISSIONS.EQUIPMENT_CATEGORY, label: "Category" },
   { value: PERMISSIONS.PART_TYPE, label: "Part Types" },
+  { value: PERMISSIONS.PART_STATUS, label: "Part Types Statuses" },
 ];
 
 const ADMIN_ONLY_DEFAULT_PERMISSIONS = new Set([
@@ -57,6 +51,7 @@ const ADMIN_ONLY_DEFAULT_PERMISSIONS = new Set([
   PERMISSIONS.EQUIPMENT_STATUS,
   PERMISSIONS.EQUIPMENT_CATEGORY,
   PERMISSIONS.PART_TYPE,
+  PERMISSIONS.PART_STATUS,
   PERMISSIONS.ASSIGN_EQUIPMENT,
 ]);
 
@@ -237,28 +232,32 @@ export function getAccessibleDashboardViews(user, navSections) {
   );
 }
 
-export function getPermissionLabel(permission) {
-  return PERMISSION_LABEL_BY_VALUE[permission] || permission;
+function identity(value) {
+  return value;
 }
 
-export function getPermissionSummary(user, maxLabels = 3) {
+export function getPermissionLabel(permission, t = identity) {
+  return t(PERMISSION_LABEL_BY_VALUE[permission] || permission);
+}
+
+export function getPermissionSummary(user, maxLabels = 3, t = identity) {
   const permissions = normalizeUserPermissions(user);
 
-  if (permissions.length === ALL_PERMISSION_VALUES.length) return "All access";
-  if (permissions.length === 0) return "No access";
+  if (permissions.length === ALL_PERMISSION_VALUES.length) return t("All access");
+  if (permissions.length === 0) return t("No access");
 
-  const labels = permissions.map(getPermissionLabel);
+  const labels = permissions.map((permission) => getPermissionLabel(permission, t));
   const visibleLabels = labels.slice(0, maxLabels).join(", ");
   const remainingCount = labels.length - maxLabels;
 
-  return remainingCount > 0 ? `${visibleLabels} +${remainingCount} more` : visibleLabels;
+  return remainingCount > 0 ? `${visibleLabels} ${t("more_count", { count: remainingCount })}` : visibleLabels;
 }
 
-export function getAccessProfileLabel(user) {
+export function getAccessProfileLabel(user, t = identity) {
   const permissions = normalizeUserPermissions(user);
-  if (permissions.length === ALL_PERMISSION_VALUES.length) return "Full access";
-  if (permissions.length === 0) return "No pages assigned";
-  return "Custom access";
+  if (permissions.length === ALL_PERMISSION_VALUES.length) return t("Full access");
+  if (permissions.length === 0) return t("No pages assigned");
+  return t("Custom access");
 }
 
 export function permissionsToRole(permissions) {

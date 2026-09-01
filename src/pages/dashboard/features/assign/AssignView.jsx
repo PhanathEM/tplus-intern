@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   FiAlertTriangle as AlertTriangle,
   FiCheckCircle as CheckCircle,
@@ -6,6 +7,7 @@ import {
   FiX as X,
 } from "react-icons/fi";
 import { FormField, formInputClass, RadioSelect } from "../../components/SharedControls";
+import { translateLabel } from "../../../../lib/i18nLabel";
 
 function SectionCard({ step, title, description, children }) {
   return (
@@ -25,6 +27,8 @@ function SectionCard({ step, title, description, children }) {
 }
 
 function DeviceResultRow({ device, onSelect }) {
+  const { t, i18n } = useTranslation();
+
   return (
     <button
       type="button"
@@ -40,13 +44,15 @@ function DeviceResultRow({ device, onSelect }) {
         </p>
       </div>
       <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-        {device.status || "—"}
+        {device.status ? translateLabel(t, i18n, device.status) : "—"}
       </span>
     </button>
   );
 }
 
 function EmployeeResultRow({ employee, isSelected, onSelect }) {
+  const { t } = useTranslation();
+
   return (
     <button
       type="button"
@@ -64,7 +70,7 @@ function EmployeeResultRow({ employee, isSelected, onSelect }) {
         </p>
       </div>
       <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-        {employee.current_equipment_count ?? 0} device{employee.current_equipment_count === 1 ? "" : "s"}
+        {t("device_count", { count: employee.current_equipment_count ?? 0 })}
       </span>
     </button>
   );
@@ -111,13 +117,14 @@ export function AssignEquipmentView({
   onResolveConflict,
   isResolvingConflict,
 }) {
+  const { t, i18n } = useTranslation();
   const canSubmit = Boolean(selectedDevice && selectedEmployee);
 
   if (isFormDataLoading) {
     return (
       <div className="px-4 py-6 sm:px-6 lg:px-8">
         <div className="rounded-xl border border-slate-200 bg-white px-5 py-10 text-center text-[13px] text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-          Loading assign form...
+          {t("Loading assign form...")}
         </div>
       </div>
     );
@@ -130,14 +137,14 @@ export function AssignEquipmentView({
           <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
             <AlertTriangle size={18} />
           </div>
-          <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Couldn&apos;t load the assign form</p>
+          <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">{t("Couldn't load the assign form")}</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">{formDataError}</p>
           <button
             type="button"
             onClick={onRetryFormData}
             className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
           >
-            Retry
+            {t("Retry")}
           </button>
         </div>
       </div>
@@ -148,9 +155,9 @@ export function AssignEquipmentView({
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <form onSubmit={onSubmit} className="mx-auto flex max-w-3xl flex-col gap-4" autoComplete="off">
         <div>
-          <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Assign equipment</h2>
+          <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Assign equipment")}</h2>
           <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-            Give a device in stock to an employee. Pick a device, then narrow down to the employee.
+            {t("Give a device in stock to an employee.")}
           </p>
         </div>
 
@@ -163,10 +170,10 @@ export function AssignEquipmentView({
 
         {conflict && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-            <p className="font-semibold">This device already belongs to someone.</p>
+            <p className="font-semibold">{t("This device already belongs to someone.")}</p>
             <p className="mt-0.5">
-              Currently assigned to{" "}
-              <span className="font-semibold">{conflict.current_owner || "another employee"}</span>.
+              {t("Currently assigned to")}{" "}
+              <span className="font-semibold">{conflict.current_owner || t("another employee")}</span>.
             </p>
             <button
               type="button"
@@ -174,7 +181,7 @@ export function AssignEquipmentView({
               disabled={isResolvingConflict}
               className="mt-2 inline-flex h-8 items-center gap-1.5 rounded-lg bg-amber-600 px-3 text-xs font-semibold text-white outline-none transition hover:bg-amber-700 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-slate-900"
             >
-              {isResolvingConflict ? "Unassigning..." : "Unassign it, then retry"}
+              {isResolvingConflict ? t("Unassigning...") : t("Unassign it, then retry")}
             </button>
           </div>
         )}
@@ -185,13 +192,13 @@ export function AssignEquipmentView({
           </div>
         )}
 
-        <SectionCard step={1} title="Pick a device">
+        <SectionCard step={1} title={t("Pick a device")}>
           {selectedDevice ? (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-orange-200 bg-orange-50 px-3.5 py-2.5 dark:border-orange-800/60 dark:bg-orange-500/10">
               <div className="min-w-0">
                 <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">{selectedDevice.display_name}</p>
                 <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
-                  {[selectedDevice.category_name, selectedDevice.asset_code, selectedDevice.status]
+                  {[selectedDevice.category_name, selectedDevice.asset_code, selectedDevice.status && translateLabel(t, i18n, selectedDevice.status)]
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
@@ -202,7 +209,7 @@ export function AssignEquipmentView({
                 className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
               >
                 <X size={13} />
-                Change
+                {t("Change")}
               </button>
             </div>
           ) : (
@@ -218,15 +225,20 @@ export function AssignEquipmentView({
                     autoComplete="off"
                     value={deviceQuery}
                     onChange={(e) => onDeviceQueryChange(e.target.value)}
-                    placeholder="Search device name, asset code, service tag..."
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
+                    placeholder={t("Search...")}
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-14 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
                   />
+                  {!deviceQuery && (
+                    <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
+                      Ctrl K
+                    </kbd>
+                  )}
                 </div>
                 <div className="sm:w-52">
                   <RadioSelect
                     id="assign-device-category"
                     options={[
-                      { value: "All", label: "All categories" },
+                      { value: "All", label: t("All categories") },
                       ...categories.map((category) => ({
                         value: category.category_name,
                         label: `${category.category_name} (${category.available_count})`,
@@ -234,19 +246,19 @@ export function AssignEquipmentView({
                     ]}
                     value={deviceCategory}
                     onSelect={onDeviceCategoryChange}
-                    placeholder="All categories"
+                    placeholder={t("All categories")}
                   />
                 </div>
               </div>
 
               <div className="mt-3 max-h-72 overflow-y-auto rounded-lg border border-slate-100 dark:border-slate-800">
                 {isDeviceLoading ? (
-                  <p className="px-3 py-6 text-center text-xs text-slate-400 dark:text-slate-500">Searching...</p>
+                  <p className="px-3 py-6 text-center text-xs text-slate-400 dark:text-slate-500">{t("Searching...")}</p>
                 ) : deviceError ? (
                   <p className="px-3 py-6 text-center text-xs text-rose-500 dark:text-rose-400">{deviceError}</p>
                 ) : deviceOptions.length === 0 ? (
                   <p className="px-3 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                    No assignable devices found. Try a different search or category.
+                    {t("No assignable devices found. Try a different search or category.")}
                   </p>
                 ) : (
                   <div className="divide-y divide-slate-50 p-1 dark:divide-slate-800">
@@ -260,7 +272,7 @@ export function AssignEquipmentView({
           )}
         </SectionCard>
 
-        <SectionCard step={2} title="Pick an employee">
+        <SectionCard step={2} title={t("Pick an employee")}>
           {selectedEmployee ? (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-orange-200 bg-orange-50 px-3.5 py-2.5 dark:border-orange-800/60 dark:bg-orange-500/10">
               <div className="min-w-0">
@@ -286,7 +298,7 @@ export function AssignEquipmentView({
                 className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
               >
                 <X size={13} />
-                Change
+                {t("Change")}
               </button>
             </div>
           ) : (
@@ -302,15 +314,20 @@ export function AssignEquipmentView({
                   autoComplete="off"
                   value={employeeQuery}
                   onChange={(e) => onEmployeeQueryChange(e.target.value)}
-                  placeholder="Search employee name or staff code..."
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
+                  placeholder={t("Search...")}
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-14 text-sm outline-none transition focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
                 />
+                {!employeeQuery && (
+                  <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
+                    Ctrl K
+                  </kbd>
+                )}
               </div>
 
               <div className="mt-3 max-h-72 overflow-y-auto rounded-lg border border-slate-100 dark:border-slate-800">
                 {isEmployeeLoading ? (
                   <p className="px-3 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                    Searching...
+                    {t("Searching...")}
                   </p>
                 ) : employeeError ? (
                   <p className="px-3 py-6 text-center text-xs text-rose-500 dark:text-rose-400">
@@ -318,7 +335,7 @@ export function AssignEquipmentView({
                   </p>
                 ) : employeeOptions.length === 0 ? (
                   <p className="px-3 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                    No employees found.
+                    {t("No employees found.")}
                   </p>
                 ) : (
                   <div className="divide-y divide-slate-50 p-1 dark:divide-slate-800">
@@ -339,18 +356,21 @@ export function AssignEquipmentView({
           )}
         </SectionCard>
 
-        <SectionCard step={3} title="Status &amp; date">
+        <SectionCard step={3} title={t("Status & date")}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FormField label="Status" htmlFor="assign-page-status">
+            <FormField label={t("Status")} htmlFor="assign-page-status">
               <RadioSelect
                 id="assign-page-status"
-                options={statuses.map((item) => ({ value: item.status_name, label: item.status_name }))}
+                options={statuses.map((item) => ({
+                  value: item.status_name,
+                  label: translateLabel(t, i18n, item.status_name),
+                }))}
                 value={status}
                 onSelect={onStatusChange}
-                placeholder="Select a status..."
+                placeholder={t("Select a status...")}
               />
             </FormField>
-            <FormField label="Assigned Date" htmlFor="assign-page-date">
+            <FormField label={t("Assigned Date")} htmlFor="assign-page-date">
               <input
                 id="assign-page-date"
                 type="date"
@@ -369,7 +389,7 @@ export function AssignEquipmentView({
             className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-slate-950 px-5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
           >
             <UserPlus size={15} />
-            {isSubmitting ? "Assigning..." : "Assign equipment"}
+            {isSubmitting ? t("Assigning...") : t("Assign equipment")}
           </button>
         </div>
       </form>

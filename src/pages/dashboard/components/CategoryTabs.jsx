@@ -1,7 +1,9 @@
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { FiChevronLeft as ChevronLeft, FiChevronRight as ChevronRight } from "react-icons/fi";
 
 export function CategoryTabs({ options, selected, onSelect, trailing }) {
+  const { t } = useTranslation();
   const scrollRef = useRef(null);
 
   function scrollByAmount(amount) {
@@ -13,7 +15,7 @@ export function CategoryTabs({ options, selected, onSelect, trailing }) {
       <button
         type="button"
         onClick={() => scrollByAmount(-240)}
-        aria-label="Scroll categories left"
+        aria-label={t("Scroll categories left")}
         className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200"
       >
         <ChevronLeft size={16} />
@@ -44,7 +46,7 @@ export function CategoryTabs({ options, selected, onSelect, trailing }) {
       <button
         type="button"
         onClick={() => scrollByAmount(240)}
-        aria-label="Scroll categories right"
+        aria-label={t("Scroll categories right")}
         className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-200"
       >
         <ChevronRight size={16} />

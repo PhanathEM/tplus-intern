@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { FiX as X } from "react-icons/fi";
 import {
   DISK_INTERFACE_OPTIONS,
@@ -26,6 +27,8 @@ export function AddStockDialog({
   isSubmitting,
   error,
 }) {
+  const { t } = useTranslation();
+
   if (!isOpen) return null;
 
   const selectedPartType = partTypes.find((item) => String(item.part_type_id) === String(values.part_type_id));
@@ -62,21 +65,23 @@ export function AddStockDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label="Close" />
+      <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label={t("Close")} />
 
       <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">
-              {isPartLocked && selectedPartType ? `Add New ${selectedPartType.part_name}` : "Add to stock"}
+              {isPartLocked && selectedPartType
+                ? t("add_new_part_title", { name: selectedPartType.part_name })
+                : t("Add to stock")}
             </h2>
-            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Add a new part to stock.</p>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{t("Add a new part to stock.")}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X size={16} />
           </button>
@@ -88,7 +93,7 @@ export function AddStockDialog({
               <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">{error}</div>
             )}
 
-            <FormField label="Part Name" htmlFor="add-stock-part">
+            <FormField label={t("Part Name")} htmlFor="add-stock-part">
               {isPartLocked ? (
                 <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                   {selectedPartType?.part_name || "—"}
@@ -100,7 +105,7 @@ export function AddStockDialog({
                   onChange={(e) => onChange("part_type_id", e.target.value)}
                   className={formInputClass}
                 >
-                  <option value="">Select a part...</option>
+                  <option value="">{t("Select a part...")}</option>
                   {partTypes.map((partType) => (
                     <option key={partType.part_type_id} value={partType.part_type_id}>
                       {partType.part_name}
@@ -111,42 +116,42 @@ export function AddStockDialog({
             </FormField>
 
             {needsModelName && (
-              <FormField label="Model Name" htmlFor="add-stock-model-name">
+              <FormField label={t("Model Name")} htmlFor="add-stock-model-name">
                 <input
                   id="add-stock-model-name"
                   type="text"
                   autoComplete="off"
                   value={values.model_name || ""}
                   onChange={(e) => onChange("model_name", e.target.value)}
-                  placeholder={MODEL_NAME_PLACEHOLDER_BY_PART[normalizedName] || "e.g. Model name..."}
+                  placeholder={MODEL_NAME_PLACEHOLDER_BY_PART[normalizedName] || t("e.g. Model name...")}
                   className={formInputClass}
                 />
               </FormField>
             )}
 
             {needsModelNumber && (
-              <FormField label="Model Number" htmlFor="add-stock-model-number">
+              <FormField label={t("Model Number")} htmlFor="add-stock-model-number">
                 <input
                   id="add-stock-model-number"
                   type="text"
                   autoComplete="off"
                   value={values.model_number || ""}
                   onChange={(e) => onChange("model_number", e.target.value)}
-                  placeholder={MODEL_NUMBER_PLACEHOLDER_BY_PART[normalizedName] || "e.g. Model number..."}
+                  placeholder={MODEL_NUMBER_PLACEHOLDER_BY_PART[normalizedName] || t("e.g. Model number...")}
                   className={formInputClass}
                 />
               </FormField>
             )}
 
             {needsDiskType && (
-              <FormField label="Disk Type" htmlFor="add-stock-disk-type">
+              <FormField label={t("Disk Type")} htmlFor="add-stock-disk-type">
                 <select
                   id="add-stock-disk-type"
                   value={values.disk_type || ""}
                   onChange={(e) => onChange("disk_type", e.target.value)}
                   className={formInputClass}
                 >
-                  <option value="">Select disk type...</option>
+                  <option value="">{t("Select disk type...")}</option>
                   {DISK_TYPE_OPTIONS.map((type) => (
                     <option key={type} value={type}>
                       {type}
@@ -157,14 +162,14 @@ export function AddStockDialog({
             )}
 
             {needsDiskInterface && (
-              <FormField label="Disk Interface" htmlFor="add-stock-disk-interface">
+              <FormField label={t("Disk Interface")} htmlFor="add-stock-disk-interface">
                 <select
                   id="add-stock-disk-interface"
                   value={values.disk_interface || ""}
                   onChange={(e) => onChange("disk_interface", e.target.value)}
                   className={formInputClass}
                 >
-                  <option value="">Select disk interface...</option>
+                  <option value="">{t("Select disk interface...")}</option>
                   {DISK_INTERFACE_OPTIONS.map((type) => (
                     <option key={type} value={type}>
                       {type}
@@ -175,14 +180,14 @@ export function AddStockDialog({
             )}
 
             {needsRamType && (
-              <FormField label="RAM Type" htmlFor="add-stock-ram-type">
+              <FormField label={t("RAM Type")} htmlFor="add-stock-ram-type">
                 <select
                   id="add-stock-ram-type"
                   value={values.ram_type || ""}
                   onChange={(e) => onChange("ram_type", e.target.value)}
                   className={formInputClass}
                 >
-                  <option value="">Select RAM type...</option>
+                  <option value="">{t("Select RAM type...")}</option>
                   {RAM_TYPE_OPTIONS.map((type) => (
                     <option key={type} value={type}>
                       {type}
@@ -193,7 +198,7 @@ export function AddStockDialog({
             )}
 
             {needsValue && (
-              <FormField label="Value" htmlFor="add-stock-value">
+              <FormField label={t("Value")} htmlFor="add-stock-value">
                 {capacityOptions ? (
                   <select
                     id="add-stock-value"
@@ -201,7 +206,7 @@ export function AddStockDialog({
                     onChange={(e) => onChange("part_value", e.target.value)}
                     className={formInputClass}
                   >
-                    <option value="">Select capacity...</option>
+                    <option value="">{t("Select capacity...")}</option>
                     {capacityOptions.map((option) => (
                       <option key={option} value={option}>
                         {option}
@@ -215,7 +220,7 @@ export function AddStockDialog({
                     autoComplete="off"
                     value={values.part_value || ""}
                     onChange={(e) => onChange("part_value", e.target.value)}
-                    placeholder="e.g. 16 GB"
+                    placeholder={t("e.g. 16 GB")}
                     className={formInputClass}
                   />
                 )}
@@ -250,7 +255,7 @@ export function AddStockDialog({
               )
             )}
 
-            <FormField label="Quantity" htmlFor="add-stock-quantity">
+            <FormField label={t("Quantity")} htmlFor="add-stock-quantity">
               <input
                 id="add-stock-quantity"
                 type="number"
@@ -262,13 +267,13 @@ export function AddStockDialog({
               />
             </FormField>
 
-            <FormField label="Remark" htmlFor="add-stock-remark">
+            <FormField label={t("Remark")} htmlFor="add-stock-remark">
               <textarea
                 id="add-stock-remark"
                 rows={3}
                 value={values.remark || ""}
                 onChange={(e) => onChange("remark", e.target.value)}
-                placeholder="Enter remark..."
+                placeholder={t("Enter remark...")}
                 className={`${formInputClass} min-h-20 resize-none py-2`}
               />
             </FormField>
@@ -281,14 +286,14 @@ export function AddStockDialog({
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={!canSubmit || isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? "Adding..." : isRam ? "Add RAM" : "Add"}
+              {isSubmitting ? t("Adding...") : isRam ? t("Add RAM") : t("Add")}
             </button>
           </div>
         </form>

@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FiAlertTriangle as AlertTriangle,
   FiBox as Box,
@@ -30,6 +31,7 @@ export function EmployeeFormModal({
   error,
   departments,
 }) {
+  const { t } = useTranslation();
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -54,7 +56,7 @@ export function EmployeeFormModal({
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
             <h3 className="text-[15px] font-semibold text-slate-600 dark:text-slate-300">
-              {isEdit ? "Edit Employee" : "Add New Employee"}
+              {isEdit ? t("Edit Employee") : t("Add New Employee")}
             </h3>
           </div>
           <button
@@ -77,7 +79,7 @@ export function EmployeeFormModal({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <FormField label="Full Name *" htmlFor="employee-full_name">
+                <FormField label={t("Full Name *")} htmlFor="employee-full_name">
                   <input
                     id="employee-full_name"
                     type="text"
@@ -91,7 +93,7 @@ export function EmployeeFormModal({
                 </FormField>
               </div>
 
-              <FormField label="Position" htmlFor="employee-position">
+              <FormField label={t("Position")} htmlFor="employee-position">
                 <input
                   id="employee-position"
                   type="text"
@@ -103,18 +105,18 @@ export function EmployeeFormModal({
                 />
               </FormField>
 
-              <FormField label="Department" htmlFor="employee-department">
+              <FormField label={t("Department")} htmlFor="employee-department">
                 <RadioSelect
                   id="employee-department"
                   options={departments.map((dept) => ({ value: dept.department_code, label: dept.department_name }))}
                   value={values.department}
                   onSelect={(value) => onChange("department", value)}
-                  placeholder="Select Department"
+                  placeholder={t("Select Department")}
                   disabled={isSubmitting}
                 />
               </FormField>
 
-              <FormField label="Location" htmlFor="employee-location">
+              <FormField label={t("Location")} htmlFor="employee-location">
                 <input
                   id="employee-location"
                   type="text"
@@ -126,7 +128,7 @@ export function EmployeeFormModal({
                 />
               </FormField>
 
-              <FormField label="Staff Code" htmlFor="employee-staff_code">
+              <FormField label={t("Staff Code")} htmlFor="employee-staff_code">
                 <input
                   id="employee-staff_code"
                   type="text"
@@ -138,7 +140,7 @@ export function EmployeeFormModal({
                 />
               </FormField>
 
-              <FormField label="Phone" htmlFor="employee-phone">
+              <FormField label={t("Phone")} htmlFor="employee-phone">
                 <input
                   id="employee-phone"
                   type="text"
@@ -150,16 +152,16 @@ export function EmployeeFormModal({
                 />
               </FormField>
 
-              <FormField label="Sex" htmlFor="employee-sex">
+              <FormField label={t("Sex")} htmlFor="employee-sex">
                 <RadioSelect
                   id="employee-sex"
                   options={[
-                    { value: "Male", label: "Male" },
-                    { value: "Female", label: "Female" },
+                    { value: "Male", label: t("Male") },
+                    { value: "Female", label: t("Female") },
                   ]}
                   value={values.sex}
                   onSelect={(value) => onChange("sex", value)}
-                  placeholder="Select Sex"
+                  placeholder={t("Select Sex")}
                   disabled={isSubmitting}
                 />
               </FormField>
@@ -173,14 +175,14 @@ export function EmployeeFormModal({
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Create"}
+              {isSubmitting ? t("Saving...") : isEdit ? t("Save changes") : t("Create")}
             </button>
           </div>
         </form>
@@ -214,6 +216,7 @@ export function EmployeeDirectoryTable({
   canManage = true,
   canCreate = true,
 }) {
+  const { t } = useTranslation();
   const columns = [
     { key: "full_name", label: "Full Name" },
     { key: "position", label: "Position" },
@@ -245,9 +248,11 @@ export function EmployeeDirectoryTable({
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
         <div>
-          <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Employees</h2>
+          <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Employees")}</h2>
           {!isLoading && !error && (
-            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">{totalCount} employees</p>
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
+              {t("employees_count", { count: totalCount })}
+            </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -261,7 +266,7 @@ export function EmployeeDirectoryTable({
                 autoComplete="off"
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search Employee"
+                placeholder={t("Search Employee")}
                 className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-14 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
               />
               {search ? (
@@ -288,20 +293,20 @@ export function EmployeeDirectoryTable({
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
               <PlusCircle size={15} />
-              New Employee
+              {t("New Employee")}
             </button>
           )}
         </div>
       </div>
 
       {isLoading ? (
-        <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading employees...</div>
+        <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">{t("Loading employees...")}</div>
       ) : error ? (
         <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
           <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
             <AlertTriangle size={18} />
           </div>
-          <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Couldn&apos;t load employees</p>
+          <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">{t("Couldn't load employees")}</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
           <button
             type="button"
@@ -309,14 +314,14 @@ export function EmployeeDirectoryTable({
             className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
           >
             <RefreshCw size={13} />
-            Retry
+            {t("Retry")}
           </button>
         </div>
       ) : employees.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No employees found"
-          description={search ? `No employee matches "${search}".` : "The employee directory is empty."}
+          title={t("No employees found")}
+          description={search ? t("No employee matches", { term: search }) : t("The employee directory is empty.")}
         />
       ) : (
         <>
@@ -325,8 +330,8 @@ export function EmployeeDirectoryTable({
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
                   {columns.map((column) => (
-                    <th key={column.key} className="px-5 py-3 font-semibold uppercase tracking-wide">
-                      {column.label}
+                    <th key={column.key} className="whitespace-nowrap px-5 py-3 font-semibold uppercase tracking-wide">
+                      {t(column.label)}
                     </th>
                   ))}
                   <th className="px-5 py-3 text-right">
@@ -334,12 +339,12 @@ export function EmployeeDirectoryTable({
                       items={[
                         {
                           icon: FileText,
-                          label: isDownloadingAllPdf ? "Preparing PDF..." : "Download All PDFs",
+                          label: isDownloadingAllPdf ? t("Preparing PDF...") : t("Download All PDFs"),
                           onClick: onDownloadAllPdf,
                         },
                         {
                           icon: Grid,
-                          label: isDownloadingAllExcel ? "Preparing Excel..." : "Download All Excel",
+                          label: isDownloadingAllExcel ? t("Preparing Excel...") : t("Download All Excel"),
                           onClick: onDownloadAllExcel,
                         },
                       ]}
@@ -380,11 +385,11 @@ export function EmployeeDirectoryTable({
                           {canManage && (
                             <RowActionsMenu
                               items={[
-                                { icon: FileText, label: "Download PDF", onClick: () => onDownloadPdf(employee) },
-                                { icon: Grid, label: "Download Excel", onClick: () => onDownloadExcel(employee) },
+                                { icon: FileText, label: t("Download PDF"), onClick: () => onDownloadPdf(employee) },
+                                { icon: Grid, label: t("Download Excel"), onClick: () => onDownloadExcel(employee) },
                                 { divider: true },
-                                { icon: Edit2, label: "Edit", onClick: () => onEdit(employee) },
-                                { icon: Trash2, label: "Delete", onClick: () => onDelete(employee), destructive: true },
+                                { icon: Edit2, label: t("Edit"), onClick: () => onEdit(employee) },
+                                { icon: Trash2, label: t("Delete"), onClick: () => onDelete(employee), destructive: true },
                               ]}
                             />
                           )}
@@ -400,9 +405,9 @@ export function EmployeeDirectoryTable({
           {totalCount > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
               <span>
-                Showing {(page - 1) * pageSize + 1}
+                {t("Showing")} {(page - 1) * pageSize + 1}
                 {"–"}
-                {Math.min(page * pageSize, totalCount)} of {totalCount}
+                {Math.min(page * pageSize, totalCount)} {t("of")} {totalCount}
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -411,7 +416,7 @@ export function EmployeeDirectoryTable({
                   onClick={() => onPageChange(Math.max(1, page - 1))}
                   className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
                 >
-                  Previous
+                  {t("Previous")}
                 </button>
                 <span className="tabular-nums text-slate-400 dark:text-slate-500">
                   {page} / {pageCount}
@@ -422,7 +427,7 @@ export function EmployeeDirectoryTable({
                   onClick={() => onPageChange(Math.min(pageCount, page + 1))}
                   className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
                 >
-                  Next
+                  {t("Next")}
                 </button>
               </div>
             </div>
@@ -443,6 +448,7 @@ export function EmployeeDetailModal({
   onUnassign,
   canManage = true,
 }) {
+  const { t } = useTranslation();
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -468,12 +474,12 @@ export function EmployeeDetailModal({
               <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{employee.full_name || "Employee"}</h2>
               {employee.is_active === false && (
                 <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
-                  Inactive
+                  {t("Inactive")}
                 </span>
               )}
               {employee.left_date && (
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                  Left {formatFieldValue(employee.left_date)}
+                  {t("Left", { date: formatFieldValue(employee.left_date) })}
                 </span>
               )}
             </div>
@@ -501,7 +507,7 @@ export function EmployeeDetailModal({
               ["Sex", employee.sex],
             ].map(([label, value]) => (
               <Fragment key={label}>
-                <dt className="font-semibold text-slate-800 dark:text-slate-200">{label}</dt>
+                <dt className="font-semibold text-slate-800 dark:text-slate-200">{t(label)}</dt>
                 <dd className="min-w-0 truncate">: {formatFieldValue(value)}</dd>
               </Fragment>
             ))}
@@ -510,13 +516,13 @@ export function EmployeeDetailModal({
 
         <div className="overflow-y-auto px-6 py-5">
           {isLoading ? (
-            <div className="py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading details...</div>
+            <div className="py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">{t("Loading details...")}</div>
           ) : error ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
               <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
                 <AlertTriangle size={18} />
               </div>
-              <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Couldn&apos;t load details</p>
+              <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">{t("Couldn't load details")}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
               <button
                 type="button"
@@ -524,14 +530,14 @@ export function EmployeeDetailModal({
                 className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
               >
                 <RefreshCw size={13} />
-                Retry
+                {t("Retry")}
               </button>
             </div>
           ) : devices.length === 0 ? (
             <EmptyState
               icon={Box}
-              title="No equipment records"
-              description="This employee has no equipment assigned."
+              title={t("No equipment records")}
+              description={t("This employee has no equipment assigned.")}
             />
           ) : (
             <div className="space-y-5">
@@ -547,7 +553,7 @@ export function EmployeeDetailModal({
                   <div key={device.equipment_id ?? idx} className="rounded-xl border border-slate-100 dark:border-slate-800">
                     <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/60 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-800/40">
                       <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-200">
-                        Device {idx + 1}
+                        {t("Device", { count: idx + 1 })}
                       </p>
                       {canManage && onUnassign && device.equipment_id && (
                         <button
@@ -555,7 +561,7 @@ export function EmployeeDetailModal({
                           onClick={() => onUnassign({ equipment_id: device.equipment_id, category: device.category, ...device.item })}
                           className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
                         >
-                          Unassign
+                          {t("Unassign")}
                         </button>
                       )}
                     </div>
@@ -564,7 +570,7 @@ export function EmployeeDetailModal({
                         }`}
                     >
                       <div className={hasSoftware ? "sm:pr-6" : ""}>
-                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Hardware</p>
+                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">{t("Hardware")}</p>
                         <dl className="grid grid-cols-[max-content_1fr] items-baseline gap-x-4 gap-y-2 text-[13px] text-slate-700 dark:text-slate-300">
                           {hardwareColumns.map(({ field, header }) => (
                             <Fragment key={field}>
@@ -578,7 +584,7 @@ export function EmployeeDetailModal({
                       </div>
                       {hasSoftware && (
                         <div className="sm:pl-6">
-                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Software</p>
+                          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">{t("Software")}</p>
                           <dl className="grid grid-cols-[max-content_1fr] items-baseline gap-x-4 gap-y-2 text-[13px] text-slate-700 dark:text-slate-300">
                             {softwareColumns.map(({ field, header }) => (
                               <Fragment key={field}>
@@ -590,7 +596,7 @@ export function EmployeeDetailModal({
                             ))}
                             {device.licenses?.length > 0 && (
                               <Fragment>
-                                <dt className="font-semibold text-slate-800 dark:text-slate-200">Software Licenses</dt>
+                                <dt className="font-semibold text-slate-800 dark:text-slate-200">{t("Software Licenses")}</dt>
                                 <dd className="min-w-0 truncate">
                                   : {device.licenses.map((license) => license.product_name).filter(Boolean).join(", ")}
                                 </dd>

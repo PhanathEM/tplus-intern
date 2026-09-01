@@ -107,7 +107,12 @@ export function useGlobalSearch({ user, onSelectView, onSelectEmployee, onSelect
             key: "equipment",
             items: list
               .filter((item) =>
-                `${item.computer_name || ""} ${item.asset_code || item.equipment_code || ""} ${item.service_tag || ""} ${item.device_model || ""
+                // device_name/name are the primary display name for most
+                // records (see getEquipmentDisplayName) — computer_name is
+                // often blank, so matching only on it left records like bare
+                // CCTV cameras ("Camera01") unfindable by the name shown
+                // everywhere else in the app.
+                `${item.device_name || ""} ${item.name || ""} ${item.computer_name || ""} ${item.asset_code || item.equipment_code || ""} ${item.service_tag || ""} ${item.device_model || ""
                   } ${item.owner_name || ""}`
                   .toLowerCase()
                   .includes(lowerTerm)

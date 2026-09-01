@@ -45,6 +45,14 @@ export function updateEquipmentByView(view, equipmentId, payload) {
   return apiPut(`/api/equipment/${view}/${equipmentId}`, payload);
 }
 
+// The category update endpoint above accepts owner_id in its body but
+// silently ignores it (confirmed via direct API testing) — the owner has
+// its own dedicated endpoint, called separately once we have the
+// equipment_id (see handleSubmitForm).
+export function updateEquipmentOwner(equipmentId, ownerId) {
+  return apiPut(`/api/equipment/${equipmentId}/owner`, { owner_id: ownerId });
+}
+
 export function deleteEquipmentItem(equipmentId) {
   return apiDelete(`/api/equipment/${equipmentId}`);
 }

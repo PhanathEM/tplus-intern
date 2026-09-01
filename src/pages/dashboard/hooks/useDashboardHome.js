@@ -4,10 +4,6 @@ import { fetchDepartments } from "../../../services/departmentService";
 import { fetchEquipmentCategorySummary } from "../../../services/equipmentService";
 import { fetchBorrowHistory } from "../../../services/borrowService";
 import { fetchPartReplacements } from "../../../services/partReplacementService";
-import { fetchSsdUpgrades } from "../../../services/ssdUpgradeService";
-import { fetchSsdProcurement } from "../../../services/ssdProcurementService";
-import { fetchCloudRates } from "../../../services/cloudRateService";
-import { fetchCloudUsage } from "../../../services/cloudUsageService";
 import { fetchServerUsage } from "../../../services/serverUsageService";
 import { fetchUsers } from "../../../services/userService";
 import { fetchRecycleBin } from "../../../services/recycleBinService";
@@ -26,10 +22,6 @@ const HOME_STAT_FETCHERS = {
     fetchPartReplacements().then((data) =>
       typeof data?.count === "number" ? data.count : Array.isArray(data?.replacements) ? data.replacements.length : 0
     ),
-  "SSD Upgrade": () => fetchSsdUpgrades().then((data) => normalizeRecordList(data).length),
-  "SSD Procurement": () => fetchSsdProcurement().then((data) => normalizeRecordList(data).length),
-  "Cloud Rate": () => fetchCloudRates().then((data) => normalizeRecordList(data).length),
-  "Cloud Usage": () => fetchCloudUsage().then((data) => normalizeRecordList(data).length),
   "Server Usage": () => fetchServerUsage().then((data) => normalizeRecordList(data).length),
   Users: () =>
     fetchUsers().then((data) => {

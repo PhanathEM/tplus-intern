@@ -334,6 +334,21 @@ const EQUIPMENT_FORM_EXCLUDED_KEYS = new Set([
   "software_licenses",
 ]);
 
+// Columns the backend derives by joining on whichever employee is linked as
+// owner_id (Sex, Department, Position, Location, Staff Code) — not real,
+// independently-editable equipment data. Kept in sync with the Owner picker
+// instead of typed by hand: maps each equipment field to the matching
+// property on an employee record (see handleSubmitForm and the
+// "employee-select" branch in EquipmentDynamicField).
+export const OWNER_DERIVED_FIELDS = {
+  owner_sex: "sex",
+  owner_position: "position",
+  owner_location: "location",
+  owner_department: "department_code",
+  owner_department_name: "department_name",
+  owner_staff_code: "staff_code",
+};
+
 const EQUIPMENT_FORM_FIELD_TYPES = {
   department: "department-select",
   department_code: "department-select",
@@ -344,6 +359,7 @@ const EQUIPMENT_FORM_FIELD_TYPES = {
   // to owner_id right before the request goes out (see handleSubmitForm).
   owner_name: "employee-select",
   server_type: "server-type-select",
+  ...Object.fromEntries(Object.keys(OWNER_DERIVED_FIELDS).map((key) => [key, "owner-derived"])),
 };
 
 function inferEquipmentFieldType(key) {

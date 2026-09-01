@@ -1,4 +1,4 @@
-import { FiActivity as Activity, FiBox as Box, FiCloud as Cloud, FiDollarSign as DollarSign, FiHardDrive as HardDrive, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiShoppingCart as ShoppingCart, FiSliders as Sliders, FiTag as Tag, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
+import { FiActivity as Activity, FiBox as Box, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiSliders as Sliders, FiTag as Tag, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
 import { PERMISSIONS } from "../../lib/permissions";
 
 export const navSections = [
@@ -36,8 +36,6 @@ export const navSections = [
           { label: "Device Replacement History", icon: Search, permission: PERMISSIONS.REPLACEMENT_HISTORY },
         ],
       },
-      { label: "SSD Upgrade", icon: HardDrive, permission: PERMISSIONS.SSD_UPGRADE },
-      { label: "SSD Procurement", icon: ShoppingCart, permission: PERMISSIONS.SSD_PROCUREMENT },
     ],
   },
   {
@@ -49,8 +47,6 @@ export const navSections = [
   {
     label: "Cloud",
     items: [
-      { label: "Cloud Rate", icon: DollarSign, permission: PERMISSIONS.CLOUD_RATE },
-      { label: "Cloud Usage", icon: Cloud, permission: PERMISSIONS.CLOUD_USAGE },
       { label: "Server Usage", icon: Activity, permission: PERMISSIONS.SERVICE_USAGE },
     ],
   },
@@ -62,6 +58,7 @@ export const navSections = [
         icon: Tool,
         children: [
           { label: "Statuses", icon: Sliders, permission: PERMISSIONS.EQUIPMENT_STATUS, adminOnly: true },
+          { label: "Part Types Statuses", icon: Sliders, permission: PERMISSIONS.PART_STATUS, adminOnly: true },
           { label: "Category", icon: Tag, permission: PERMISSIONS.EQUIPMENT_CATEGORY, adminOnly: true },
           { label: "Part Types", icon: Box, permission: PERMISSIONS.PART_TYPE, adminOnly: true },
         ],
@@ -149,14 +146,11 @@ export const PART_ACTION_OPTIONS = [
   { value: "add", label: "Add" },
 ];
 
-// The backend rejects any old_part_status value other than exactly these two.
-export const OLD_PART_STATUS_OPTIONS = [
-  { value: "Working - IT Stock", label: "Working - IT Stock" },
-  { value: "Broken - IT Stock", label: "Broken - IT Stock" },
-];
-
-// Stock lines don't ask for a status in the UI anymore — every part added to
-// stock is assumed unused and sitting with IT until it's installed.
+// The Add Stock form still doesn't ask for a status — every part added to
+// stock is assumed unused and sitting with IT until it's installed, and this
+// is what gets sent for it. The Edit Stock form does let it be changed
+// afterward, from the list fetched via GET /api/part-statuses (see
+// partStatusService.js), e.g. once a part is moved into use.
 export const DEFAULT_PART_STOCK_STATUS = "Working - IT Stock";
 
 export const departmentColumns = [
@@ -165,23 +159,6 @@ export const departmentColumns = [
   { key: "department_name", label: "Department Name" },
   { key: "employee_count", label: "Employees" },
   { key: "equipment_count", label: "Equipment" },
-];
-
-export const ssdUpgradeColumns = [
-  { key: "upgrade_id", label: "Upgrade ID" },
-  { key: "employee_id", label: "Employee ID" },
-  { key: "owner_name", label: "Owner Name" },
-  { key: "owner_department", label: "Owner Department" },
-  { key: "owner_location", label: "Owner Location" },
-  { key: "equipment_id", label: "Equipment ID" },
-  { key: "computer_name", label: "Computer Name" },
-  { key: "device_model", label: "Device Model" },
-  { key: "asset_code", label: "Asset Code" },
-  { key: "charge_cable_needed", label: "Charge Cable Needed" },
-  { key: "replace_status", label: "Replace Status" },
-  { key: "ssd_capacity", label: "SSD Capacity" },
-  { key: "ssd_equipment_code", label: "SSD Equipment Code" },
-  { key: "remark", label: "Remark" },
 ];
 
 export const PART_STOCK_COLUMNS = {
@@ -202,13 +179,6 @@ export const PART_STOCK_COLUMNS = {
   ],
 };
 
-export const ssdProcurementColumns = [
-  { key: "procurement_id", label: "Procurement ID" },
-  { key: "model_name", label: "Model Name" },
-  { key: "qty", label: "Quantity" },
-  { key: "decision", label: "Decision" },
-];
-
 export const licenseColumns = [
   { key: "license_id", label: "License ID" },
   { key: "product_name", label: "Product Name" },
@@ -220,27 +190,6 @@ export const licenseColumns = [
   { key: "remark", label: "Remark" },
 ];
 
-export const cloudRateColumns = [
-  { key: "rate_id", label: "Rate ID" },
-  { key: "item_name", label: "Item Name" },
-  { key: "unit", label: "Unit" },
-  { key: "capacity", label: "Capacity" },
-  { key: "price_type", label: "Price Type" },
-  { key: "unit_price", label: "Unit Price" },
-  { key: "total_price_month", label: "Total Price / Month" },
-  { key: "total_price_year", label: "Total Price / Year" },
-  { key: "year", label: "Year" },
-];
-
-export const cloudUsageColumns = [
-  { key: "usage_id", label: "Usage ID" },
-  { key: "item_name", label: "Item Name" },
-  { key: "unit", label: "Unit" },
-  { key: "unit_cost", label: "Unit Cost" },
-  { key: "usage_month", label: "Usage Month" },
-  { key: "quantity", label: "Quantity" },
-  { key: "amount", label: "Amount" },
-];
 
 export const EQUIPMENT_VIEWS = [
   { slug: "cctv", label: "CCTV" },
@@ -346,7 +295,7 @@ export const PART_BORROW_INITIAL_VALUES = {
 export const PART_RETURN_INITIAL_VALUES = {
   return_date: "",
   condition_on_return: "",
-  returned_broken: false,
+  return_status: "Working - IT Stock",
 };
 
 export const partBorrowColumns = [

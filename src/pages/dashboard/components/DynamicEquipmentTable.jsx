@@ -1,4 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { FiAlertTriangle as AlertTriangle, FiRefreshCw as RefreshCw } from "react-icons/fi";
+import { translateLabel } from "../../../lib/i18nLabel";
 import { EmptyState } from "./SharedControls";
 import { RecordCellValue } from "./RecordsTableView";
 
@@ -10,13 +12,13 @@ export function DynamicEquipmentTable({
   records,
   rowKey,
   isLoading,
-  loadingText = "Loading equipment...",
+  loadingText,
   error,
-  errorTitle = "Couldn't load equipment",
+  errorTitle,
   onRetry,
   emptyIcon,
-  emptyTitle = "No equipment found",
-  emptyDescription = "Equipment will appear here.",
+  emptyTitle,
+  emptyDescription,
   renderRowActions,
   actionsHeader,
   getRowClassName,
@@ -28,8 +30,14 @@ export function DynamicEquipmentTable({
   // this table's other callers (Equipment, Assign) keep the flat hover.
   elevatedRowHover = false,
 }) {
+  const { t, i18n } = useTranslation();
+
   if (isLoading) {
-    return <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">{loadingText}</div>;
+    return (
+      <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">
+        {loadingText || t("Loading equipment...")}
+      </div>
+    );
   }
 
   if (error) {
@@ -38,7 +46,7 @@ export function DynamicEquipmentTable({
         <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
           <AlertTriangle size={18} />
         </div>
-        <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">{errorTitle}</p>
+        <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">{errorTitle || t("Couldn't load equipment")}</p>
         <p className="text-xs text-slate-500 dark:text-slate-400">{error}</p>
         <button
           type="button"
@@ -46,14 +54,20 @@ export function DynamicEquipmentTable({
           className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
         >
           <RefreshCw size={13} />
-          Retry
+          {t("Retry")}
         </button>
       </div>
     );
   }
 
   if (records.length === 0) {
-    return <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />;
+    return (
+      <EmptyState
+        icon={emptyIcon}
+        title={emptyTitle || t("No equipment found")}
+        description={emptyDescription || t("Equipment will appear here.")}
+      />
+    );
   }
 
   return (
@@ -64,11 +78,11 @@ export function DynamicEquipmentTable({
             {selectable && <th className="w-10 px-4 py-3" />}
             {columns.map((column) => (
               <th key={column.key} className="whitespace-nowrap px-4 py-3 font-semibold">
-                {column.label}
+                {translateLabel(t, i18n, column.label)}
               </th>
             ))}
             {renderRowActions && (
-              <th className="whitespace-nowrap px-4 py-3 font-semibold text-right">{actionsHeader || "Actions"}</th>
+              <th className="whitespace-nowrap px-4 py-3 font-semibold text-right">{actionsHeader || t("Actions")}</th>
             )}
           </tr>
         </thead>
@@ -107,7 +121,13 @@ export function DynamicEquipmentTable({
                         } ${elevatedRowHover ? hoverBg : ""} ${elevatedRowHover && isFirstCell ? "rounded-l-lg" : ""} ${elevatedRowHover && isLastCell ? "rounded-r-lg" : ""
                         }`}
                     >
-                      <RecordCellValue value={record[column.key]} />
+                      <RecordCellValue
+                        value={
+                          column.key === "status" && record[column.key]
+                            ? translateLabel(t, i18n, record[column.key])
+                            : record[column.key]
+                        }
+                      />
                     </td>
                   );
                 })}

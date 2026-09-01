@@ -77,15 +77,19 @@ export function getLicenseExpiryAlerts(licenses = []) {
     .sort((a, b) => (a.info.days ?? -9999) - (b.info.days ?? -9999));
 }
 
+// Grouped by category, keeping the actual items (not just a count) so a
+// "Low stock" notification can point back at exactly those equipment_ids —
+// see targetEquipmentIds below.
 function groupStockByCategory(stock) {
   const groups = new Map();
 
   for (const item of stock) {
     const category = item.category || item.category_name || item.device_type || "Uncategorized";
-    groups.set(category, (groups.get(category) || 0) + 1);
+    if (!groups.has(category)) groups.set(category, []);
+    groups.get(category).push(item);
   }
 
-  return [...groups.entries()].sort((a, b) => a[1] - b[1]);
+  return [...groups.entries()].sort((a, b) => a[1].length - b[1].length);
 }
 
 export function buildDashboardNotifications({ currentBorrows = [], availableStock = [], licenses = [], error }) {
@@ -147,15 +151,21 @@ export function buildDashboardNotifications({ currentBorrows = [], availableStoc
     });
   } else {
     groupStockByCategory(availableStock)
-      .filter(([, count]) => count <= LOW_STOCK_THRESHOLD)
+      .filter(([, categoryItems]) => categoryItems.length <= LOW_STOCK_THRESHOLD)
       .slice(0, 4)
-      .forEach(([category, count]) => {
+      .forEach(([category, categoryItems]) => {
+        const count = categoryItems.length;
         notifications.push({
           id: `stock-low-${category}`,
           title: "Low stock",
           detail: `${category} has ${count} available item${count === 1 ? "" : "s"} left.`,
           time: "Stock alert",
           targetView: "Equipments",
+          // Opening this jumps straight to the category and filters the
+          // table down to exactly these items, instead of just landing on
+          // an unfiltered category list.
+          targetCategory: category,
+          targetEquipmentIds: categoryItems.map((item) => item.equipment_id),
           tone: count === 0 ? "danger" : "warning",
         });
       });

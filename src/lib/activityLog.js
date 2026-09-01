@@ -11,9 +11,11 @@ export const ACTIVITY_MODULES = {
   USER: "User",
   LICENSE: "Software License",
   STATUS: "Status",
+  PART_STATUS: "Part Status",
   REPLACEMENT: "Device Replacement",
   PART_STOCK: "Part Stock",
   PART_BORROW: "Part Borrow",
+  SERVICE_USAGE: "Server Usage",
 };
 
 export const ACTIVITY_ACTIONS = {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { addPartStock, deletePartStock, fetchPartStock, updatePartStock } from "../../../../services/partStockService";
+import { fetchPartStatuses } from "../../../../services/partStatusService";
 import {
   createPartCustomField,
   createPartType,
@@ -103,6 +104,30 @@ export function usePartStock({ isActive, user }) {
       ignore = true;
     };
   }, [isActive, fetchToken]);
+
+  // Options for the Edit Stock form's status field — admin-configurable via
+  // GET /api/part-statuses, so this stays in sync without a redeploy if the
+  // list ever changes. Fetched once (only the active ones; that's the
+  // endpoint's default).
+  const [partStatuses, setPartStatuses] = useState([]);
+
+  useEffect(() => {
+    if (!isActive) return;
+
+    let ignore = false;
+
+    fetchPartStatuses()
+      .then((data) => {
+        if (!ignore) setPartStatuses(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!ignore) setPartStatuses([]);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isActive]);
 
   // Reference data for the Add/Edit Part Type form — fetched once.
   const [allCategories, setAllCategories] = useState([]);
@@ -668,6 +693,7 @@ export function usePartStock({ isActive, user }) {
     partTypes,
     selectedPartTypeId,
     handleSelectPart,
+    partStatuses,
 
     allCategories,
     isPartTypeFormOpen,

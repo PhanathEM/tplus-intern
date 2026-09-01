@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FiPlusCircle as PlusCircle, FiX as X } from "react-icons/fi";
 import {
   EmployeeSelectDropdown,
   FormField,
   formInputClass,
 } from "../../components/SharedControls";
+import { OWNER_DERIVED_FIELDS } from "../../dashboard.utils";
 
 function EquipmentDynamicField({ field, values, onChange, isSubmitting, departments, employees, onRemove }) {
+  const { t } = useTranslation();
   const id = `add-equipment-${field.key}`;
   const value = values[field.key] || "";
   const [isRemoving, setIsRemoving] = useState(false);
@@ -32,7 +35,7 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
           type="button"
           onClick={handleRemove}
           disabled={isSubmitting || isRemoving}
-          title="Remove field"
+          title={t("Remove field")}
           className="text-slate-400 outline-none transition hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-500 dark:hover:text-rose-400"
         >
           <X size={13} />
@@ -65,10 +68,31 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
       <EmployeeSelectDropdown
         employees={employees || []}
         selectedId={value}
-        onSelect={(employeeId) => onChange(field.key, String(employeeId))}
+        onSelect={(employee) => {
+          onChange(field.key, String(employee.employee_id));
+          // Sex/Department/Position/Location/Staff Code (if configured as
+          // columns) are read-only, derived from whichever employee is
+          // picked here — keep them in sync with the new pick.
+          Object.entries(OWNER_DERIVED_FIELDS).forEach(([derivedKey, employeeProp]) => {
+            onChange(derivedKey, employee[employeeProp] != null ? String(employee[employeeProp]) : "");
+          });
+        }}
         disabled={isSubmitting}
-        placeholder="Select employee"
+        placeholder={t("Select employee")}
       />
+    );
+  } else if (field.type === "owner-derived") {
+    // No such field exists on equipment itself — it's a value the backend
+    // derives from whichever employee is the owner, so it's never typed in
+    // here: plain read-only text, not an input.
+    input = (
+      <div
+        id={id}
+        title={t("Set automatically from the selected owner")}
+        className="flex h-10 w-full items-center rounded-lg bg-slate-50 px-3 text-sm text-slate-500 dark:bg-slate-800/60 dark:text-slate-400"
+      >
+        {value || "—"}
+      </div>
     );
   } else if (field.type === "server-type-select") {
     input = (
@@ -81,8 +105,8 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
         disabled={isSubmitting}
       >
         <option value="">—</option>
-        <option value="Cloud">Cloud</option>
-        <option value="Physical">Physical</option>
+        <option value="Cloud">{t("Cloud")}</option>
+        <option value="Physical">{t("Physical")}</option>
       </select>
     );
   } else if (field.type === "yes-no-select") {
@@ -96,8 +120,8 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
         disabled={isSubmitting}
       >
         <option value="">—</option>
-        <option value="Yes">Yes</option>
-        <option value="No">No</option>
+        <option value="Yes">{t("Yes")}</option>
+        <option value="No">{t("No")}</option>
       </select>
     );
   } else if (field.type === "date") {
@@ -155,6 +179,7 @@ const FALLBACK_CUSTOM_FIELD_TYPES = [
 ];
 
 export function AddCustomFieldControl({ onAdd, disabled, types }) {
+  const { t } = useTranslation();
   const typeOptions = types && types.length > 0 ? types : FALLBACK_CUSTOM_FIELD_TYPES;
   const [isOpen, setIsOpen] = useState(false);
   const [label, setLabel] = useState("");
@@ -171,7 +196,7 @@ export function AddCustomFieldControl({ onAdd, disabled, types }) {
         className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[13px] font-semibold text-slate-600 outline-none transition hover:border-slate-400 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-white"
       >
         <PlusCircle size={15} />
-        Add field
+        {t("Add field")}
       </button>
     );
   }
@@ -200,7 +225,7 @@ export function AddCustomFieldControl({ onAdd, disabled, types }) {
         <input
           type="text"
           autoComplete="off"
-          placeholder="Field name"
+          placeholder={t("Field name")}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           className={`${formInputClass} max-w-56`}
@@ -224,7 +249,7 @@ export function AddCustomFieldControl({ onAdd, disabled, types }) {
           disabled={isSaving}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
         >
-          {isSaving ? "Adding..." : "Add"}
+          {isSaving ? t("Adding...") : t("Add")}
         </button>
         <button
           type="button"
@@ -235,7 +260,7 @@ export function AddCustomFieldControl({ onAdd, disabled, types }) {
           disabled={isSaving}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-semibold text-slate-700 outline-none transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </div>
     </div>
@@ -243,6 +268,7 @@ export function AddCustomFieldControl({ onAdd, disabled, types }) {
 }
 
 function CustomFieldCheckboxItem({ field, onRemove, onError }) {
+  const { t } = useTranslation();
   const [isRemoving, setIsRemoving] = useState(false);
 
   function handleChange() {
@@ -255,7 +281,7 @@ function CustomFieldCheckboxItem({ field, onRemove, onError }) {
 
   return (
     <label
-      title="Custom field — uncheck to remove it from this category"
+      title={t("Custom field — uncheck to remove it from this category")}
       className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] font-medium text-slate-700 transition hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600"
     >
       <input
@@ -271,6 +297,7 @@ function CustomFieldCheckboxItem({ field, onRemove, onError }) {
 }
 
 function ReusableFieldCheckboxItem({ field, onReuse, onError }) {
+  const { t } = useTranslation();
   const [isSaving, setIsSaving] = useState(false);
 
   function handleChange() {
@@ -283,7 +310,7 @@ function ReusableFieldCheckboxItem({ field, onReuse, onError }) {
 
   return (
     <label
-      title="Existing custom field from another category — check to reuse it here"
+      title={t("Existing custom field from another category — check to reuse it here")}
       className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-[13px] font-medium text-slate-500 transition hover:border-slate-400 hover:text-slate-700 dark:border-slate-600 dark:text-slate-400 dark:hover:border-slate-500 dark:hover:text-slate-200"
     >
       <input
@@ -321,6 +348,8 @@ export function EquipmentFormModal({
   isLicensesLoading = false,
   licensesError = null,
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -339,23 +368,23 @@ return (
         type="button"
         className="absolute inset-0 bg-slate-950/60"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={t("Close")}
       />
       <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">
-              {isEdit ? "Edit equipment" : "Add new equipment"}
+              {isEdit ? t("Edit equipment") : t("Add new equipment")}
             </h2>
             <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-              {isEdit ? "Update this item's details." : "New items start unassigned in stock."}
+              {isEdit ? t("Update this item's details.") : t("New items start unassigned in stock.")}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X size={16} />
           </button>
@@ -370,7 +399,7 @@ return (
             )}
 
 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField label="Category *" htmlFor="add-equipment-category">
+              <FormField label={t("Category *")} htmlFor="add-equipment-category">
                 <select
                   id="add-equipment-category"
                   required
@@ -380,7 +409,7 @@ return (
                   className={formInputClass}
                   disabled={isSubmitting || categoryLocked}
                 >
-                  <option value="">Select category</option>
+                  <option value="">{t("Select category")}</option>
                   {categoryOptions.map((option) => (
                     <option key={option} value={option}>
                       {option}
@@ -402,7 +431,7 @@ return (
                 />
               ))}
 
-<FormField label="Status" htmlFor="add-equipment-status">
+<FormField label={t("Status")} htmlFor="add-equipment-status">
                 <select
                   id="add-equipment-status"
                   autoComplete="off"
@@ -422,7 +451,7 @@ return (
             </div>
 
 <div className="mt-4">
-              <FormField label="Remark" htmlFor="add-equipment-remark">
+              <FormField label={t("Remark")} htmlFor="add-equipment-remark">
                 <textarea
                   id="add-equipment-remark"
                   rows={3}
@@ -436,14 +465,14 @@ return (
             </div>
 
 <div className="mt-4">
-              <FormField label="Software License">
+              <FormField label={t("Software License")}>
                 {isLicensesLoading ? (
-                  <p className="text-[13px] text-slate-500 dark:text-slate-400">Loading licenses...</p>
+                  <p className="text-[13px] text-slate-500 dark:text-slate-400">{t("Loading licenses...")}</p>
                 ) : licensesError ? (
                   <p className="text-[13px] text-rose-600 dark:text-rose-400">{licensesError}</p>
                 ) : licenseOptions.length === 0 ? (
                   <p className="text-[13px] text-slate-500 dark:text-slate-400">
-                    No licenses found. Add one from the License page first.
+                    {t("No licenses found. Add one from the License page first.")}
                   </p>
                 ) : (
                   <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
@@ -480,7 +509,7 @@ return (
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             {onOpenColumnsPicker && (
               <button
@@ -489,7 +518,7 @@ return (
                 disabled={isSubmitting || !values.category}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
               >
-                Add Columns
+                {t("Add Columns")}
               </button>
             )}
             <button
@@ -497,7 +526,7 @@ return (
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add equipment"}
+              {isSubmitting ? t("Saving...") : isEdit ? t("Save changes") : t("Add equipment")}
             </button>
           </div>
         </form>
@@ -525,6 +554,8 @@ export function ColumnsPickerModal({
   error,
   onError,
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -541,21 +572,21 @@ export function ColumnsPickerModal({
         type="button"
         className="absolute inset-0 bg-slate-950/60"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={t("Close")}
       />
       <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Configure columns</h2>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Configure columns")}</h2>
             <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-              Choose which fields appear for {categoryLabel || "this category"}.
+              {t("Choose which fields appear for", { category: categoryLabel || t("this category") })}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X size={16} />
           </button>
@@ -569,9 +600,9 @@ export function ColumnsPickerModal({
 
         <div className="overflow-y-auto px-6 py-5">
           {isLoading ? (
-            <div className="py-8 text-center text-[13px] text-slate-500 dark:text-slate-400">Loading fields...</div>
+            <div className="py-8 text-center text-[13px] text-slate-500 dark:text-slate-400">{t("Loading fields...")}</div>
           ) : fields.length === 0 && customFields.length === 0 && reusableFields.length === 0 && !onAddField ? (
-            <div className="py-8 text-center text-[13px] text-slate-500 dark:text-slate-400">No fields available.</div>
+            <div className="py-8 text-center text-[13px] text-slate-500 dark:text-slate-400">{t("No fields available.")}</div>
           ) : (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {fields.map((field) => (
@@ -606,7 +637,7 @@ export function ColumnsPickerModal({
         <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
           <p className="text-[12px] text-amber-600">
             {!isLoading && selectedKeys.length === 0
-              ? "Tick at least one field above (any one) to save."
+              ? t("Tick at least one field above (any one) to save.")
               : ""}
           </p>
           <div className="flex shrink-0 items-center gap-2">
@@ -616,16 +647,16 @@ export function ColumnsPickerModal({
               disabled={isSaving}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="button"
               onClick={onSave}
               disabled={isSaving || isLoading || selectedKeys.length === 0}
-              title={selectedKeys.length === 0 ? "Tick at least one field above to save" : undefined}
+              title={selectedKeys.length === 0 ? t("Tick at least one field above to save") : undefined}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
-              {isSaving ? "Saving..." : "Save columns"}
+              {isSaving ? t("Saving...") : t("Save columns")}
             </button>
           </div>
         </div>
@@ -646,6 +677,8 @@ export function BorrowEquipmentModal({
   error,
   employees,
 }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -662,22 +695,22 @@ return (
         type="button"
         className="absolute inset-0 bg-slate-950/60"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={t("Close")}
       />
       <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Borrow equipment</h2>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Borrow equipment")}</h2>
             <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
               {[equipment.category, equipment.device_type, equipment.device_model].filter(Boolean).join(" · ") ||
-                `Equipment ${equipment.equipment_id}`}
+                t("equipment_id_fallback", { id: equipment.equipment_id })}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X size={16} />
           </button>
@@ -693,7 +726,7 @@ return (
 
 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <FormField label="Employee *" htmlFor="borrow-employee_id">
+                <FormField label={t("Employee *")} htmlFor="borrow-employee_id">
                   <EmployeeSelectDropdown
                     employees={employees}
                     selectedId={values.employee_id}
@@ -703,7 +736,7 @@ return (
                 </FormField>
               </div>
 
-<FormField label="Expected Return Date *" htmlFor="borrow-expected_return_date">
+<FormField label={t("Expected Return Date *")} htmlFor="borrow-expected_return_date">
                 <input
                   id="borrow-expected_return_date"
                   type="date"
@@ -716,7 +749,7 @@ return (
                 />
               </FormField>
 
-<FormField label="Condition on Borrow" htmlFor="borrow-condition_on_borrow">
+<FormField label={t("Condition on Borrow")} htmlFor="borrow-condition_on_borrow">
                 <input
                   id="borrow-condition_on_borrow"
                   type="text"
@@ -729,7 +762,7 @@ return (
               </FormField>
 
 <div className="sm:col-span-2">
-                <FormField label="Purpose" htmlFor="borrow-purpose">
+                <FormField label={t("Purpose")} htmlFor="borrow-purpose">
                   <input
                     id="borrow-purpose"
                     type="text"
@@ -743,7 +776,7 @@ return (
               </div>
 
 <div className="sm:col-span-2">
-                <FormField label="Remark" htmlFor="borrow-remark">
+                <FormField label={t("Remark")} htmlFor="borrow-remark">
                   <textarea
                     id="borrow-remark"
                     rows={3}
@@ -765,14 +798,14 @@ return (
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? "Borrowing..." : "Borrow equipment"}
+              {isSubmitting ? t("Borrowing...") : t("Borrow equipment")}
             </button>
           </div>
         </form>
@@ -782,6 +815,8 @@ return (
 }
 
 export function ReturnEquipmentModal({ isOpen, loan, values, onChange, onSubmit, onClose, isSubmitting, error }) {
+  const { t } = useTranslation();
+
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -798,23 +833,23 @@ return (
         type="button"
         className="absolute inset-0 bg-slate-950/60"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={t("Close")}
       />
       <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">Return equipment</h2>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Return equipment")}</h2>
             <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
               {[loan.category_name, loan.device_model, loan.computer_name].filter(Boolean).join(" · ") ||
-                `Equipment ${loan.equipment_id}`}{" "}
-              · borrowed by {loan.borrower_name || `#${loan.borrower_id}`}
+                t("equipment_id_fallback", { id: loan.equipment_id })}{" "}
+              · {t("borrowed_by", { name: loan.borrower_name || `#${loan.borrower_id}` })}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Close"
+            aria-label={t("Close")}
           >
             <X size={16} />
           </button>
@@ -829,7 +864,7 @@ return (
             )}
 
 <div className="grid grid-cols-1 gap-4">
-              <FormField label="Return Date *" htmlFor="return-return_date">
+              <FormField label={t("Return Date *")} htmlFor="return-return_date">
                 <input
                   id="return-return_date"
                   type="date"
@@ -842,7 +877,7 @@ return (
                 />
               </FormField>
 
-<FormField label="Condition on Return" htmlFor="return-condition_on_return">
+<FormField label={t("Condition on Return")} htmlFor="return-condition_on_return">
                 <input
                   id="return-condition_on_return"
                   type="text"
@@ -863,14 +898,14 @@ return (
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? "Returning..." : "Mark as returned"}
+              {isSubmitting ? t("Returning...") : t("Mark as returned")}
             </button>
           </div>
         </form>

@@ -13,7 +13,7 @@ import {
 } from "react-icons/fi";
 import { EmptyState, FormField, formInputClass, RowActionsMenu } from "../../components/SharedControls";
 
-export function StatusesView({
+export function PartStatusesView({
   statuses,
   isLoading,
   error,
@@ -39,25 +39,23 @@ export function StatusesView({
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
           <div>
-            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Equipment statuses")}</h2>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Part statuses")}</h2>
             {!isLoading && !error && (
               <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
                 {t("status_count", { count: statuses.length })}
               </p>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {canManage && (
-              <button
-                type="button"
-                onClick={onAddNew}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
-              >
-                <PlusCircle size={15} />
-                {t("Add Status")}
-              </button>
-            )}
-          </div>
+          {canManage && (
+            <button
+              type="button"
+              onClick={onAddNew}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
+            >
+              <PlusCircle size={15} />
+              {t("Add Status")}
+            </button>
+          )}
         </div>
 
         {downloadError && (
@@ -86,7 +84,7 @@ export function StatusesView({
             </button>
           </div>
         ) : statuses.length === 0 ? (
-          <EmptyState icon={Sliders} title={t("No statuses found")} description={t("Equipment statuses will appear here.")} />
+          <EmptyState icon={Sliders} title={t("No statuses found")} description={t("Part statuses will appear here.")} />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
@@ -94,7 +92,8 @@ export function StatusesView({
                 <tr>
                   <th className="px-5 py-3 font-semibold">{t("Status Name")}</th>
                   <th className="px-5 py-3 font-semibold">{t("Description")}</th>
-                  <th className="px-5 py-3 font-semibold">{t("Equipment")}</th>
+                  <th className="px-5 py-3 font-semibold">{t("Borrowable")}</th>
+                  <th className="px-5 py-3 font-semibold">{t("Part Stock")}</th>
                   <th className="px-5 py-3 text-right font-semibold">
                     <RowActionsMenu
                       items={[
@@ -115,15 +114,26 @@ export function StatusesView({
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
                 {statuses.map((status) => (
-                  <tr key={status.status_id} className={`transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40 ${status.is_active ? "" : "opacity-60"}`}>
+                  <tr
+                    key={status.status_id}
+                    className={`transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40 ${status.is_active === false ? "opacity-60" : ""}`}
+                  >
                     <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-950 dark:text-white">
                       {status.status_name}
+                      {status.is_active === false && (
+                        <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                          {t("Hidden")}
+                        </span>
+                      )}
                     </td>
                     <td className="max-w-72 truncate px-5 py-3.5 text-slate-600 dark:text-slate-300" title={status.description || ""}>
                       {status.description || "—"}
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">
-                      {status.equipment_count ?? 0}
+                      {status.is_borrowable ? t("Yes") : t("No")}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">
+                      {status.stock_count ?? 0}
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-right">
                       {canManage && (
@@ -132,8 +142,7 @@ export function StatusesView({
                             items={[
                               {
                                 icon: FileText,
-                                label:
-                                  downloadingPdfId === status.status_id ? t("Preparing PDF...") : t("Download as PDF"),
+                                label: downloadingPdfId === status.status_id ? t("Preparing PDF...") : t("Download as PDF"),
                                 onClick: () => onDownloadStatusPdf(status),
                               },
                               {
@@ -163,7 +172,7 @@ export function StatusesView({
   );
 }
 
-export function StatusFormModal({ isOpen, mode, values, onChange, onSubmit, onClose, isSubmitting, error }) {
+export function PartStatusFormModal({ isOpen, mode, values, onChange, onSubmit, onClose, isSubmitting, error }) {
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -180,18 +189,13 @@ export function StatusFormModal({ isOpen, mode, values, onChange, onSubmit, onCl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-slate-950/60"
-        onClick={onClose}
-        aria-label={t("Close")}
-      />
+      <button type="button" className="absolute inset-0 bg-slate-950/60" onClick={onClose} aria-label={t("Close")} />
       <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{isEdit ? t("Edit status") : t("Add status")}</h2>
             <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-              {isEdit ? t("Update this status's details.") : t("Create a new equipment status.")}
+              {isEdit ? t("Update this status's details.") : t("Create a new part status.")}
             </p>
           </div>
           <button
@@ -214,9 +218,9 @@ export function StatusFormModal({ isOpen, mode, values, onChange, onSubmit, onCl
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <FormField label={t("Status Name *")} htmlFor="status-name">
+                <FormField label={t("Status Name *")} htmlFor="part-status-name">
                   <input
-                    id="status-name"
+                    id="part-status-name"
                     type="text"
                     required
                     autoComplete="off"
@@ -229,9 +233,9 @@ export function StatusFormModal({ isOpen, mode, values, onChange, onSubmit, onCl
               </div>
 
               <div className="sm:col-span-2">
-                <FormField label={t("Description")} htmlFor="status-description">
+                <FormField label={t("Description")} htmlFor="part-status-description">
                   <textarea
-                    id="status-description"
+                    id="part-status-description"
                     rows={2}
                     value={values.description}
                     onChange={(e) => onChange("description", e.target.value)}
@@ -240,7 +244,6 @@ export function StatusFormModal({ isOpen, mode, values, onChange, onSubmit, onCl
                   />
                 </FormField>
               </div>
-
             </div>
           </div>
 

@@ -8,7 +8,7 @@ import {
     FiUserPlus,
 } from "react-icons/fi";
 import { login, signup } from "../../services/authService";
-import { setAuthToken } from "../../lib/apiClient";
+import { setAuthToken, setStoredCredentials } from "../../lib/apiClient";
 import tplusLogo from "../../assets/tplus-logo.png";
 import { ThemeToggle } from "../../components/ThemeToggle";
 
@@ -32,7 +32,6 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [attempts, setAttempts] = useState(0);
 
-    const [regFullName, setRegFullName] = useState("");
     const [regUsername, setRegUsername] = useState("");
     const [regPassword, setRegPassword] = useState("");
     const [regConfirmPassword, setRegConfirmPassword] = useState("");
@@ -55,8 +54,8 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
     const handleRegisterSubmit = async (e) => {
         e.preventDefault();
 
-        if (!regFullName.trim() || !regUsername.trim() || !regPassword.trim()) {
-            setRegError("Fill in your name, username, and password to continue.");
+        if (!regUsername.trim() || !regPassword.trim()) {
+            setRegError("Fill in your username and password to continue.");
             return;
         }
 
@@ -69,12 +68,14 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
         setIsRegisterSubmitting(true);
 
         try {
+            // No separate "Full Name" field anymore — the username doubles
+            // as the display name; an admin can still rename the account
+            // later from the Users page.
             await signup({
-                fullName: regFullName.trim(),
+                fullName: regUsername.trim(),
                 username: regUsername.trim(),
                 password: regPassword,
             });
-            setRegFullName("");
             setRegUsername("");
             setRegPassword("");
             setRegConfirmPassword("");
@@ -110,6 +111,12 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
             // Field name isn't documented by the backend yet — probe common shapes.
             const token = response?.token ?? response?.access_token ?? response?.accessToken;
             if (token) setAuthToken(token);
+            // Captured fresh on every successful login so the backend's
+            // still-required username/password query params (see
+            // apiClient.js) always match whatever the password actually is
+            // right now — including right after this same account's
+            // password was changed via Account settings.
+            setStoredCredentials(username.trim(), password);
             onLogin({
                 user: {
                     ...response?.user,
@@ -321,30 +328,6 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
                         </form>
                         ) : (
                         <form onSubmit={handleRegisterSubmit} className="space-y-6" autoComplete="off">
-                            {/* Full Name Field */}
-                            <div>
-                                <label
-                                    className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300"
-                                    htmlFor="reg-full-name"
-                                >
-                                    Full Name
-                                </label>
-                                <div className="relative group">
-                                    <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-yellow-500 transition-colors dark:text-slate-500 dark:group-focus-within:text-yellow-400" />
-                                    <input
-                                        id="reg-full-name"
-                                        type="text"
-                                        required
-                                        autoComplete="off"
-                                        value={regFullName}
-                                        onChange={(e) => setRegFullName(e.target.value)}
-                                        placeholder="Enter your full name"
-                                        className="h-14 w-full rounded-2xl border border-yellow-200 bg-white pl-12 pr-5 text-base outline-none transition-all focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-yellow-500 dark:focus:ring-yellow-500/20"
-                                        disabled={isRegisterSubmitting}
-                                    />
-                                </div>
-                            </div>
-
                             {/* Username Field */}
                             <div>
                                 <label
