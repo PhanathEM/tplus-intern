@@ -5,6 +5,7 @@ import {
   EmployeeSelectDropdown,
   FormField,
   formInputClass,
+  RadioSelect,
 } from "../../components/SharedControls";
 import { OWNER_DERIVED_FIELDS } from "../../dashboard.utils";
 
@@ -47,21 +48,17 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
   let input;
   if (field.type === "department-select") {
     input = (
-      <select
+      <RadioSelect
         id={id}
-        autoComplete="off"
         value={value}
-        onChange={(e) => onChange(field.key, e.target.value)}
-        className={formInputClass}
+        onSelect={(option) => onChange(field.key, option.value)}
+        options={[
+          { value: "", label: "—" },
+          ...departments.map((dept) => ({ value: dept.department_code, label: dept.department_name })),
+        ]}
+        placeholder="—"
         disabled={isSubmitting}
-      >
-        <option value="">—</option>
-        {departments.map((dept) => (
-          <option key={dept.department_id} value={dept.department_code}>
-            {dept.department_name}
-          </option>
-        ))}
-      </select>
+      />
     );
   } else if (field.type === "employee-select") {
     input = (
@@ -96,33 +93,33 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
     );
   } else if (field.type === "server-type-select") {
     input = (
-      <select
+      <RadioSelect
         id={id}
-        autoComplete="off"
         value={value}
-        onChange={(e) => onChange(field.key, e.target.value)}
-        className={formInputClass}
+        onSelect={(option) => onChange(field.key, option.value)}
+        options={[
+          { value: "", label: "—" },
+          { value: "Cloud", label: t("Cloud") },
+          { value: "Physical", label: t("Physical") },
+        ]}
+        placeholder="—"
         disabled={isSubmitting}
-      >
-        <option value="">—</option>
-        <option value="Cloud">{t("Cloud")}</option>
-        <option value="Physical">{t("Physical")}</option>
-      </select>
+      />
     );
   } else if (field.type === "yes-no-select") {
     input = (
-      <select
+      <RadioSelect
         id={id}
-        autoComplete="off"
         value={value}
-        onChange={(e) => onChange(field.key, e.target.value)}
-        className={formInputClass}
+        onSelect={(option) => onChange(field.key, option.value)}
+        options={[
+          { value: "", label: "—" },
+          { value: "Yes", label: t("Yes") },
+          { value: "No", label: t("No") },
+        ]}
+        placeholder="—"
         disabled={isSubmitting}
-      >
-        <option value="">—</option>
-        <option value="Yes">{t("Yes")}</option>
-        <option value="No">{t("No")}</option>
-      </select>
+      />
     );
   } else if (field.type === "date") {
     input = (
@@ -231,23 +228,19 @@ export function AddCustomFieldControl({ onAdd, disabled, types }) {
           className={`${formInputClass} max-w-56`}
           disabled={isSaving}
         />
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className={`${formInputClass} max-w-36`}
-          disabled={isSaving}
-        >
-          {typeOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <div className="w-36">
+          <RadioSelect
+            value={type}
+            onSelect={(option) => setType(option.value)}
+            options={typeOptions}
+            disabled={isSaving}
+          />
+        </div>
         <button
           type="button"
           onClick={handleAdd}
           disabled={isSaving}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518]"
         >
           {isSaving ? t("Adding...") : t("Add")}
         </button>
@@ -400,22 +393,14 @@ return (
 
 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label={t("Category *")} htmlFor="add-equipment-category">
-                <select
+                <RadioSelect
                   id="add-equipment-category"
-                  required
-                  autoComplete="off"
                   value={values.category}
-                  onChange={(e) => onChange("category", e.target.value)}
-                  className={formInputClass}
+                  onSelect={(option) => onChange("category", option.value)}
+                  options={categoryOptions.map((option) => ({ value: option, label: option }))}
+                  placeholder={t("Select category")}
                   disabled={isSubmitting || categoryLocked}
-                >
-                  <option value="">{t("Select category")}</option>
-                  {categoryOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                />
               </FormField>
 
 {fields.map((field) => (
@@ -431,22 +416,18 @@ return (
                 />
               ))}
 
-<FormField label={t("Status")} htmlFor="add-equipment-status">
-                <select
+              <FormField label={t("Status")} htmlFor="add-equipment-status">
+                <RadioSelect
                   id="add-equipment-status"
-                  autoComplete="off"
                   value={values.status}
-                  onChange={(e) => onChange("status", e.target.value)}
-                  className={formInputClass}
+                  onSelect={(option) => onChange("status", option.value)}
+                  options={[
+                    { value: "", label: "—" },
+                    ...statuses.map((status) => ({ value: status.status_name, label: status.status_name })),
+                  ]}
+                  placeholder="—"
                   disabled={isSubmitting}
-                >
-                  <option value="">—</option>
-                  {statuses.map((status) => (
-                    <option key={status.status_id} value={status.status_name}>
-                      {status.status_name}
-                    </option>
-                  ))}
-                </select>
+                />
               </FormField>
             </div>
 
@@ -524,7 +505,7 @@ return (
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting ? t("Saving...") : isEdit ? t("Save changes") : t("Add equipment")}
             </button>
@@ -654,7 +635,7 @@ export function ColumnsPickerModal({
               onClick={onSave}
               disabled={isSaving || isLoading || selectedKeys.length === 0}
               title={selectedKeys.length === 0 ? t("Tick at least one field above to save") : undefined}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
               {isSaving ? t("Saving...") : t("Save columns")}
             </button>
@@ -803,7 +784,7 @@ return (
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting ? t("Borrowing...") : t("Borrow equipment")}
             </button>
@@ -903,7 +884,7 @@ return (
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting ? t("Returning...") : t("Mark as returned")}
             </button>

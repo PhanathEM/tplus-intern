@@ -386,7 +386,7 @@ export function AssignEquipmentView({
           <button
             type="submit"
             disabled={!canSubmit || isSubmitting}
-            className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-slate-950 px-5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
           >
             <UserPlus size={15} />
             {isSubmitting ? t("Assigning...") : t("Assign equipment")}

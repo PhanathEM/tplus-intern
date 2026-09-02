@@ -17,6 +17,7 @@ export function useDashboardPermissions({ user }) {
   const canManageBorrows = hasPermission(user, PERMISSIONS.CURRENTLY_BORROWED);
   const canManageActivityLog = hasPermission(user, PERMISSIONS.ACTIVITY_LOG);
   const canManageRecycleBin = hasPermission(user, PERMISSIONS.RECYCLE_BIN);
+  const canManageReport = hasPermission(user, PERMISSIONS.REPORT);
 
   const accessibleDashboardViews = useMemo(
     () => getAccessibleDashboardViews(user, navSections),
@@ -43,6 +44,7 @@ export function useDashboardPermissions({ user }) {
     canManageBorrows,
     canManageActivityLog,
     canManageRecycleBin,
+    canManageReport,
     accessibleDashboardViews,
     firstAccessibleDashboardView,
     canManageUsers,

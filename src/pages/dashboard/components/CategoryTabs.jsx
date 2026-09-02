@@ -11,7 +11,7 @@ export function CategoryTabs({ options, selected, onSelect, trailing }) {
   }
 
   return (
-    <div className="flex items-center gap-1 border-b border-slate-100 pl-5 pr-2 py-3 dark:border-slate-800">
+    <div className="flex items-center gap-1 pl-5 pr-2">
       <button
         type="button"
         onClick={() => scrollByAmount(-240)}
@@ -21,26 +21,34 @@ export function CategoryTabs({ options, selected, onSelect, trailing }) {
         <ChevronLeft size={16} />
       </button>
 
-      <div
-        ref={scrollRef}
-        className="flex flex-nowrap gap-2 overflow-x-auto scroll-smooth scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {options.map((option) => {
-          const isActive = option.value === selected;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => onSelect(option.value)}
-              className={`inline-flex h-8 shrink-0 items-center whitespace-nowrap rounded-full px-3.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${isActive
-                ? "bg-slate-950 text-white dark:bg-white dark:text-slate-900"
-                : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
-                }`}
-            >
-              {option.label}
-            </button>
-          );
-        })}
+      {/* The divider line is a sibling BEHIND the scrollable tab row (not
+          inside it), so it's never subject to the row's own overflow-x-auto
+          clipping. The active tab just renders above it (z-10) with an
+          opaque background, which naturally covers the line wherever the
+          two overlap — no pixel/color matching required. */}
+      <div className="relative min-w-0 flex-1">
+        <div
+          ref={scrollRef}
+          className="flex flex-nowrap items-stretch gap-1 overflow-x-auto scroll-smooth scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {options.map((option) => {
+            const isActive = option.value === selected;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onSelect(option.value)}
+                className={`relative shrink-0 whitespace-nowrap rounded-t-lg border px-5 py-2 text-[13px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isActive
+                  ? "z-10 border-slate-200 border-b-transparent bg-white text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                  : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                  }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-slate-200 dark:bg-slate-800" />
       </div>
 
       <button

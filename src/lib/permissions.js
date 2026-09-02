@@ -17,6 +17,7 @@ export const PERMISSIONS = {
   PART_TYPE: "part_type",
   PART_STATUS: "part_status",
   SERVICE_USAGE: "service_usage",
+  REPORT: "report",
   USERS: "users",
   ACTIVITY_LOG: "activity_log",
   RECYCLE_BIN: "recycle_bin",
@@ -35,6 +36,7 @@ export const PERMISSION_DEFINITIONS = [
   { value: PERMISSIONS.REPLACEMENT_HISTORY, label: "Device Replacement History" },
   { value: PERMISSIONS.LICENSE, label: "Software License" },
   { value: PERMISSIONS.SERVICE_USAGE, label: "Server Usage" },
+  { value: PERMISSIONS.REPORT, label: "Report" },
   { value: PERMISSIONS.USERS, label: "Users" },
   { value: PERMISSIONS.ACTIVITY_LOG, label: "Activity Log" },
   { value: PERMISSIONS.RECYCLE_BIN, label: "Recycle Bin" },
@@ -45,6 +47,7 @@ export const PERMISSION_DEFINITIONS = [
 ];
 
 const ADMIN_ONLY_DEFAULT_PERMISSIONS = new Set([
+  PERMISSIONS.REPORT,
   PERMISSIONS.USERS,
   PERMISSIONS.ACTIVITY_LOG,
   PERMISSIONS.RECYCLE_BIN,
@@ -224,6 +227,13 @@ export function getVisibleNavSections(user, navSections) {
 export function getAccessibleDashboardViews(user, navSections) {
   return navSections.flatMap((section) =>
     section.items.flatMap((item) => {
+      // A `standalone` item (e.g. Settings) opens as its own page — its
+      // children exist only to compute whether it's reachable at all
+      // (canAccessNavItem's own children-OR check below), not as separate
+      // routable views in their own right.
+      if (item.standalone) {
+        return canAccessNavItem(user, item) ? [item.label] : [];
+      }
       const items = item.children?.length ? item.children : [item];
       return items
         .filter((candidate) => canAccessNavItem(user, candidate))

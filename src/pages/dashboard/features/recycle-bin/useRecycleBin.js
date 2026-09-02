@@ -56,6 +56,11 @@ export function useRecycleBin({ isActive, onRestore }) {
     setFetchToken((value) => value + 1);
   }
 
+  function resetForEntry() {
+    setIsLoading(true);
+    setError(null);
+  }
+
   function handleFilterChange(value) {
     setTypeFilter(value);
     setIsLoading(true);
@@ -130,6 +135,7 @@ export function useRecycleBin({ isActive, onRestore }) {
     isLoading,
     error,
     handleRetry,
+    resetForEntry,
     typeFilter,
     handleFilterChange,
     typeOptions,

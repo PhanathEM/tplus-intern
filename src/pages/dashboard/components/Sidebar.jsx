@@ -69,7 +69,10 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
           <div className="space-y-2">
             {section.items.map((item) => {
               const Icon = item.icon;
-              const hasChildren = Boolean(item.children?.length);
+              // `standalone` items (e.g. Settings) carry `children` purely so
+              // the existing children-based permission check makes them
+              // visible, but they open as one page — never as a dropdown.
+              const hasChildren = Boolean(item.children?.length) && !item.standalone;
               const isChildActive = hasChildren && item.children.some((child) => child.label === activeView);
               const isActive = item.label === activeView || isChildActive;
               const isExpanded = expandedLabels.has(item.label) || isChildActive;

@@ -8,6 +8,40 @@ const TONE_DOT_CLASS = {
   warning: "bg-amber-500",
 };
 
+// A distinct solid gradient per stat card — picked per label where it reads
+// naturally (Recycle Bin = slate, etc.), falling back to a cycling palette
+// for any card not listed here.
+const CARD_GRADIENT_BY_LABEL = {
+  Employees: "from-violet-500 to-purple-600",
+  Departments: "from-sky-400 to-blue-600",
+  Equipments: "from-amber-400 to-orange-500",
+  "Currently Borrowed": "from-teal-400 to-emerald-600",
+  "Borrow History": "from-indigo-400 to-indigo-600",
+  "Device Replacement": "from-rose-400 to-rose-600",
+  "Software License": "from-emerald-400 to-emerald-600",
+  "Server Usage": "from-cyan-400 to-sky-600",
+  Users: "from-fuchsia-400 to-pink-600",
+  "Activity Log": "from-orange-400 to-orange-600",
+  "Recycle Bin": "from-slate-500 to-slate-700",
+};
+
+const FALLBACK_CARD_GRADIENTS = [
+  "from-violet-500 to-purple-600",
+  "from-sky-400 to-blue-600",
+  "from-amber-400 to-orange-500",
+  "from-teal-400 to-emerald-600",
+  "from-rose-400 to-rose-600",
+];
+
+function getCardGradientClass(label, index) {
+  return CARD_GRADIENT_BY_LABEL[label] || FALLBACK_CARD_GRADIENTS[index % FALLBACK_CARD_GRADIENTS.length];
+}
+
+// Administration-only pages — not useful as a "count" stat on the home
+// overview, so they're left off this grid even for accounts that can see
+// those pages via the sidebar.
+const HOME_STAT_EXCLUDED_LABELS = ["Users", "Activity Log", "Recycle Bin"];
+
 const ACTION_LABELS = {
   create: "Created",
   update: "Updated",
@@ -20,7 +54,7 @@ const ACTION_LABELS = {
   return: "Returned",
 };
 
-function StatCard({ item, count, isLoading, onSelect }) {
+function StatCard({ item, count, isLoading, onSelect, colorIndex }) {
   const { t } = useTranslation();
   const Icon = item.icon;
   const hasCount = typeof count === "number";
@@ -29,16 +63,16 @@ function StatCard({ item, count, isLoading, onSelect }) {
     <button
       type="button"
       onClick={() => onSelect(item.label)}
-      className="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 text-left outline-none transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-900 dark:hover:shadow-black/30 dark:focus-visible:ring-offset-slate-900"
+      className={`group flex items-center gap-4 rounded-2xl bg-linear-to-br px-6 py-6 text-left shadow-sm outline-none transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 ${getCardGradientClass(item.label, colorIndex)}`}
     >
-      <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+      <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/20 text-white">
         <Icon size={22} />
       </div>
       <div className="min-w-0">
-        <p className="text-[13px] font-medium leading-tight text-slate-500 dark:text-slate-400">{t(item.label)}</p>
-        <p className="mt-1 text-2xl font-bold tabular-nums text-slate-950 dark:text-white">
+        <p className="text-2xl font-bold tabular-nums text-white">
           {hasCount ? count.toLocaleString() : isLoading ? "…" : "0"}
         </p>
+        <p className="mt-1 text-[13px] font-medium leading-tight text-white/80">{t(item.label)}</p>
       </div>
     </button>
   );
@@ -210,9 +244,9 @@ export function DashboardHomeView({
   isInsightsLoading = false,
 }) {
   const { t } = useTranslation();
-  const cards = navSections.flatMap((section) =>
-    section.items.flatMap((item) => (item.children?.length ? item.children : [item]))
-  );
+  const cards = navSections
+    .flatMap((section) => section.items.flatMap((item) => (item.children?.length ? item.children : [item])))
+    .filter((item) => !HOME_STAT_EXCLUDED_LABELS.includes(item.label));
 
   // A card sitting at 0 is just noise — only keep ones with something to
   // show. Shown as-is while still loading so the grid doesn't flash empty
@@ -241,13 +275,14 @@ export function DashboardHomeView({
         </div>
       ) : visibleCards.length > 0 ? (
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-          {visibleCards.map((item) => (
+          {visibleCards.map((item, index) => (
             <StatCard
               key={item.label}
               item={item}
               count={stats[item.label]}
               isLoading={isStatsLoading}
               onSelect={onSelectView}
+              colorIndex={index}
             />
           ))}
         </div>

@@ -72,19 +72,21 @@ import {
   EmployeeDirectoryTable,
   EmployeeFormModal,
 } from "./features/employees/EmployeeViews";
-import { ResetPasswordModal, UserPermissionsModal, UsersView } from "./features/users/UserViews";
+import { ResetPasswordModal, UserPermissionsModal } from "./features/users/UserViews";
 import { StatusesView, StatusFormModal } from "./features/statuses/StatusViews";
 import { PartStatusesView, PartStatusFormModal } from "./features/part-statuses/PartStatusViews";
 import { ProfileModal, ChangePasswordModal } from "./features/account/AccountViews";
 import { AssignEquipmentView } from "./features/assign/AssignView";
-import { ActivityLogView } from "./features/activity/ActivityViews";
 import { useActivityLog } from "./features/activity/useActivityLog";
 import { useMyActivity } from "./features/activity/useMyActivity";
 import { getAccessProfileLabel } from "../../lib/permissions";
 import { useDashboardPermissions } from "./hooks/useDashboardPermissions";
 import { ACTIVITY_ACTION_VALUES, ACTIVITY_MODULE_VALUES } from "../../lib/activityLog";
-import { RecycleBinView } from "./features/recycle-bin/RecycleBinViews";
 import { useRecycleBin } from "./features/recycle-bin/useRecycleBin";
+import { SettingsView } from "./features/settings/SettingsView";
+import { ReportView } from "./features/report/ReportView";
+import { useReport } from "./features/report/useReport";
+import { exportReportToExcel, exportReportToPdf } from "./features/report/reportExport";
 import { DashboardHomeView } from "./features/home/DashboardHomeView";
 
 const SIDEBAR_WIDTH_STORAGE_KEY = "tplus-sidebar-width";
@@ -109,6 +111,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     canManageBorrows,
     canManageActivityLog,
     canManageRecycleBin,
+    canManageReport,
     accessibleDashboardViews,
     firstAccessibleDashboardView,
     canManageUsers,
@@ -207,6 +210,22 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     .slice(0, 2)
     .toUpperCase();
 
+  // Settings hosts Users/Activity Log/Recycle Bin as tabs on one page —
+  // switching tabs never changes `activeView` (it stays "Settings" the
+  // whole time), so it needs its own reset instead of going through
+  // handleSelectView's resetMap.
+  function resetSettingsTab(tab) {
+    if (tab === "Users") users.resetForEntry();
+    else if (tab === "Recycle Bin") recycleBin.resetForEntry();
+  }
+
+  function handleSettingsTabChange(tab) {
+    if (tab !== settingsTab) {
+      resetSettingsTab(tab);
+      setSettingsTab(tab);
+    }
+  }
+
   function handleSelectView(label, options) {
     // Every feature hook exposes `resetForEntry()` so switching into its view
     // flips the loading spinner instantly, without this composition root
@@ -227,6 +246,8 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
       "Borrow History": borrowHistory.resetForEntry,
       Employees: employees.resetForEntry,
       Departments: departments.resetForEntry,
+      Report: report.resetForEntry,
+      Settings: () => resetSettingsTab(settingsTab),
     };
 
     if (label !== activeView) {
@@ -296,12 +317,15 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   const isAssignView = activeView === "Assign" && hasActiveViewAccess;
   const isCurrentBorrowsView = activeView === "Currently Borrowed" && hasActiveViewAccess;
   const isBorrowHistoryView = activeView === "Borrow History" && hasActiveViewAccess;
-  const isUsersView = activeView === "Users" && hasActiveViewAccess;
   const isStatusView = activeView === "Statuses" && hasActiveViewAccess;
   const isPartStatusView = activeView === "Part Types Statuses" && hasActiveViewAccess;
   const isCategoryView = activeView === "Category" && hasActiveViewAccess;
-  const isActivityLogView = activeView === "Activity Log" && hasActiveViewAccess;
-  const isRecycleBinView = activeView === "Recycle Bin" && hasActiveViewAccess;
+  const isReportView = activeView === "Report" && hasActiveViewAccess;
+  const isSettingsView = activeView === "Settings" && hasActiveViewAccess;
+  const [settingsTab, setSettingsTab] = useState("Users");
+  const isUsersView = isSettingsView && settingsTab === "Users";
+  const isActivityLogView = isSettingsView && settingsTab === "Activity Log";
+  const isRecycleBinView = isSettingsView && settingsTab === "Recycle Bin";
 
   const departments = useDepartments({
     isActive: isDepartmentsView,
@@ -343,6 +367,20 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
       equipment.handleRetry();
     },
   });
+
+  const report = useReport({ isActive: isReportView });
+  const [isExportingReportPdf, setIsExportingReportPdf] = useState(false);
+  const [isExportingReportExcel, setIsExportingReportExcel] = useState(false);
+
+  function handleDownloadReportPdf() {
+    setIsExportingReportPdf(true);
+    Promise.resolve(exportReportToPdf(report.report)).finally(() => setIsExportingReportPdf(false));
+  }
+
+  function handleDownloadReportExcel() {
+    setIsExportingReportExcel(true);
+    Promise.resolve(exportReportToExcel(report.report)).finally(() => setIsExportingReportExcel(false));
+  }
 
   const assign = useAssign({
     isActive: isAssignView,
@@ -916,7 +954,8 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
             !isPartStatusView &&
             !isCategoryView &&
             !isActivityLogView &&
-            !isRecycleBinView && (
+            !isRecycleBinView &&
+            !isReportView && (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
                 <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
                   <EmptyState
@@ -959,31 +998,51 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
             </div>
           )}
 
-          {isUsersView &&
-            (canManageUsers ? (
-              <UsersView
-                users={users.users}
-                pendingCount={users.pendingApprovalCount}
-                isLoading={users.isLoading}
-                error={users.error}
-                onRetry={users.handleRetry}
-                onApprove={users.handleApprove}
-                onEditPermissions={users.handleOpenEditPermissions}
-                onResetPassword={users.handleOpenResetPassword}
-                onDelete={users.handleOpenDeleteUser}
-                currentUserId={user?.user_id ?? user?.id}
-              />
-            ) : (
-              <div className="px-4 py-6 sm:px-6 lg:px-8">
-                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-                  <EmptyState
-                    icon={Box}
-                    title="Not available"
-                    description="This page is admin-only."
-                  />
-                </div>
-              </div>
-            ))}
+          {isSettingsView && (
+            <SettingsView
+              activeTab={settingsTab}
+              onTabChange={handleSettingsTabChange}
+              canManageUsers={canManageUsers}
+              canManageActivityLog={canManageActivityLog}
+              canManageRecycleBin={canManageRecycleBin}
+              usersProps={{
+                users: users.users,
+                pendingCount: users.pendingApprovalCount,
+                isLoading: users.isLoading,
+                error: users.error,
+                onRetry: users.handleRetry,
+                onApprove: users.handleApprove,
+                onEditPermissions: users.handleOpenEditPermissions,
+                onResetPassword: users.handleOpenResetPassword,
+                onDelete: users.handleOpenDeleteUser,
+                currentUserId: user?.user_id ?? user?.id,
+              }}
+              activityLogProps={{
+                entries: activityLog.filteredEntries,
+                totalCount: activityLog.entries.length,
+                filters: activityLog.filters,
+                onFilterChange: activityLog.handleFilterChange,
+                moduleOptions: ACTIVITY_MODULE_VALUES,
+                actionOptions: ACTIVITY_ACTION_VALUES,
+              }}
+              recycleBinProps={{
+                entries: recycleBin.entries,
+                isLoading: recycleBin.isLoading,
+                error: recycleBin.error,
+                onRetry: recycleBin.handleRetry,
+                typeFilter: recycleBin.typeFilter,
+                onFilterChange: recycleBin.handleFilterChange,
+                typeOptions: recycleBin.typeOptions,
+                onRestore: recycleBin.handleRestore,
+                onDeleteForever: recycleBin.handleOpenDelete,
+                onPurgeAll: recycleBin.handleOpenPurge,
+                restoringId: recycleBin.restoringId,
+                deletingId: recycleBin.deletingId,
+                isPurging: recycleBin.isPurging,
+                actionError: recycleBin.actionError,
+              }}
+            />
+          )}
 
           {isStatusView &&
             (canManageStatuses ? (
@@ -1122,41 +1181,17 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
               </div>
             ))}
 
-          {isActivityLogView &&
-            (canManageActivityLog ? (
-              <ActivityLogView
-                entries={activityLog.filteredEntries}
-                totalCount={activityLog.entries.length}
-                filters={activityLog.filters}
-                onFilterChange={activityLog.handleFilterChange}
-                moduleOptions={ACTIVITY_MODULE_VALUES}
-                actionOptions={ACTIVITY_ACTION_VALUES}
-              />
-            ) : (
-              <div className="px-4 py-6 sm:px-6 lg:px-8">
-                <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-                  <EmptyState icon={Box} title="Not available" description="This page is admin-only." />
-                </div>
-              </div>
-            ))}
-
-          {isRecycleBinView &&
-            (canManageRecycleBin ? (
-              <RecycleBinView
-                entries={recycleBin.entries}
-                isLoading={recycleBin.isLoading}
-                error={recycleBin.error}
-                onRetry={recycleBin.handleRetry}
-                typeFilter={recycleBin.typeFilter}
-                onFilterChange={recycleBin.handleFilterChange}
-                typeOptions={recycleBin.typeOptions}
-                onRestore={recycleBin.handleRestore}
-                onDeleteForever={recycleBin.handleOpenDelete}
-                onPurgeAll={recycleBin.handleOpenPurge}
-                restoringId={recycleBin.restoringId}
-                deletingId={recycleBin.deletingId}
-                isPurging={recycleBin.isPurging}
-                actionError={recycleBin.actionError}
+          {isReportView &&
+            (canManageReport ? (
+              <ReportView
+                report={report.report}
+                isLoading={report.isLoading}
+                error={report.error}
+                onRetry={report.handleRetry}
+                onDownloadPdf={handleDownloadReportPdf}
+                onDownloadExcel={handleDownloadReportExcel}
+                isExportingPdf={isExportingReportPdf}
+                isExportingExcel={isExportingReportExcel}
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">

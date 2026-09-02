@@ -1,4 +1,4 @@
-import { FiActivity as Activity, FiBox as Box, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiSliders as Sliders, FiTag as Tag, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
+import { FiActivity as Activity, FiBarChart2 as BarChart2, FiBox as Box, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiSettings as SettingsIcon, FiSliders as Sliders, FiTag as Tag, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
 import { PERMISSIONS } from "../../lib/permissions";
 
 export const navSections = [
@@ -68,18 +68,24 @@ export const navSections = [
   {
     label: "Administration",
     items: [
-      { label: "Users", icon: UserCheck, permission: PERMISSIONS.USERS, adminOnly: true },
+      { label: "Report", icon: BarChart2, permission: PERMISSIONS.REPORT, adminOnly: true },
       {
-        label: "Activity Log",
-        icon: Activity,
-        permission: PERMISSIONS.ACTIVITY_LOG,
-        adminOnly: true,
-      },
-      {
-        label: "Recycle Bin",
-        icon: Trash2,
-        permission: PERMISSIONS.RECYCLE_BIN,
-        adminOnly: true,
+        label: "Settings",
+        icon: SettingsIcon,
+        // `standalone` opens this as one page (see Sidebar.jsx) instead of
+        // expanding a dropdown — the children below exist only so the
+        // existing children-based permission check (canAccessNavItem) makes
+        // this nav item visible whenever the account can reach at least one
+        // of Users/Activity Log/Recycle Bin, same as any other parent item.
+        // Each one keeps its own individually grantable permission,
+        // unchanged from before — Settings itself just now hosts all three
+        // as tabs on one page instead of three separate sidebar entries.
+        standalone: true,
+        children: [
+          { label: "Users", icon: UserCheck, permission: PERMISSIONS.USERS, adminOnly: true },
+          { label: "Activity Log", icon: Activity, permission: PERMISSIONS.ACTIVITY_LOG, adminOnly: true },
+          { label: "Recycle Bin", icon: Trash2, permission: PERMISSIONS.RECYCLE_BIN, adminOnly: true },
+        ],
       },
     ],
   },

@@ -10,7 +10,7 @@ import {
   RAM_TYPE_OPTIONS,
 } from "../dashboard.config";
 import { getExtraStockColumns, hasStockColumn } from "../dashboard.utils";
-import { FormField, formInputClass } from "./SharedControls";
+import { FormField, formInputClass, RadioSelect } from "./SharedControls";
 
 // Shared between the Part Stock page's "Add to stock" action and Device
 // Replacement's "add to stock" shortcut (shown inline when fitting a part
@@ -99,19 +99,13 @@ export function AddStockDialog({
                   {selectedPartType?.part_name || "—"}
                 </div>
               ) : (
-                <select
+                <RadioSelect
                   id="add-stock-part"
                   value={values.part_type_id || ""}
-                  onChange={(e) => onChange("part_type_id", e.target.value)}
-                  className={formInputClass}
-                >
-                  <option value="">{t("Select a part...")}</option>
-                  {partTypes.map((partType) => (
-                    <option key={partType.part_type_id} value={partType.part_type_id}>
-                      {partType.part_name}
-                    </option>
-                  ))}
-                </select>
+                  onSelect={(option) => onChange("part_type_id", option.value)}
+                  options={partTypes.map((partType) => ({ value: partType.part_type_id, label: partType.part_name }))}
+                  placeholder={t("Select a part...")}
+                />
               )}
             </FormField>
 
@@ -145,74 +139,50 @@ export function AddStockDialog({
 
             {needsDiskType && (
               <FormField label={t("Disk Type")} htmlFor="add-stock-disk-type">
-                <select
+                <RadioSelect
                   id="add-stock-disk-type"
                   value={values.disk_type || ""}
-                  onChange={(e) => onChange("disk_type", e.target.value)}
-                  className={formInputClass}
-                >
-                  <option value="">{t("Select disk type...")}</option>
-                  {DISK_TYPE_OPTIONS.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
+                  onSelect={(option) => onChange("disk_type", option.value)}
+                  options={DISK_TYPE_OPTIONS.map((type) => ({ value: type, label: type }))}
+                  placeholder={t("Select disk type...")}
+                />
               </FormField>
             )}
 
             {needsDiskInterface && (
               <FormField label={t("Disk Interface")} htmlFor="add-stock-disk-interface">
-                <select
+                <RadioSelect
                   id="add-stock-disk-interface"
                   value={values.disk_interface || ""}
-                  onChange={(e) => onChange("disk_interface", e.target.value)}
-                  className={formInputClass}
-                >
-                  <option value="">{t("Select disk interface...")}</option>
-                  {DISK_INTERFACE_OPTIONS.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
+                  onSelect={(option) => onChange("disk_interface", option.value)}
+                  options={DISK_INTERFACE_OPTIONS.map((type) => ({ value: type, label: type }))}
+                  placeholder={t("Select disk interface...")}
+                />
               </FormField>
             )}
 
             {needsRamType && (
               <FormField label={t("RAM Type")} htmlFor="add-stock-ram-type">
-                <select
+                <RadioSelect
                   id="add-stock-ram-type"
                   value={values.ram_type || ""}
-                  onChange={(e) => onChange("ram_type", e.target.value)}
-                  className={formInputClass}
-                >
-                  <option value="">{t("Select RAM type...")}</option>
-                  {RAM_TYPE_OPTIONS.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
+                  onSelect={(option) => onChange("ram_type", option.value)}
+                  options={RAM_TYPE_OPTIONS.map((type) => ({ value: type, label: type }))}
+                  placeholder={t("Select RAM type...")}
+                />
               </FormField>
             )}
 
             {needsValue && (
               <FormField label={t("Value")} htmlFor="add-stock-value">
                 {capacityOptions ? (
-                  <select
+                  <RadioSelect
                     id="add-stock-value"
                     value={values.part_value || ""}
-                    onChange={(e) => onChange("part_value", e.target.value)}
-                    className={formInputClass}
-                  >
-                    <option value="">{t("Select capacity...")}</option>
-                    {capacityOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                    onSelect={(option) => onChange("part_value", option.value)}
+                    options={capacityOptions.map((option) => ({ value: option, label: option }))}
+                    placeholder={t("Select capacity...")}
+                  />
                 ) : (
                   <input
                     id="add-stock-value"
@@ -291,7 +261,7 @@ export function AddStockDialog({
             <button
               type="submit"
               disabled={!canSubmit || isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-[13px] font-semibold text-white outline-none transition hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 dark:focus-visible:ring-offset-slate-900"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
               {isSubmitting ? t("Adding...") : isRam ? t("Add RAM") : t("Add")}
             </button>

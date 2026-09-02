@@ -531,6 +531,14 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
 
   function handleSubmitForm(event) {
     event.preventDefault();
+
+    // The category picker is a custom dropdown, not a native <select required>,
+    // so this check replaces the browser's own required-field validation.
+    if (formMode !== "edit" && !formValues.category?.trim()) {
+      setFormError("Please choose a category.");
+      return;
+    }
+
     setIsSaving(true);
     setFormError(null);
 
