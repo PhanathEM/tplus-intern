@@ -1,5 +1,5 @@
+# Frontend
 # TPLUS Management System
-
 A web dashboard for managing an organization's IT assets — employees, equipment, software licenses, and related workflows — built as a React frontend for the TPLUS backend API.
 
 ## Features
