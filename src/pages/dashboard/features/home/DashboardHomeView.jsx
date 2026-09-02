@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { FiActivity as ActivityIcon, FiBell as Bell } from "react-icons/fi";
+import { FiActivity as ActivityIcon, FiBell as Bell, FiPieChart as PieChartIcon } from "react-icons/fi";
 import { EmptyState } from "../../components/SharedControls";
+import { DonutChart, DonutLegend } from "./charts";
 
 const TONE_DOT_CLASS = {
   danger: "bg-rose-500",
@@ -28,18 +29,87 @@ function StatCard({ item, count, isLoading, onSelect }) {
     <button
       type="button"
       onClick={() => onSelect(item.label)}
-      className="group flex items-center gap-5 rounded-2xl border border-slate-200 bg-white px-6 py-6 text-left outline-none transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-900 dark:hover:shadow-black/30 dark:focus-visible:ring-offset-slate-900"
+      className="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 text-left outline-none transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-800 dark:bg-slate-900 dark:hover:shadow-black/30 dark:focus-visible:ring-offset-slate-900"
     >
-      <div className="grid h-16 w-16 shrink-0 place-items-center text-slate-500 dark:text-slate-400">
-        <Icon size={30} />
+      <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+        <Icon size={22} />
       </div>
       <div className="min-w-0">
-        <p className="text-[15px] font-medium leading-tight text-slate-600 dark:text-slate-400">{t(item.label)}</p>
-        <p className="mt-1 text-3xl font-bold tabular-nums text-slate-950 dark:text-white">
+        <p className="text-[13px] font-medium leading-tight text-slate-500 dark:text-slate-400">{t(item.label)}</p>
+        <p className="mt-1 text-2xl font-bold tabular-nums text-slate-950 dark:text-white">
           {hasCount ? count.toLocaleString() : isLoading ? "…" : "0"}
         </p>
       </div>
     </button>
+  );
+}
+
+function InsightPanel({ title, icon: Icon, isLoading, isEmpty, emptyMessage, children }) {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+      <div className="mb-4 flex items-center gap-2">
+        {Icon && <Icon className="text-slate-400 dark:text-slate-500" size={16} />}
+        <h3 className="text-[13px] font-semibold text-slate-950 dark:text-white">{title}</h3>
+      </div>
+      {isLoading ? (
+        <p className="py-8 text-center text-[13px] text-slate-400 dark:text-slate-500">{t("Loading...")}</p>
+      ) : isEmpty ? (
+        <p className="py-8 text-center text-[13px] text-slate-400 dark:text-slate-500">{emptyMessage}</p>
+      ) : (
+        children
+      )}
+    </div>
+  );
+}
+
+function EquipmentStatusPanel({ statusBreakdown, isLoading, t }) {
+  return (
+    <InsightPanel
+      title={t("Equipment by Status")}
+      icon={PieChartIcon}
+      isLoading={isLoading}
+      isEmpty={statusBreakdown.length === 0}
+      emptyMessage={t("No equipment data yet.")}
+    >
+      <div className="flex items-center gap-5">
+        <DonutChart data={statusBreakdown} />
+        <div className="min-w-0 flex-1">
+          <DonutLegend data={statusBreakdown} />
+        </div>
+      </div>
+    </InsightPanel>
+  );
+}
+
+function CategoryOccupancyPanel({ categoryOccupancy, isLoading, t }) {
+  return (
+    <InsightPanel
+      title={t("Equipment In Use by Category")}
+      icon={ActivityIcon}
+      isLoading={isLoading}
+      isEmpty={categoryOccupancy.length === 0}
+      emptyMessage={t("No equipment data yet.")}
+    >
+      <ul className="space-y-4">
+        {categoryOccupancy.map((category) => (
+          <li key={category.label}>
+            <div className="mb-1.5 flex items-center justify-between text-[13px]">
+              <span className="font-medium text-slate-700 dark:text-slate-300">{category.label}</span>
+              <span className="text-slate-400 dark:text-slate-500">
+                {category.occupied} {t("of")} {category.total}
+              </span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div
+                className="h-full rounded-full bg-orange-400 dark:bg-orange-500"
+                style={{ width: `${category.percent}%` }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </InsightPanel>
   );
 }
 
@@ -135,6 +205,9 @@ export function DashboardHomeView({
   notifications,
   onOpenNotification,
   recentActivity,
+  statusBreakdown = [],
+  categoryOccupancy = [],
+  isInsightsLoading = false,
 }) {
   const { t } = useTranslation();
   const cards = navSections.flatMap((section) =>
@@ -150,6 +223,11 @@ export function DashboardHomeView({
         const count = stats[item.label];
         return typeof count === "number" && count > 0;
       });
+
+  // These two panels are built from equipment data specifically — only
+  // worth showing to accounts that actually have that page, so a
+  // viewer-only account doesn't see permanently-empty charts.
+  const hasEquipmentAccess = cards.some((item) => item.label === "Equipments");
 
   return (
     <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
@@ -174,6 +252,13 @@ export function DashboardHomeView({
           ))}
         </div>
       ) : null}
+
+      {hasEquipmentAccess && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <EquipmentStatusPanel statusBreakdown={statusBreakdown} isLoading={isInsightsLoading} t={t} />
+          <CategoryOccupancyPanel categoryOccupancy={categoryOccupancy} isLoading={isInsightsLoading} t={t} />
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <NotificationsPanel notifications={notifications} onOpenNotification={onOpenNotification} />

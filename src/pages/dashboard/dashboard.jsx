@@ -377,7 +377,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
               aria-label="Close navigation"
             />
             <aside className="relative flex h-full w-72 flex-col border-r border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
-              <div className="flex items-center justify-between border-b border-slate-100 pr-3 dark:border-slate-800">
+              <div className="flex items-center justify-between pr-3">
                 <SidebarBrand collapsed={false} />
                 <button
                   type="button"
@@ -395,7 +395,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
 
         {/* Desktop sidebar */}
         <aside
-          className={`sticky top-0 hidden h-screen min-h-0 shrink-0 flex-col border-r border-slate-200 bg-white xl:flex dark:border-slate-800 dark:bg-slate-900 ${isResizingSidebar ? "" : "transition-[width] duration-200"
+          className={`sticky top-0 z-30 hidden h-screen min-h-0 shrink-0 flex-col border-r border-slate-200 bg-white xl:flex dark:border-slate-800 dark:bg-slate-900 ${isResizingSidebar ? "" : "transition-[width] duration-200"
             } ${isSidebarCollapsed ? "w-19" : "relative"}`}
           style={isSidebarCollapsed ? undefined : { width: sidebarWidth }}
         >
@@ -424,7 +424,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
 
         {/* Main content */}
         <main className="min-w-0 flex-1">
-          <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90">
+          <header className="sticky top-0 z-20 bg-white/90 backdrop-blur dark:bg-slate-900/90">
             <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
               {isMobileSearchOpen ? (
                 <div className="flex flex-1 items-center gap-2">
@@ -462,7 +462,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                       {activeViewParentLabel && (
                         <>
                           <span className="text-[20px]">{t(activeViewParentLabel)}</span>
-                          <span className="mx-1.5 text-[22px]">&rsaquo;</span>
+                          <span className="mx-1.5 text-[15px] text-slate-400 dark:text-slate-600">/</span>
                         </>
                       )}
                       {t(activeView)}
@@ -679,6 +679,9 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
               notifications={notifications.visibleNotifications}
               onOpenNotification={notifications.handleOpen}
               recentActivity={myActivity.entries}
+              statusBreakdown={home.statusBreakdown}
+              categoryOccupancy={home.categoryOccupancy}
+              isInsightsLoading={home.isInsightsLoading}
             />
           )}
 

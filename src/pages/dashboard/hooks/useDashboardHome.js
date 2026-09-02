@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchEmployees } from "../../../services/employeeService";
 import { fetchDepartments } from "../../../services/departmentService";
-import { fetchEquipmentCategorySummary } from "../../../services/equipmentService";
+import { fetchEquipmentByStatus, fetchEquipmentCategorySummary } from "../../../services/equipmentService";
 import { fetchBorrowHistory } from "../../../services/borrowService";
 import { fetchPartReplacements } from "../../../services/partReplacementService";
 import { fetchServerUsage } from "../../../services/serverUsageService";
@@ -34,9 +34,55 @@ const HOME_STAT_FETCHERS = {
     ),
 };
 
+// Every equipment record (any category), each carrying status_name and
+// category_name — grouped client-side into the two Home insight panels
+// below instead of firing a separate request per breakdown.
+function loadEquipmentInsights() {
+  return fetchEquipmentByStatus().then((data) => {
+    const items = Array.isArray(data) ? data : [];
+
+    const statusCounts = new Map();
+    const categoryCounts = new Map();
+
+    items.forEach((item) => {
+      const status = item.status_name || item.status || "Unknown";
+      statusCounts.set(status, (statusCounts.get(status) || 0) + 1);
+
+      const category = item.category_name || item.category || "Uncategorized";
+      const current = categoryCounts.get(category) || { total: 0, occupied: 0 };
+      current.total += 1;
+      // An item with an owner on file is currently assigned/in use — the
+      // closest real equivalent this data has to "occupied".
+      if (item.owner_name) current.occupied += 1;
+      categoryCounts.set(category, current);
+    });
+
+    const total = items.length || 1;
+    const statusBreakdown = [...statusCounts.entries()]
+      .map(([label, count]) => ({ label, count, percent: Math.round((count / total) * 100) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const categoryOccupancy = [...categoryCounts.entries()]
+      .map(([label, { total: categoryTotal, occupied }]) => ({
+        label,
+        total: categoryTotal,
+        occupied,
+        percent: categoryTotal > 0 ? Math.round((occupied / categoryTotal) * 100) : 0,
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 4);
+
+    return { statusBreakdown, categoryOccupancy };
+  });
+}
+
 export function useDashboardHome({ isActive, accessibleDashboardViews }) {
   const [stats, setStats] = useState({});
   const [isLoading, setIsLoading] = useState(isActive);
+  const [statusBreakdown, setStatusBreakdown] = useState([]);
+  const [categoryOccupancy, setCategoryOccupancy] = useState([]);
+  const [isInsightsLoading, setIsInsightsLoading] = useState(isActive);
 
   useEffect(() => {
     if (!isActive) return;
@@ -63,5 +109,32 @@ export function useDashboardHome({ isActive, accessibleDashboardViews }) {
     };
   }, [isActive, accessibleDashboardViews]);
 
-  return { stats, isLoading };
+  useEffect(() => {
+    if (!isActive) return;
+
+    let ignore = false;
+
+    const canSeeEquipment = accessibleDashboardViews.includes("Equipments");
+
+    (canSeeEquipment ? loadEquipmentInsights() : Promise.resolve(null))
+      .then((result) => {
+        if (ignore) return;
+        setStatusBreakdown(result?.statusBreakdown || []);
+        setCategoryOccupancy(result?.categoryOccupancy || []);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setStatusBreakdown([]);
+        setCategoryOccupancy([]);
+      })
+      .finally(() => {
+        if (!ignore) setIsInsightsLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isActive, accessibleDashboardViews]);
+
+  return { stats, isLoading, statusBreakdown, categoryOccupancy, isInsightsLoading };
 }

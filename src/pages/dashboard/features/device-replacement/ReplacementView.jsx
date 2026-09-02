@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { FiAlertTriangle as AlertTriangle, FiChevronDown as ChevronDown, FiMonitor as Monitor, FiPlusCircle as PlusCircle, FiRefreshCw as RefreshCw, FiSearch as Search, FiX as X } from "react-icons/fi";
 import { PART_ACTION_OPTIONS } from "../../dashboard.config";
 import { formatFieldValue, getEquipmentDisplayName } from "../../dashboard.utils";
-import { EmptyState, formInputClass, RadioSelect } from "../../components/SharedControls";
+import { EmptyState, formInputClass, Pagination, RadioSelect } from "../../components/SharedControls";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
 import { AddStockDialog } from "../../components/AddStockDialog";
@@ -244,27 +244,7 @@ export function ReplaceableDevicesView({
               {"–"}
               {Math.min(page * REPLACEABLE_PAGE_SIZE, numberedDevices.length)} {t("of")} {numberedDevices.length}
             </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={page === 1}
-                onClick={() => setPage(Math.max(1, page - 1))}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
-              >
-                {t("Previous")}
-              </button>
-              <span className="tabular-nums text-slate-400 dark:text-slate-500">
-                {page} / {pageCount}
-              </span>
-              <button
-                type="button"
-                disabled={page === pageCount}
-                onClick={() => setPage(Math.min(pageCount, page + 1))}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
-              >
-                {t("Next")}
-              </button>
-            </div>
+            <Pagination currentPage={page} pageCount={pageCount} onPageChange={setPage} />
           </div>
         )}
       </div>

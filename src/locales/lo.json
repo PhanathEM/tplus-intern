@@ -41,6 +41,9 @@
   "Things you add, edit, or delete will show up here.": "ສິ່ງທີ່ທ່ານເພີ່ມ, ແກ້ໄຂ, ຫຼືລຶບຈະສະແດງຢູ່ບ່ອນນີ້.",
   "No pages assigned": "ບໍ່ມີໜ້າທີ່ຖືກມອບໝາຍ",
   "Ask an admin to add permissions to this account.": "ກະລຸນາຕິດຕໍ່ຜູ້ດູແລລະບົບເພື່ອເພີ່ມສິດອະນຸຍາດໃຫ້ບັນຊີນີ້.",
+  "Equipment by Status": "ອຸປະກອນຕາມສະຖານະ",
+  "Equipment In Use by Category": "ອຸປະກອນທີ່ກຳລັງໃຊ້ຕາມປະເພດ",
+  "No equipment data yet.": "ຍັງບໍ່ມີຂໍ້ມູນອຸປະກອນ.",
 
   "Created": "ສ້າງແລ້ວ",
   "Updated": "ອັບເດດແລ້ວ",

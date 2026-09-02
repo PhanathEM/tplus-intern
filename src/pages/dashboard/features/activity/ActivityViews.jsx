@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FiActivity as ActivityIcon, FiChevronDown as ChevronDown, FiSearch as Search } from "react-icons/fi";
-import { EmptyState, RadioSelect } from "../../components/SharedControls";
+import { EmptyState, Pagination, RadioSelect } from "../../components/SharedControls";
 import { formatFieldValue, humanizeFieldKey } from "../../dashboard.utils";
 import { translateLabel } from "../../../../lib/i18nLabel";
 
@@ -290,27 +290,7 @@ export function ActivityLogView({
               {"–"}
               {Math.min(currentPage * ACTIVITY_LOG_PAGE_SIZE, entries.length)} {t("of")} {entries.length}
             </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={currentPage === 1}
-                onClick={() => setPage(Math.max(1, currentPage - 1))}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
-              >
-                {t("Previous")}
-              </button>
-              <span className="tabular-nums text-slate-400 dark:text-slate-500">
-                {currentPage} / {pageCount}
-              </span>
-              <button
-                type="button"
-                disabled={currentPage === pageCount}
-                onClick={() => setPage(Math.min(pageCount, currentPage + 1))}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700"
-              >
-                {t("Next")}
-              </button>
-            </div>
+            <Pagination currentPage={currentPage} pageCount={pageCount} onPageChange={setPage} />
           </div>
         )}
       </div>

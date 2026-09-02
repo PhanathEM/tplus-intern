@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { FiChevronDown as ChevronDown } from "react-icons/fi";
 import { TbLayoutSidebar } from "react-icons/tb";
@@ -18,25 +19,54 @@ function getBadgeClass(tone) {
   return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300";
 }
 
+// Rendered into document.body via a portal instead of positioned inside the
+// sidebar's own DOM — the sidebar's nav list scrolls (overflow-y-auto, which
+// clips overflow-x too), so a tooltip positioned as a normal descendant gets
+// cut off right at the sidebar's edge. Measuring the trigger's rect on
+// hover and portaling out escapes that entirely.
+function HoverTooltip({ label, rect }) {
+  if (!rect) return null;
+
+  const style = {
+    top: rect.top + rect.height / 2,
+    left: rect.right + 12,
+    transform: "translateY(-50%)",
+  };
+
+  return createPortal(
+    <div
+      role="tooltip"
+      className="pointer-events-none fixed z-100 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white shadow-lg dark:bg-slate-700"
+      style={style}
+    >
+      {label}
+      <span className="absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent border-r-slate-900 dark:border-r-slate-700" />
+    </div>,
+    document.body
+  );
+}
+
 export function SidebarNavigation({ collapsed = false, activeView, onSelect, user, badges }) {
   const { t } = useTranslation();
   const [expandedLabels, setExpandedLabels] = useState(() => new Set());
+  const [hoveredTooltip, setHoveredTooltip] = useState(null);
 
   const visibleSections = getVisibleNavSections(user, navSections);
+
+  function showTooltip(label, el) {
+    if (!collapsed || !el) return;
+    setHoveredTooltip({ label, rect: el.getBoundingClientRect() });
+  }
+
+  function hideTooltip() {
+    setHoveredTooltip(null);
+  }
 
   return (
     <nav className={`scrollbar-thin flex-1 overflow-y-auto py-4 ${collapsed ? "px-3" : "px-4"}`}>
       {visibleSections.map((section, sectionIdx) => (
-        <div key={section.label} className={sectionIdx === 0 ? "" : "mt-5"}>
-          {!collapsed ? (
-            <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              {t(section.label)}
-            </p>
-          ) : (
-            sectionIdx !== 0 && <div className="mx-2 mb-3 border-t border-slate-200 dark:border-slate-700" />
-          )}
-
-          <div className="space-y-0.5">
+        <div key={section.label} className={sectionIdx === 0 ? "" : "mt-2"}>
+          <div className="space-y-2">
             {section.items.map((item) => {
               const Icon = item.icon;
               const hasChildren = Boolean(item.children?.length);
@@ -64,7 +94,11 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
                       }
                       onSelect(item.label);
                     }}
-                    title={collapsed ? t(item.label) : undefined}
+                    onMouseEnter={(e) => showTooltip(t(item.label), e.currentTarget)}
+                    onMouseLeave={hideTooltip}
+                    onFocus={(e) => showTooltip(t(item.label), e.currentTarget)}
+                    onBlur={hideTooltip}
+                    aria-label={collapsed ? t(item.label) : undefined}
                     className={`group relative flex w-full items-center rounded-lg py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${collapsed ? "justify-center px-0" : "gap-3 px-3 text-left"
                       } ${isActive
                         ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
@@ -119,15 +153,20 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
           </div>
         </div>
       ))}
+
+      {collapsed && hoveredTooltip && <HoverTooltip label={hoveredTooltip.label} rect={hoveredTooltip.rect} />}
     </nav>
   );
 }
 
 export function SidebarBrand({ collapsed, onToggleCollapse }) {
   const { t } = useTranslation();
+  const [toggleTooltipRect, setToggleTooltipRect] = useState(null);
+  const toggleLabel = collapsed ? t("Expand sidebar") : t("Collapse sidebar");
+
   return (
     <div
-      className={`flex shrink-0 items-center border-b border-slate-100 dark:border-slate-800 ${collapsed ? "h-auto flex-col justify-center gap-2 px-3 py-3" : "h-16 justify-between px-4"
+      className={`flex shrink-0 items-center ${collapsed ? "h-auto flex-col justify-center gap-2 px-3 py-3" : "h-16 justify-between px-4"
         }`}
     >
       <div className={`flex min-w-0 items-center ${collapsed ? "" : "gap-3"}`}>
@@ -149,12 +188,16 @@ export function SidebarBrand({ collapsed, onToggleCollapse }) {
       <button
         type="button"
         onClick={onToggleCollapse}
+        onMouseEnter={(e) => setToggleTooltipRect(e.currentTarget.getBoundingClientRect())}
+        onMouseLeave={() => setToggleTooltipRect(null)}
+        onFocus={(e) => setToggleTooltipRect(e.currentTarget.getBoundingClientRect())}
+        onBlur={() => setToggleTooltipRect(null)}
         className="hidden shrink-0 rounded-md p-1.5 text-slate-500 outline-none transition hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white dark:focus-visible:ring-offset-slate-900 xl:grid xl:place-items-center"
-        aria-label={collapsed ? t("Expand sidebar") : t("Collapse sidebar")}
-        title={collapsed ? t("Expand sidebar") : t("Collapse sidebar")}
+        aria-label={toggleLabel}
       >
         <TbLayoutSidebar size={19} />
       </button>
+      {toggleTooltipRect && <HoverTooltip label={toggleLabel} rect={toggleTooltipRect} />}
     </div>
   );
 }

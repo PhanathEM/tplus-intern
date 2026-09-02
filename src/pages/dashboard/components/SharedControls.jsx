@@ -3,10 +3,92 @@ import { createPortal } from "react-dom";
 import {
   FiAlertTriangle as AlertTriangle,
   FiChevronDown as ChevronDown,
+  FiChevronLeft as ChevronLeft,
+  FiChevronRight as ChevronRight,
   FiMoreVertical as MoreVertical,
   FiSearch as Search,
 } from "react-icons/fi";
 import { getEmployeeDepartmentCode } from "../dashboard.utils";
+
+const PAGE_ARROW_CLASS =
+  "grid h-8 w-8 shrink-0 place-items-center rounded-full border border-slate-200 text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:bg-transparent dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 dark:disabled:hover:border-slate-700";
+
+// Always includes page 1, the last page, and one neighbor on each side of
+// the current page; collapses any gap into a single "..." entry — e.g.
+// current=2, total=8 -> [1, 2, 3, "...", 8].
+function buildPageList(current, total) {
+  const delta = 1;
+  const range = [];
+  for (let i = 1; i <= total; i += 1) {
+    if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+      range.push(i);
+    }
+  }
+
+  const withGaps = [];
+  let previous;
+  range.forEach((page) => {
+    if (previous != null) {
+      withGaps.push(page - previous === 2 ? previous + 1 : page - previous !== 1 ? "..." : null);
+    }
+    withGaps.push(page);
+    previous = page;
+  });
+  return withGaps.filter((entry) => entry !== null);
+}
+
+// Rounded numbered pages with a filled active page and ellipsis for gaps —
+// the one pagination look used everywhere a list is paginated.
+export function Pagination({ currentPage, pageCount, onPageChange }) {
+  if (pageCount <= 1) return null;
+
+  const pages = buildPageList(currentPage, pageCount);
+
+  return (
+    <nav className="flex items-center gap-1.5" aria-label="Pagination">
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+        disabled={currentPage === 1}
+        aria-label="Previous page"
+        className={PAGE_ARROW_CLASS}
+      >
+        <ChevronLeft size={15} />
+      </button>
+
+      {pages.map((page, index) =>
+        page === "..." ? (
+          <span key={`gap-${index}`} className="grid h-8 w-8 place-items-center text-sm text-slate-400 dark:text-slate-500">
+            …
+          </span>
+        ) : (
+          <button
+            key={page}
+            type="button"
+            onClick={() => onPageChange(page)}
+            aria-current={page === currentPage ? "page" : undefined}
+            className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${page === currentPage
+              ? "bg-slate-950 text-white dark:bg-white dark:text-slate-900"
+              : "border border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+              }`}
+          >
+            {page}
+          </button>
+        )
+      )}
+
+      <button
+        type="button"
+        onClick={() => onPageChange(Math.min(pageCount, currentPage + 1))}
+        disabled={currentPage === pageCount}
+        aria-label="Next page"
+        className={PAGE_ARROW_CLASS}
+      >
+        <ChevronRight size={15} />
+      </button>
+    </nav>
+  );
+}
 
 // Portal-based so the menu isn't clipped by a scrolling table container.
 // `items`: [{ icon, label, onClick, destructive? }] — pass `{ divider: true }`
