@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import {
   FiBell as Bell,
   FiBox as Box,
-  FiChevronDown as ChevronDown,
   FiLogOut as LogOut,
   FiMenu as Menu,
   FiGlobe as Globe,
@@ -29,7 +28,7 @@ import { useAccount } from "./features/account/useAccount";
 import { useDashboardNotifications } from "./hooks/useDashboardNotifications";
 import { useDashboardRouting } from "./hooks/useDashboardRouting";
 import { useDashboardHome } from "./hooks/useDashboardHome";
-import { EMPLOYEES_PAGE_SIZE, navItemsByLabel, parentLabelByChildLabel } from "./dashboard.config";
+import { EMPLOYEES_PAGE_SIZE, navItemsByLabel } from "./dashboard.config";
 import { getEquipmentDisplayName } from "./dashboard.utils";
 import { ConfirmDialog, EmptyState } from "./components/SharedControls";
 import { SidebarBrand, SidebarNavigation } from "./components/Sidebar";
@@ -203,12 +202,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   const notificationsRef = useRef(null);
   const profileMenuRef = useRef(null);
   const displayName = user?.name || "Admin User";
-  const initials = displayName
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 
   // Settings hosts Users/Activity Log/Recycle Bin as tabs on one page —
   // switching tabs never changes `activeView` (it stays "Settings" the
@@ -303,7 +296,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   }, []);
 
   const activeNavItem = navItemsByLabel[activeView];
-  const activeViewParentLabel = parentLabelByChildLabel[activeView];
   const isEmployeeView = activeView === "Employees" && hasActiveViewAccess;
   const isDepartmentsView = activeView === "Departments" && hasActiveViewAccess;
   const isEquipmentView = activeView === "Equipments" && hasActiveViewAccess;
@@ -462,7 +454,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
 
         {/* Main content */}
         <main className="min-w-0 flex-1">
-          <header className="sticky top-0 z-20 bg-white/90 backdrop-blur dark:bg-slate-900/90">
+          <header className="sticky top-0 z-20 bg-[#fddd1c] backdrop-blur">
             <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
               {isMobileSearchOpen ? (
                 <div className="flex flex-1 items-center gap-2">
@@ -495,17 +487,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                     <Menu className="text-lg" />
                   </button>
 
-                  <div className="min-w-0 flex-1">
-                    <h1 className="truncate text-[17px] font-semibold text-slate-950 dark:text-white">
-                      {activeViewParentLabel && (
-                        <>
-                          <span className="text-[20px]">{t(activeViewParentLabel)}</span>
-                          <span className="mx-1.5 text-[15px] text-slate-400 dark:text-slate-600">/</span>
-                        </>
-                      )}
-                      {t(activeView)}
-                    </h1>
-                  </div>
+                  <div className="min-w-0 flex-1" />
 
                   <GlobalSearch
                     className="hidden w-72 shrink-0 lg:block"
@@ -520,183 +502,177 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                       sits truly centered in the header, not just left of
                       these icons. */}
                   <div className="flex flex-1 items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsMobileSearchOpen(true)}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-400 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 lg:hidden"
-                    aria-label="Open search"
-                  >
-                    <Search size={18} />
-                  </button>
-
-                  <ThemeToggle theme={theme} onToggle={onToggleTheme} className="hidden sm:inline-flex" />
-                  <LanguageToggle language={language} onToggle={onToggleLanguage} className="hidden sm:inline-flex" />
-
-                  <div className="relative" ref={notificationsRef}>
                     <button
                       type="button"
-                      onClick={() => {
-                        notifications.setIsOpen((value) => !value);
-                        setIsProfileMenuOpen(false);
-                      }}
-                      className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-400 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900"
-                      aria-label="Notifications"
-                      aria-haspopup="true"
-                      aria-expanded={notifications.isOpen}
+                      onClick={() => setIsMobileSearchOpen(true)}
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-slate-400 dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900 lg:hidden"
+                      aria-label="Open search"
                     >
-                      <Bell size={18} />
-                      {notifications.hasUnread && (
-                        <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white dark:ring-slate-900">
-                          {notifications.unreadCount > 9 ? "9+" : notifications.unreadCount}
-                        </span>
-                      )}
+                      <Search size={18} />
                     </button>
 
-                    {notifications.isOpen && (
-                      <div className="absolute right-0 top-full z-30 mt-2 w-80 rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
-                        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-700">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-950 dark:text-white">Notifications</p>
-                            <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
-                              {notifications.unreadCount} unread
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={notifications.handleMarkAllRead}
-                              disabled={notifications.visibleNotifications.length === 0}
-                              className="rounded text-xs font-semibold text-orange-600 outline-none transition hover:text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:text-slate-300"
-                            >
-                              Mark all as read
-                            </button>
-                          </div>
-                        </div>
-                        <div className="max-h-80 overflow-y-auto">
-                          {notifications.isLoading && notifications.visibleNotifications.length === 0 ? (
-                            <div className="px-4 py-8 text-center text-[13px] text-slate-500 dark:text-slate-400">
-                              Loading notifications...
-                            </div>
-                          ) : notifications.visibleNotifications.length === 0 ? (
-                            <EmptyState icon={Bell} title="No notifications" description="You're all caught up." />
-                          ) : (
-                            notifications.visibleNotifications.map((item) => (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => notifications.handleOpen(item)}
-                                className="flex w-full gap-3 border-b border-slate-50 px-4 py-3 text-left outline-none transition last:border-b-0 hover:bg-slate-50 focus-visible:bg-slate-50 dark:border-slate-700/60 dark:hover:bg-slate-700/60 dark:focus-visible:bg-slate-700/60"
-                              >
-                                <span
-                                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.unread
-                                    ? item.tone === "danger"
-                                      ? "bg-rose-500"
-                                      : "bg-orange-500"
-                                    : "bg-transparent"
-                                    }`}
-                                />
-                                <div className="min-w-0">
-                                  <p className="text-[13px] font-semibold text-slate-950 dark:text-white">{item.title}</p>
-                                  <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">{item.detail}</p>
-                                  <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{item.time}</p>
-                                </div>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                    <ThemeToggle theme={theme} onToggle={onToggleTheme} className="hidden sm:inline-flex" />
+                    <LanguageToggle language={language} onToggle={onToggleLanguage} className="hidden sm:inline-flex" />
 
-                  <div
-                    className="relative hidden sm:block"
-                    ref={profileMenuRef}
-                    onMouseEnter={() => {
-                      if (profileMenuCloseTimeout.current) {
-                        clearTimeout(profileMenuCloseTimeout.current);
-                      }
-                      setIsProfileMenuOpen(true);
-                      notifications.setIsOpen(false);
-                    }}
-                    onMouseLeave={() => {
-                      profileMenuCloseTimeout.current = window.setTimeout(() => {
-                        setIsProfileMenuOpen(false);
-                      }, 150);
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsProfileMenuOpen((value) => !value);
+                    <div className="relative" ref={notificationsRef}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          notifications.setIsOpen((value) => !value);
+                          setIsProfileMenuOpen(false);
+                        }}
+                        className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-black/10 text-slate-700 outline-none transition hover:bg-black/15 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20 dark:focus-visible:ring-offset-slate-900"
+                        aria-label="Notifications"
+                        aria-haspopup="true"
+                        aria-expanded={notifications.isOpen}
+                      >
+                        <Bell size={18} />
+                        {notifications.hasUnread && (
+                          <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-[#fddd1c]">
+                            {notifications.unreadCount > 9 ? "9+" : notifications.unreadCount}
+                          </span>
+                        )}
+                      </button>
+
+                      {notifications.isOpen && (
+                        <div className="absolute right-0 top-full z-30 mt-2 w-80 rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-700">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-950 dark:text-white">Notifications</p>
+                              <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
+                                {notifications.unreadCount} unread
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={notifications.handleMarkAllRead}
+                                disabled={notifications.visibleNotifications.length === 0}
+                                className="rounded text-xs font-semibold text-orange-600 outline-none transition hover:text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:text-slate-300"
+                              >
+                                Mark all as read
+                              </button>
+                            </div>
+                          </div>
+                          <div className="max-h-80 overflow-y-auto">
+                            {notifications.isLoading && notifications.visibleNotifications.length === 0 ? (
+                              <div className="px-4 py-8 text-center text-[13px] text-slate-500 dark:text-slate-400">
+                                Loading notifications...
+                              </div>
+                            ) : notifications.visibleNotifications.length === 0 ? (
+                              <EmptyState icon={Bell} title="No notifications" description="You're all caught up." />
+                            ) : (
+                              notifications.visibleNotifications.map((item) => (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={() => notifications.handleOpen(item)}
+                                  className="flex w-full gap-3 border-b border-slate-50 px-4 py-3 text-left outline-none transition last:border-b-0 hover:bg-slate-50 focus-visible:bg-slate-50 dark:border-slate-700/60 dark:hover:bg-slate-700/60 dark:focus-visible:bg-slate-700/60"
+                                >
+                                  <span
+                                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.unread
+                                      ? item.tone === "danger"
+                                        ? "bg-rose-500"
+                                        : "bg-orange-500"
+                                      : "bg-transparent"
+                                      }`}
+                                  />
+                                  <div className="min-w-0">
+                                    <p className="text-[13px] font-semibold text-slate-950 dark:text-white">{item.title}</p>
+                                    <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">{item.detail}</p>
+                                    <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{item.time}</p>
+                                  </div>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      className="relative hidden sm:block"
+                      ref={profileMenuRef}
+                      onMouseEnter={() => {
+                        if (profileMenuCloseTimeout.current) {
+                          clearTimeout(profileMenuCloseTimeout.current);
+                        }
+                        setIsProfileMenuOpen(true);
                         notifications.setIsOpen(false);
                       }}
-                      className="flex items-center gap-2 rounded-lg py-1.5 pl-1.5 pr-2 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:hover:bg-slate-800 dark:focus-visible:ring-offset-slate-900"
-                      aria-haspopup="true"
-                      aria-expanded={isProfileMenuOpen}
+                      onMouseLeave={() => {
+                        profileMenuCloseTimeout.current = window.setTimeout(() => {
+                          setIsProfileMenuOpen(false);
+                        }, 150);
+                      }}
                     >
-                      <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-950 text-xs font-semibold text-white dark:bg-white dark:text-slate-900">
-                        {initials}
-                      </div>
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{displayName}</span>
-                      <ChevronDown
-                        size={14}
-                        className={`text-slate-400 transition-transform ${isProfileMenuOpen ? "rotate-180" : ""}`}
-                      />
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProfileMenuOpen((value) => !value);
+                          notifications.setIsOpen(false);
+                        }}
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-black/10 text-slate-700 outline-none transition hover:bg-black/15 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20 dark:focus-visible:ring-offset-slate-900"
+                        aria-haspopup="true"
+                        aria-expanded={isProfileMenuOpen}
+                        aria-label={displayName}
+                      >
+                        <UserIcon size={18} />
+                      </button>
 
-                    {isProfileMenuOpen && (
-                      <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-700 dark:bg-slate-800">
-                        <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-700">
-                          <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{displayName}</p>
-                          <p className="truncate text-xs text-slate-500 dark:text-slate-400">{getAccessProfileLabel(user, t)}</p>
+                      {isProfileMenuOpen && (
+                        <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                          <div className="border-b border-slate-100 px-3 py-2 dark:border-slate-700">
+                            <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">{displayName}</p>
+                            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{getAccessProfileLabel(user, t)}</p>
+                          </div>
+                          <div className="flex items-center justify-between gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-300 sm:hidden">
+                            <span className="flex items-center gap-2.5">
+                              <Moon size={15} />
+                              Dark mode
+                            </span>
+                            <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+                          </div>
+                          <div className="flex items-center justify-between gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-300 sm:hidden">
+                            <span className="flex items-center gap-2.5">
+                              <Globe size={15} />
+                              Language
+                            </span>
+                            <LanguageToggle language={language} onToggle={onToggleLanguage} />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsProfileMenuOpen(false);
+                              account.handleOpenProfile();
+                            }}
+                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-300 dark:hover:bg-slate-700"
+                          >
+                            <UserIcon size={15} />
+                            {t("View profile")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsProfileMenuOpen(false);
+                              account.handleOpenChangePassword();
+                            }}
+                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-300 dark:hover:bg-slate-700"
+                          >
+                            <Settings size={15} />
+                            {t("Account settings")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={onLogout}
+                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-rose-600 outline-none transition hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                          >
+                            <LogOut size={15} />
+                            {t("Sign out")}
+                          </button>
                         </div>
-                        <div className="flex items-center justify-between gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-300 sm:hidden">
-                          <span className="flex items-center gap-2.5">
-                            <Moon size={15} />
-                            Dark mode
-                          </span>
-                          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-                        </div>
-                        <div className="flex items-center justify-between gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-300 sm:hidden">
-                          <span className="flex items-center gap-2.5">
-                            <Globe size={15} />
-                            Language
-                          </span>
-                          <LanguageToggle language={language} onToggle={onToggleLanguage} />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsProfileMenuOpen(false);
-                            account.handleOpenProfile();
-                          }}
-                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-300 dark:hover:bg-slate-700"
-                        >
-                          <UserIcon size={15} />
-                          {t("View profile")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsProfileMenuOpen(false);
-                            account.handleOpenChangePassword();
-                          }}
-                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-600 outline-none transition hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-300 dark:hover:bg-slate-700"
-                        >
-                          <Settings size={15} />
-                          {t("Account settings")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={onLogout}
-                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-rose-600 outline-none transition hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-rose-400 dark:hover:bg-rose-950/40"
-                        >
-                          <LogOut size={15} />
-                          {t("Sign out")}
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
@@ -1421,11 +1397,10 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         title="Delete this part?"
         message={
           partStock.partTypeToDelete
-            ? `Remove "${partStock.partTypeToDelete.part_name}" from the part catalog. This can't be undone.${
-                partStock.linkedEquipmentField
-                  ? ` It'll also delete the linked equipment field "${partStock.linkedEquipmentField.label}" everywhere it's used.`
-                  : ""
-              }`
+            ? `Remove "${partStock.partTypeToDelete.part_name}" from the part catalog. This can't be undone.${partStock.linkedEquipmentField
+              ? ` It'll also delete the linked equipment field "${partStock.linkedEquipmentField.label}" everywhere it's used.`
+              : ""
+            }`
             : ""
         }
         confirmLabel="Delete"

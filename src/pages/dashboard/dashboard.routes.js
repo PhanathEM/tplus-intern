@@ -25,6 +25,8 @@ export const dashboardRouteByView = {
   Users: "users",
   "Activity Log": "activity-log",
   "Recycle Bin": "recycle-bin",
+  Report: "report",
+  Settings: "settings",
 };
 
 const dashboardViewByRoute = Object.fromEntries(

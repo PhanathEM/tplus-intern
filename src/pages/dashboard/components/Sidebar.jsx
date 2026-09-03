@@ -78,8 +78,13 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
               const isExpanded = expandedLabels.has(item.label) || isChildActive;
               const badge = getBadgeConfig(badges, item.label, item.badge);
 
+              const isDropdownOpen = !collapsed && hasChildren && isExpanded;
+
               return (
-                <div key={item.label}>
+                <div
+                  key={item.label}
+                  className={isDropdownOpen ? "rounded-xl bg-slate-50 p-1 dark:bg-slate-800/60" : ""}
+                >
                   <button
                     type="button"
                     onClick={() => {
@@ -104,8 +109,10 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
                     aria-label={collapsed ? t(item.label) : undefined}
                     className={`group relative flex w-full items-center rounded-lg py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${collapsed ? "justify-center px-0" : "gap-3 px-3 text-left"
                       } ${isActive
-                        ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                        ? `text-[#ddbb00] ${isDropdownOpen ? "" : "bg-slate-100 dark:bg-slate-800"}`
+                        : isDropdownOpen
+                          ? "text-slate-900 dark:text-white"
+                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
                       }`}
                   >
                     <Icon className="shrink-0 text-[17px]" />
@@ -128,10 +135,10 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
                     )}
                   </button>
 
-                  {!collapsed && hasChildren && isExpanded && (
-                    <div className="mt-0.5 space-y-0.5 pl-8">
+                  {isDropdownOpen && (
+                    <div className="relative mt-0.5 space-y-0.5 pl-9">
+                      <span className="pointer-events-none absolute bottom-2 left-[20px] top-2 w-px bg-slate-200 dark:bg-slate-700" />
                       {item.children.map((child) => {
-                        const ChildIcon = child.icon;
                         const isChildItemActive = child.label === activeView;
                         return (
                           <button
@@ -139,11 +146,14 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
                             type="button"
                             onClick={() => onSelect(child.label)}
                             className={`group relative flex w-full items-center gap-2.5 rounded-lg py-2 pl-2 pr-3 text-left text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${isChildItemActive
-                              ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
-                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                              ? "text-[#ddbb00]"
+                              : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
                               }`}
                           >
-                            <ChildIcon className="shrink-0 text-sm" />
+                            <span
+                              className={`relative z-10 h-1.5 w-1.5 shrink-0 rounded-full ${isChildItemActive ? "bg-[#ddbb00]" : "bg-slate-300 dark:bg-slate-600"
+                                }`}
+                            />
                             <span className="flex-1 truncate">{t(child.label)}</span>
                           </button>
                         );
