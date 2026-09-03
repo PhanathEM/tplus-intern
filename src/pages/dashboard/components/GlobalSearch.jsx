@@ -93,6 +93,9 @@ export function GlobalSearch({
   placeholder,
   inputClassName,
   className = "w-full lg:w-72",
+  // Off on pages that filter their own table from this same box — the
+  // results are already on screen, so a dropdown over them is just clutter.
+  showResults = true,
 }) {
   const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
@@ -126,7 +129,7 @@ export function GlobalSearch({
   }, []);
 
   const term = value.trim();
-  const showDropdown = isFocused && term.length >= 2;
+  const showDropdown = showResults && isFocused && term.length >= 2;
   const sectionKeys = Object.keys(SECTION_META).filter((key) => (safeResults[key] || []).length > 0);
   const hasAnyResults = sectionKeys.length > 0;
 
@@ -145,7 +148,7 @@ export function GlobalSearch({
           placeholder={placeholder || t("Search...")}
           className={
             inputClassName ||
-            "h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-14 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
+            "h-9 w-full rounded-lg border-0 bg-slate-50 pl-9 pr-14 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:bg-white dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-800"
           }
         />
         {!value && (

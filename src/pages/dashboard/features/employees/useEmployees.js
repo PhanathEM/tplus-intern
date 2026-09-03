@@ -5,8 +5,9 @@ import { EMPLOYEE_FORM_INITIAL_VALUES, EMPLOYEES_PAGE_SIZE } from "../../dashboa
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 import { exportAllEmployeesToExcel, exportAllEmployeesToPdf, exportEmployeeToExcel, exportEmployeeToPdf } from "./employeeExport";
 
-export function useEmployees({ isActive, user, loadDepartments }) {
-  const [directorySearch, setDirectorySearch] = useState("");
+// `searchTerm` comes from the header's global search bar — the directory has no
+// search box of its own, so typing up there filters this table in place.
+export function useEmployees({ isActive, user, loadDepartments, searchTerm = "" }) {
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,14 +32,14 @@ export function useEmployees({ isActive, user, loadDepartments }) {
   const [isDownloadingAllPdf, setIsDownloadingAllPdf] = useState(false);
 
   const filteredEmployees = useMemo(() => {
-    const term = directorySearch.trim().toLowerCase();
+    const term = searchTerm.trim().toLowerCase();
     if (!term) return employees;
     return employees.filter((employee) =>
       `${employee.full_name || ""} ${employee.staff_code || ""} ${employee.phone || ""} ${employee.position || ""} ${getEmployeeDepartmentCode(employee) || ""} ${employee.sex || ""} ${employee.location || ""}`
         .toLowerCase()
         .includes(term)
     );
-  }, [employees, directorySearch]);
+  }, [employees, searchTerm]);
 
   const sortedEmployees = useMemo(() => {
     if (!sort.key) return filteredEmployees;
@@ -47,7 +48,10 @@ export function useEmployees({ isActive, user, loadDepartments }) {
   }, [filteredEmployees, sort]);
 
   const pageCount = Math.max(1, Math.ceil(sortedEmployees.length / EMPLOYEES_PAGE_SIZE));
-  const paginatedEmployees = sortedEmployees.slice((page - 1) * EMPLOYEES_PAGE_SIZE, page * EMPLOYEES_PAGE_SIZE);
+  // Derived rather than reset in an effect: narrowing the search can drop the
+  // page count below the page you were on, which would otherwise show blanks.
+  const safePage = Math.min(page, pageCount);
+  const paginatedEmployees = sortedEmployees.slice((safePage - 1) * EMPLOYEES_PAGE_SIZE, safePage * EMPLOYEES_PAGE_SIZE);
 
   useEffect(() => {
     if (!isActive) return;
@@ -72,11 +76,6 @@ export function useEmployees({ isActive, user, loadDepartments }) {
       ignore = true;
     };
   }, [isActive, fetchToken]);
-
-  function handleDirectorySearchChange(value) {
-    setDirectorySearch(value);
-    setPage(1);
-  }
 
   function handleSort(key) {
     setSort((current) => (current.key === key ? { key, direction: current.direction === "asc" ? "desc" : "asc" } : { key, direction: "asc" }));
@@ -281,19 +280,6 @@ export function useEmployees({ isActive, user, loadDepartments }) {
     setDetailTarget(null);
   }
 
-  // Global search hands back a grouped result (from groupEmployeeSearchResults),
-  // which only has an employee_id to go on — fetch the real detail by id
-  // rather than trusting whatever device rows happened to match the search term.
-  function handleSelectFromGlobalSearch(group) {
-    handleViewDetail({
-      employee_id: group.employee_id,
-      full_name: group.owner_name,
-      position: group.employee_position,
-      department: group.employee_department,
-      location: group.employee_location,
-    });
-  }
-
   // DI target for Equipment's unassign handler — refreshes the employee
   // detail view if it's open, without Equipment needing to know about
   // Employee's internal state.
@@ -302,8 +288,6 @@ export function useEmployees({ isActive, user, loadDepartments }) {
   }
 
   return {
-    directorySearch,
-    handleDirectorySearchChange,
     employees: paginatedEmployees,
     totalCount: sortedEmployees.length,
     sort,
@@ -312,7 +296,7 @@ export function useEmployees({ isActive, user, loadDepartments }) {
     error,
     handleRetry,
     resetForEntry,
-    page,
+    page: safePage,
     pageCount,
     setPage,
     handleViewDetail,
@@ -340,7 +324,6 @@ export function useEmployees({ isActive, user, loadDepartments }) {
     detailError,
     handleRetryDetail,
     handleCloseDetail,
-    handleSelectFromGlobalSearch,
     refreshAfterExternalEquipmentChange,
     handleDownloadEmployeeExcel,
     handleDownloadEmployeePdf,

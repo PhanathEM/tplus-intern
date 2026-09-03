@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FiPlusCircle as PlusCircle, FiX as X } from "react-icons/fi";
-import {
-  EmployeeSelectDropdown,
-  FormField,
-  formInputClass,
-  RadioSelect,
-} from "../../components/SharedControls";
+import { EmployeeSelectDropdown, FormField, formInputClass, RadioSelect, RollingText } from "../../components/SharedControls";
 import { OWNER_DERIVED_FIELDS } from "../../dashboard.utils";
 
 function EquipmentDynamicField({ field, values, onChange, isSubmitting, departments, employees, onRemove }) {
@@ -240,9 +235,9 @@ export function AddCustomFieldControl({ onAdd, disabled, types }) {
           type="button"
           onClick={handleAdd}
           disabled={isSaving}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518]"
+          className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518]"
         >
-          {isSaving ? t("Adding...") : t("Add")}
+          <RollingText text={isSaving ? t("Adding...") : t("Add")} />
         </button>
         <button
           type="button"
@@ -505,9 +500,9 @@ return (
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+              className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? t("Saving...") : isEdit ? t("Save changes") : t("Add equipment")}
+              <RollingText text={isSubmitting ? t("Saving...") : isEdit ? t("Save changes") : t("Add equipment")} />
             </button>
           </div>
         </form>
@@ -635,9 +630,9 @@ export function ColumnsPickerModal({
               onClick={onSave}
               disabled={isSaving || isLoading || selectedKeys.length === 0}
               title={selectedKeys.length === 0 ? t("Tick at least one field above to save") : undefined}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+              className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
-              {isSaving ? t("Saving...") : t("Save columns")}
+              <RollingText text={isSaving ? t("Saving...") : t("Save columns")} />
             </button>
           </div>
         </div>
@@ -784,9 +779,9 @@ return (
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+              className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? t("Borrowing...") : t("Borrow equipment")}
+              <RollingText text={isSubmitting ? t("Borrowing...") : t("Borrow equipment")} />
             </button>
           </div>
         </form>
@@ -884,9 +879,9 @@ return (
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+              className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? t("Returning...") : t("Mark as returned")}
+              <RollingText text={isSubmitting ? t("Returning...") : t("Mark as returned")} />
             </button>
           </div>
         </form>

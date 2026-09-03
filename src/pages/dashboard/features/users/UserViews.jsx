@@ -7,7 +7,7 @@ import {
   FiUsers as Users,
   FiX as X,
 } from "react-icons/fi";
-import { EmptyState, FormField, formInputClass } from "../../components/SharedControls";
+import { EmptyState, FormField, formInputClass, RollingText } from "../../components/SharedControls";
 import { userPermissionSections } from "../../dashboard.config";
 import { translateLabel } from "../../../../lib/i18nLabel";
 import {
@@ -305,9 +305,9 @@ export function UserPermissionsModal({ isOpen, user, values, onChange, onSubmit,
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+              className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? t("Saving...") : t("Save changes")}
+              <RollingText text={isSubmitting ? t("Saving...") : t("Save changes")} />
             </button>
           </div>
         </form>
@@ -411,9 +411,9 @@ export function ResetPasswordModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+              className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? t("Saving...") : t("Reset password")}
+              <RollingText text={isSubmitting ? t("Saving...") : t("Reset password")} />
             </button>
           </div>
         </form>

@@ -17,7 +17,7 @@ import {
   FiX as X,
 } from "react-icons/fi";
 import { buildEquipmentDisplayColumns } from "../../dashboard.utils";
-import { EmptyState, Pagination, RadioSelect, RowActionsMenu } from "../../components/SharedControls";
+import { EmptyState, Pagination, RadioSelect, RollingText, RowActionsMenu } from "../../components/SharedControls";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
 import { exportAllEquipmentToExcel, exportAllEquipmentToPdf } from "./equipmentExport";
@@ -183,10 +183,10 @@ return (
               <button
                 type="button"
                 onClick={onAddNew}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+                className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
               >
                 <PlusCircle size={15} />
-                {t("New Equipment")}
+                <RollingText text={t("New Equipment")} />
               </button>
             )}
           </div>
@@ -404,10 +404,10 @@ export function CategoryManagementView({
             <button
               type="button"
               onClick={onAddCategory}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+              className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
               <PlusCircle size={15} />
-              {t("New Category")}
+              <RollingText text={t("New Category")} />
             </button>
           )}
         </div>

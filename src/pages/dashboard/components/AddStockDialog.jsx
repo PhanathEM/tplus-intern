@@ -10,7 +10,7 @@ import {
   RAM_TYPE_OPTIONS,
 } from "../dashboard.config";
 import { getExtraStockColumns, hasStockColumn } from "../dashboard.utils";
-import { FormField, formInputClass, RadioSelect } from "./SharedControls";
+import { FormField, formInputClass, RadioSelect, RollingText } from "./SharedControls";
 
 // Shared between the Part Stock page's "Add to stock" action and Device
 // Replacement's "add to stock" shortcut (shown inline when fitting a part
@@ -261,9 +261,9 @@ export function AddStockDialog({
             <button
               type="submit"
               disabled={!canSubmit || isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+              className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? t("Adding...") : isRam ? t("Add RAM") : t("Add")}
+              <RollingText text={isSubmitting ? t("Adding...") : isRam ? t("Add RAM") : t("Add")} />
             </button>
           </div>
         </form>

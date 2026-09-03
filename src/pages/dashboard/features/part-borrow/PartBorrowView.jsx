@@ -7,14 +7,7 @@ import {
   FiX as X,
 } from "react-icons/fi";
 import { partBorrowColumns } from "../../dashboard.config";
-import {
-  ConfirmDialog,
-  EmployeeSelectDropdown,
-  FormField,
-  RadioSelect,
-  RowActionsMenu,
-  formInputClass,
-} from "../../components/SharedControls";
+import { ConfirmDialog, EmployeeSelectDropdown, FormField, formInputClass, RadioSelect, RollingText, RowActionsMenu } from "../../components/SharedControls";
 import { RecordCellValue, RecordsTableView } from "../../components/RecordsTableView";
 
 function getBorrowedItemLabel(record, t) {
@@ -72,10 +65,10 @@ export function PartBorrowView({
           <button
             type="button"
             onClick={onAddBorrow}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+            className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
           >
             <Plus size={14} />
-            {t("Borrow a Part")}
+            <RollingText text={t("Borrow a Part")} />
           </button>
         )
       }
@@ -263,9 +256,9 @@ export function BorrowPartDialog({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+              className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? t("Borrowing...") : t("Borrow")}
+              <RollingText text={isSubmitting ? t("Borrowing...") : t("Borrow")} />
             </button>
           </div>
         </form>
@@ -367,9 +360,9 @@ export function ReturnPartDialog({ borrow, values, partStatuses = [], onChange, 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+              className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? t("Returning...") : t("Return")}
+              <RollingText text={isSubmitting ? t("Returning...") : t("Return")} />
             </button>
           </div>
         </form>

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { searchEmployees } from "../../../services/employeeService";
+import { fetchEmployees } from "../../../services/employeeService";
 import { fetchDepartments } from "../../../services/departmentService";
 import { fetchUsers } from "../../../services/userService";
 import { fetchEquipmentByCategory } from "../../../services/equipmentService";
 import { hasPermission, PERMISSIONS } from "../../../lib/permissions";
-import { groupEmployeeSearchResults } from "../dashboard.utils";
+import { getEmployeeDepartmentCode } from "../dashboard.utils";
 
 function createEmptyResults() {
   return {
@@ -19,7 +19,10 @@ function createEmptyResults() {
 // other hooks' already-loaded lists — a deliberate existing product decision
 // (search must work across categories the user hasn't visited yet), not
 // something this pass unifies.
-export function useGlobalSearch({ user, onSelectView, onSelectEmployee, onSelectEquipmentCategory }) {
+// `isSuspended` is set on pages that filter their own list from the same search
+// box (Employees) — the dropdown is hidden there, so fetching results for it
+// would be four API calls per keystroke pause with nothing to show them in.
+export function useGlobalSearch({ user, onSelectView, onSelectEquipmentCategory, isSuspended = false }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(createEmptyResults);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +38,7 @@ export function useGlobalSearch({ user, onSelectView, onSelectEmployee, onSelect
 
   useEffect(() => {
     const term = query.trim();
-    if (term.length < 2) return;
+    if (term.length < 2 || isSuspended) return;
 
     let ignore = false;
     const lowerTerm = term.toLowerCase();
@@ -46,11 +49,22 @@ export function useGlobalSearch({ user, onSelectView, onSelectEmployee, onSelect
       const jobs = [];
 
       if (hasPermission(user, PERMISSIONS.EMPLOYEE)) {
+        // Filtered here rather than through /api/employees/search, which only
+        // matches on name — the directory is searchable by every column shown
+        // in its table, so the same seven fields have to match here too.
+        // Re-fetched per search (the effect is already debounced) so a newly
+        // added employee is findable without a reload.
         jobs.push(
-          searchEmployees(term)
+          fetchEmployees()
             .then((data) => ({
               key: "employees",
-              items: groupEmployeeSearchResults(Array.isArray(data) ? data : []).slice(0, 5),
+              items: (Array.isArray(data) ? data : [])
+                .filter((employee) =>
+                  `${employee.full_name || ""} ${employee.staff_code || ""} ${employee.phone || ""} ${employee.position || ""} ${getEmployeeDepartmentCode(employee) || ""} ${employee.sex || ""} ${employee.location || ""}`
+                    .toLowerCase()
+                    .includes(lowerTerm)
+                )
+                .slice(0, 5),
             }))
             .catch(() => ({ key: "employees", items: [] }))
         );
@@ -140,17 +154,24 @@ export function useGlobalSearch({ user, onSelectView, onSelectEmployee, onSelect
       ignore = true;
       window.clearTimeout(timeoutId);
     };
-  }, [query, user]);
+  }, [query, user, isSuspended]);
 
   function handleSelectResult(type, item) {
-    setQuery("");
     setResults(createEmptyResults());
     setIsLoading(false);
 
     if (type === "employees") {
+      // The term stays in the box (narrowed to the picked name) because the
+      // Employees table filters on it — clearing it would land the user on the
+      // full 200-row directory instead of the person they just clicked.
+      setQuery(item.full_name || item.owner_name || item.name || "");
       onSelectView?.("Employees");
-      onSelectEmployee?.(item);
-    } else if (type === "departments") {
+      return;
+    }
+
+    setQuery("");
+
+    if (type === "departments") {
       onSelectView?.("Departments");
     } else if (type === "equipment") {
       onSelectView?.("Equipments");

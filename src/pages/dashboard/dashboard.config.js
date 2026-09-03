@@ -322,7 +322,7 @@ export const EMPLOYEE_FORM_INITIAL_VALUES = {
   sex: "",
 };
 
-export const EMPLOYEES_PAGE_SIZE = 15;
+export const EMPLOYEES_PAGE_SIZE = 20;
 
 // ---------------------------------------------------------------------------
 // Empty state

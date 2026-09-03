@@ -6,7 +6,7 @@ import {
   FiUserPlus as UserPlus,
   FiX as X,
 } from "react-icons/fi";
-import { FormField, formInputClass, RadioSelect } from "../../components/SharedControls";
+import { FormField, formInputClass, RadioSelect, RollingText } from "../../components/SharedControls";
 import { translateLabel } from "../../../../lib/i18nLabel";
 
 function SectionCard({ step, title, description, children }) {
@@ -386,10 +386,10 @@ export function AssignEquipmentView({
           <button
             type="submit"
             disabled={!canSubmit || isSubmitting}
-            className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+            className="group/roll inline-flex h-10 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
           >
             <UserPlus size={15} />
-            {isSubmitting ? t("Assigning...") : t("Assign equipment")}
+            <RollingText text={isSubmitting ? t("Assigning...") : t("Assign equipment")} />
           </button>
         </div>
       </form>

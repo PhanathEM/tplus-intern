@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { FiAlertTriangle as AlertTriangle, FiX as X } from "react-icons/fi";
-import { FormField, formInputClass } from "../../components/SharedControls";
+import { FormField, formInputClass, RollingText } from "../../components/SharedControls";
 
 export function ProfileModal({ isOpen, profile, isLoading, error, accessLabel, onClose }) {
   const { t } = useTranslation();
@@ -185,9 +185,9 @@ export function ChangePasswordModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+              className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? t("Saving...") : t("Save changes")}
+              <RollingText text={isSubmitting ? t("Saving...") : t("Save changes")} />
             </button>
           </div>
         </form>

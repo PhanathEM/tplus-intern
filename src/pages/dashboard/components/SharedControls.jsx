@@ -68,7 +68,7 @@ export function Pagination({ currentPage, pageCount, onPageChange }) {
             onClick={() => onPageChange(page)}
             aria-current={page === currentPage ? "page" : undefined}
             className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${page === currentPage
-              ? "bg-slate-950 text-white dark:bg-white dark:text-slate-900"
+              ? "bg-[#fddd1c] text-slate-900"
               : "border border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-800"
               }`}
           >
@@ -87,6 +87,42 @@ export function Pagination({ currentPage, pageCount, onPageChange }) {
         <ChevronRight size={15} />
       </button>
     </nav>
+  );
+}
+
+// Label whose letters roll upward on hover, each a beat behind the last.
+// The text is rendered twice inside a clipped box — the resting copy leaves
+// through the top while its duplicate arrives from below — so both copies are
+// aria-hidden and a single sr-only span carries the real text.
+// The trigger must carry `group/roll` for the hover to reach these.
+export function RollingText({ text }) {
+  const characters = [...text];
+
+  function renderCharacters(isIncoming) {
+    return characters.map((character, index) => (
+      <span
+        key={index}
+        className={`inline-block transition-transform duration-300 ease-out ${isIncoming
+          ? "translate-y-full group-hover/roll:translate-y-0"
+          : "group-hover/roll:-translate-y-full"
+          }`}
+        style={{ transitionDelay: `${index * 25}ms` }}
+      >
+        {character === " " ? " " : character}
+      </span>
+    ));
+  }
+
+  return (
+    <span className="relative inline-flex overflow-hidden">
+      <span className="sr-only">{text}</span>
+      <span aria-hidden="true" className="inline-flex">
+        {renderCharacters(false)}
+      </span>
+      <span aria-hidden="true" className="absolute inset-0 inline-flex">
+        {renderCharacters(true)}
+      </span>
+    </span>
   );
 }
 
@@ -351,9 +387,9 @@ export function ConfirmDialog({
                 <button
                   type="button"
                   onClick={onBlockedAction}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+                  className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
                 >
-                  {blockedActionLabel}
+                  <RollingText text={blockedActionLabel} />
                 </button>
               )}
             </>

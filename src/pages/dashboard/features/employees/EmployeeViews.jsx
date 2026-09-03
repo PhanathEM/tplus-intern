@@ -1,14 +1,18 @@
-import { Fragment, useEffect, useRef } from "react";
+import { Fragment, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FiAlertTriangle as AlertTriangle,
   FiBox as Box,
+  FiBriefcase as Briefcase,
   FiEdit2 as Edit2,
   FiFileText as FileText,
   FiGrid as Grid,
+  FiHash as Hash,
+  FiLayers as Layers,
+  FiMapPin as MapPin,
+  FiPhone as Phone,
   FiPlusCircle as PlusCircle,
   FiRefreshCw as RefreshCw,
-  FiSearch as Search,
   FiTrash2 as Trash2,
   FiUser as UserIcon,
   FiUsers as Users,
@@ -18,7 +22,7 @@ import {
   formatFieldValue,
   getEmployeeDepartmentCode,
 } from "../../dashboard.utils";
-import { EmptyState, FormField, formInputClass, Pagination, RadioSelect, RowActionsMenu } from "../../components/SharedControls";
+import { EmptyState, FormField, formInputClass, Pagination, RadioSelect, RollingText, RowActionsMenu } from "../../components/SharedControls";
 
 export function EmployeeFormModal({
   isOpen,
@@ -180,9 +184,9 @@ export function EmployeeFormModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+              className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
-              {isSubmitting ? t("Saving...") : isEdit ? t("Save changes") : t("Create")}
+              <RollingText text={isSubmitting ? t("Saving...") : isEdit ? t("Save changes") : t("Create")} />
             </button>
           </div>
         </form>
@@ -200,9 +204,7 @@ export function EmployeeDirectoryTable({
   page,
   pageCount,
   onPageChange,
-  pageSize,
   search = "",
-  onSearchChange,
   onViewDetail,
   onAddNew,
   onEdit,
@@ -218,35 +220,18 @@ export function EmployeeDirectoryTable({
 }) {
   const { t } = useTranslation();
   const columns = [
-    { key: "full_name", label: "Full Name" },
-    { key: "position", label: "Position" },
-    { key: "department_code", label: "Department" },
-    { key: "sex", label: "Sex" },
-    { key: "staff_code", label: "Staff Code" },
-    { key: "phone", label: "Phone" },
-    { key: "location", label: "Location" },
+    { key: "full_name", label: "Full Name", icon: UserIcon },
+    { key: "position", label: "Position", icon: Briefcase },
+    { key: "department_code", label: "Department", icon: Layers },
+    { key: "sex", label: "Sex", icon: Users },
+    { key: "staff_code", label: "Staff Code", icon: Hash },
+    { key: "phone", label: "Phone", icon: Phone },
+    { key: "location", label: "Location", icon: MapPin },
   ];
 
-  const searchInputRef = useRef(null);
-
-  useEffect(() => {
-    if (!onSearchChange) return;
-
-    function handleKeyDown(event) {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        searchInputRef.current?.focus();
-        searchInputRef.current?.select();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onSearchChange]);
-
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+    <div className="rounded-xl bg-white dark:bg-slate-900">
+      <div className="sticky top-14 z-20 flex flex-wrap items-center justify-between gap-3 bg-white py-2 dark:bg-slate-900">
         <div>
           <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Employees")}</h2>
           {!isLoading && !error && (
@@ -256,44 +241,14 @@ export function EmployeeDirectoryTable({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {onSearchChange && (
-            <div className="relative w-64">
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={14} />
-              <input
-                ref={searchInputRef}
-                id="employee-directory-search"
-                type="text"
-                autoComplete="off"
-                value={search}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder={t("Search Employee")}
-                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-14 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
-              />
-              {search ? (
-                <button
-                  type="button"
-                  onClick={() => onSearchChange("")}
-                  aria-label="Clear search"
-                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                >
-                  <X size={13} />
-                </button>
-              ) : (
-                <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
-                  Ctrl K
-                </kbd>
-              )}
-            </div>
-          )}
-
           {canCreate && (
             <button
               type="button"
               onClick={onAddNew}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
+              className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
               <PlusCircle size={15} />
-              {t("New Employee")}
+              <RollingText text={t("New Employee")} />
             </button>
           )}
         </div>
@@ -326,15 +281,25 @@ export function EmployeeDirectoryTable({
       ) : (
         <>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
+            {/* border-separate (not the default collapse) so the hovered row
+                can round its end cells — border-radius on a cell is ignored
+                in the collapsed model. Row lines therefore live on the cells
+                rather than on <tr>, which borders can't carry here. */}
+            <table className="min-w-full border-separate border-spacing-0 text-left text-[13px]">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
-                  {columns.map((column) => (
-                    <th key={column.key} className="whitespace-nowrap px-5 py-3 font-semibold uppercase tracking-wide">
-                      {t(column.label)}
-                    </th>
-                  ))}
-                  <th className="px-5 py-3 text-right">
+                  {columns.map((column) => {
+                    const ColumnIcon = column.icon;
+                    return (
+                      <th key={column.key} className="whitespace-nowrap border-b border-slate-100 px-5 py-2 font-semibold uppercase tracking-wide dark:border-slate-800">
+                        <span className="inline-flex items-center gap-1.5">
+                          {ColumnIcon && <ColumnIcon size={13} className="shrink-0" />}
+                          {t(column.label)}
+                        </span>
+                      </th>
+                    );
+                  })}
+                  <th className="border-b border-slate-100 px-5 py-2 text-right dark:border-slate-800">
                     <RowActionsMenu
                       items={[
                         {
@@ -352,22 +317,27 @@ export function EmployeeDirectoryTable({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+              <tbody>
                 {employees.map((employee) => {
-                  // Gmail's row hover: the row lifts off the list as its own
-                  // white card (shadow + rounded ends) instead of just
-                  // tinting the background.
-                  const cellClass = "whitespace-nowrap px-5 py-3.5 group-hover:bg-white dark:group-hover:bg-slate-800";
+                  // Every cell keeps a full border at rest — top transparent,
+                  // bottom the row separator — so hover only has to recolour
+                  // it into a box around the row, with no 1px height jump.
+                  // Only the top/bottom edges recolour on every cell — the
+                  // side borders stay transparent except on the first and last
+                  // cell, otherwise each column divider lights up too and the
+                  // row reads as a grid instead of one card.
+                  const cellClass =
+                    "whitespace-nowrap border border-x-transparent border-t-transparent border-b-slate-50 bg-white px-5 py-2 group-hover:border-y-slate-200 dark:border-b-slate-800/60 dark:bg-slate-900 dark:group-hover:border-y-slate-700";
                   return (
                     <tr
                       key={employee.employee_id}
                       onClick={() => onViewDetail(employee)}
-                      className="group relative cursor-pointer transition hover:z-10 hover:shadow-[0_1px_2px_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.35)]"
+                      className="group cursor-pointer"
                     >
-                      <td className={`${cellClass} rounded-l-lg font-semibold text-slate-950 dark:text-white`}>
+                      <td className={`${cellClass} rounded-l-lg font-semibold text-slate-950 group-hover:border-l-slate-200 dark:text-white dark:group-hover:border-l-slate-700`}>
                         <div className="flex items-center gap-2.5">
-                          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
-                            <UserIcon size={15} />
+                          <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                            <UserIcon size={13} />
                           </div>
                           {employee.full_name || "—"}
                         </div>
@@ -380,7 +350,7 @@ export function EmployeeDirectoryTable({
                       <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{employee.staff_code || "—"}</td>
                       <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{employee.phone || "—"}</td>
                       <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{employee.location || "—"}</td>
-                      <td className={`${cellClass} rounded-r-lg text-right`}>
+                      <td className={`${cellClass} rounded-r-lg text-right group-hover:border-r-slate-200 dark:group-hover:border-r-slate-700`}>
                         <div className="flex items-center justify-end">
                           {canManage && (
                             <RowActionsMenu
@@ -403,12 +373,7 @@ export function EmployeeDirectoryTable({
           </div>
 
           {totalCount > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-              <span>
-                {t("Showing")} {(page - 1) * pageSize + 1}
-                {"–"}
-                {Math.min(page * pageSize, totalCount)} {t("of")} {totalCount}
-              </span>
+            <div className="flex flex-wrap items-center justify-center gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
               <Pagination currentPage={page} pageCount={pageCount} onPageChange={onPageChange} />
             </div>
           )}

@@ -72,7 +72,7 @@ function MetricRows({ rows, labelHeader, valueLabel, headerHighlight, t }) {
   const isHighlightDark = headerHighlight && getReadableTextTone(headerHighlight) === "dark";
   const pillClass = headerHighlight
     ? `inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal leading-normal ${isHighlightDark ? "text-slate-950" : "text-white"
-      }`
+    }`
     : "";
   return (
     <div className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -107,7 +107,7 @@ function DepartmentRows({ rows, headerHighlight, t }) {
   const isHighlightDark = headerHighlight && getReadableTextTone(headerHighlight) === "dark";
   const pillClass = headerHighlight
     ? `inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal leading-normal ${isHighlightDark ? "text-slate-950" : "text-white"
-      }`
+    }`
     : "";
   const pillStyle = headerHighlight ? { backgroundColor: headerHighlight } : undefined;
   return (
@@ -145,12 +145,9 @@ export function ReportView({ report, isLoading, error, onRetry, onDownloadPdf, o
 
   return (
     <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-2 dark:bg-slate-900 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         <div>
           <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Report")}</h2>
-          <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-            {t("A full snapshot of employees, equipment, licenses, and activity.")}
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button

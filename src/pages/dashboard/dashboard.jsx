@@ -28,7 +28,7 @@ import { useAccount } from "./features/account/useAccount";
 import { useDashboardNotifications } from "./hooks/useDashboardNotifications";
 import { useDashboardRouting } from "./hooks/useDashboardRouting";
 import { useDashboardHome } from "./hooks/useDashboardHome";
-import { EMPLOYEES_PAGE_SIZE, navItemsByLabel } from "./dashboard.config";
+import { navItemsByLabel } from "./dashboard.config";
 import { getEquipmentDisplayName } from "./dashboard.utils";
 import { ConfirmDialog, EmptyState } from "./components/SharedControls";
 import { SidebarBrand, SidebarNavigation } from "./components/Sidebar";
@@ -182,6 +182,10 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     onSelectEquipmentCategory: handleSelectEquipmentCategory,
   });
   const isDashboardHomeView = activeView === "Dashboard" && hasActiveViewAccess;
+  // Declared up here (rather than with the other view flags below) because the
+  // global search needs it to know whether the Employees table is doing the
+  // filtering instead of the dropdown.
+  const isEmployeeView = activeView === "Employees" && hasActiveViewAccess;
   const home = useDashboardHome({ isActive: isDashboardHomeView, accessibleDashboardViews });
 
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -190,8 +194,8 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   const globalSearch = useGlobalSearch({
     user,
     onSelectView: handleSelectView,
-    onSelectEmployee: (item) => employees.handleSelectFromGlobalSearch(item),
     onSelectEquipmentCategory: handleSelectEquipmentCategory,
+    isSuspended: isEmployeeView,
   });
 
   function handleSelectGlobalSearchResult(type, item) {
@@ -296,7 +300,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   }, []);
 
   const activeNavItem = navItemsByLabel[activeView];
-  const isEmployeeView = activeView === "Employees" && hasActiveViewAccess;
   const isDepartmentsView = activeView === "Departments" && hasActiveViewAccess;
   const isEquipmentView = activeView === "Equipments" && hasActiveViewAccess;
   const isReplacementView = activeView === "Device Replacement" && hasActiveViewAccess;
@@ -328,6 +331,9 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     isActive: isEmployeeView,
     user,
     loadDepartments: departments.loadDepartments,
+    // Only filter the directory while it's the page on screen, so a search
+    // typed on another page doesn't silently narrow it later.
+    searchTerm: isEmployeeView ? globalSearch.query : "",
   });
 
   const replacements = useReplacements({ isActive: isReplacementView || isReplacementHistoryView, user });
@@ -455,7 +461,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         {/* Main content */}
         <main className="min-w-0 flex-1">
           <header className="sticky top-0 z-20 bg-[#fddd1c] backdrop-blur">
-            <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
+            <div className="flex h-14 items-center gap-3 px-4 sm:px-6 lg:px-8">
               {isMobileSearchOpen ? (
                 <div className="flex flex-1 items-center gap-2">
                   <GlobalSearch
@@ -466,6 +472,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                     results={globalSearch.results}
                     isLoading={globalSearch.isLoading}
                     onSelect={handleSelectGlobalSearchResult}
+                    showResults={!isEmployeeView}
                   />
                   <button
                     type="button"
@@ -487,20 +494,18 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                     <Menu className="text-lg" />
                   </button>
 
-                  <div className="min-w-0 flex-1" />
-
                   <GlobalSearch
-                    className="hidden w-72 shrink-0 lg:block"
+                    className="hidden w-full max-w-lg lg:block"
                     value={globalSearch.query}
                     onChange={globalSearch.handleQueryChange}
                     results={globalSearch.results}
                     isLoading={globalSearch.isLoading}
                     onSelect={handleSelectGlobalSearchResult}
+                    showResults={!isEmployeeView}
                   />
 
-                  {/* Mirrors the title block's flex-1 so the search bar above
-                      sits truly centered in the header, not just left of
-                      these icons. */}
+                  {/* flex-1 + justify-end keeps the icons pinned to the right
+                      edge while the search bar sits left of them. */}
                   <div className="flex flex-1 items-center justify-end gap-3">
                     <button
                       type="button"
@@ -957,9 +962,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                 page={employees.page}
                 pageCount={employees.pageCount}
                 onPageChange={employees.setPage}
-                pageSize={EMPLOYEES_PAGE_SIZE}
-                search={employees.directorySearch}
-                onSearchChange={employees.handleDirectorySearchChange}
+                search={globalSearch.query}
                 onViewDetail={employees.handleViewDetail}
                 onAddNew={employees.handleOpenAdd}
                 onEdit={employees.handleOpenEdit}
