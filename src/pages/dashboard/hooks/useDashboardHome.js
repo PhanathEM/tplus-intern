@@ -70,8 +70,9 @@ function loadEquipmentInsights() {
         occupied,
         percent: categoryTotal > 0 ? Math.round((occupied / categoryTotal) * 100) : 0,
       }))
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 4);
+      // Every category, largest first - the panel scrolls rather than hiding
+      // the smaller ones behind a top-four cut.
+      .sort((a, b) => b.total - a.total);
 
     return { statusBreakdown, categoryOccupancy };
   });

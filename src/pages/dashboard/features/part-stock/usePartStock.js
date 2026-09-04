@@ -204,7 +204,7 @@ export function usePartStock({ isActive, user }) {
   }
 
   function handleSelectPart(partTypeId) {
-    setSelectedPartTypeId((current) => (String(current) === String(partTypeId) ? null : partTypeId));
+    setSelectedPartTypeId(partTypeId);
   }
 
   // --- Part types (create/edit/delete the catalog of replaceable parts) ---
@@ -691,7 +691,7 @@ export function usePartStock({ isActive, user }) {
     handleRetry,
     resetForEntry,
     partTypes,
-    selectedPartTypeId,
+    selectedPartTypeId: selectedPartTypeId ?? partTypes[0]?.part_type_id ?? null,
     handleSelectPart,
     partStatuses,
 

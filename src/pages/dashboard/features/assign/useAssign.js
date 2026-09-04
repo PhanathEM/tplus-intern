@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchAssignFormData, fetchAssignableEquipment, fetchAssignEmployees, submitAssign } from "../../../../services/assignService";
 import { unassignEquipment } from "../../../../services/equipmentService";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
+import { filterDevicesByQuery, filterEmployeesByQuery } from "../../dashboard.utils";
 
 export function useAssign({ isActive, user, onAssigned }) {
   const [formData, setFormData] = useState({
@@ -64,7 +65,7 @@ export function useAssign({ isActive, user, onAssigned }) {
     let ignore = false;
     const timer = setTimeout(() => {
       setIsDeviceLoading(true);
-      fetchAssignableEquipment({ q: deviceQuery.trim(), category: deviceCategory })
+      fetchAssignableEquipment({ category: deviceCategory })
         .then((data) => {
           if (ignore) return;
           setDeviceOptions(Array.isArray(data?.equipment) ? data.equipment : []);
@@ -82,7 +83,14 @@ export function useAssign({ isActive, user, onAssigned }) {
       ignore = true;
       clearTimeout(timer);
     };
-  }, [isActive, selectedDevice, deviceQuery, deviceCategory]);
+  }, [isActive, selectedDevice, deviceCategory]);
+
+  // Refetching is per category only; the typed query narrows what came back.
+  const filteredDeviceOptions = useMemo(
+    () => filterDevicesByQuery(deviceOptions, deviceQuery),
+    [deviceOptions, deviceQuery]
+  );
+
 
   useEffect(() => {
     if (!isActive || selectedEmployee) return;
@@ -90,9 +98,7 @@ export function useAssign({ isActive, user, onAssigned }) {
     let ignore = false;
     const timer = setTimeout(() => {
       setIsEmployeeLoading(true);
-      fetchAssignEmployees({
-        q: employeeQuery.trim(),
-      })
+      fetchAssignEmployees()
         .then((data) => {
           if (ignore) return;
           setEmployeeOptions(Array.isArray(data?.employees) ? data.employees : []);
@@ -110,7 +116,14 @@ export function useAssign({ isActive, user, onAssigned }) {
       ignore = true;
       clearTimeout(timer);
     };
-  }, [isActive, selectedEmployee, employeeQuery]);
+  }, [isActive, selectedEmployee]);
+
+  // Fetched once; the typed query narrows what came back.
+  const filteredEmployeeOptions = useMemo(
+    () => filterEmployeesByQuery(employeeOptions, employeeQuery),
+    [employeeOptions, employeeQuery]
+  );
+
 
   function handleRetryFormData() {
     setIsFormDataLoading(true);
@@ -237,7 +250,7 @@ export function useAssign({ isActive, user, onAssigned }) {
     handleDeviceQueryChange,
     deviceCategory,
     handleDeviceCategoryChange,
-    deviceOptions,
+    deviceOptions: filteredDeviceOptions,
     isDeviceLoading,
     deviceError,
     selectedDevice,
@@ -245,7 +258,7 @@ export function useAssign({ isActive, user, onAssigned }) {
     handleClearDevice,
     employeeQuery,
     handleEmployeeQueryChange,
-    employeeOptions,
+    employeeOptions: filteredEmployeeOptions,
     isEmployeeLoading,
     employeeError,
     selectedEmployee,

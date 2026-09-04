@@ -7,7 +7,7 @@ import { navItemsByLabel } from "../dashboard.config";
 import { canAccessDashboardView } from "../../../lib/permissions";
 import { buildDashboardNotifications, getLicenseExpiryAlerts } from "../dashboard.notifications";
 
-export function useDashboardNotifications({ user, onSelectView, onSelectEquipmentCategory }) {
+export function useDashboardNotifications({ user, onSelectView, onSelectEquipmentCategory, onSelectTab }) {
   const [readIds, setReadIds] = useState(() => new Set());
   const [data, setData] = useState({
     currentBorrows: [],
@@ -113,6 +113,11 @@ export function useDashboardNotifications({ user, onSelectView, onSelectEquipmen
     }
     if (notification.targetCategory) {
       onSelectEquipmentCategory?.(notification.targetCategory, notification.targetEquipmentIds);
+    }
+    if (notification.targetTab) {
+      onSelectTab?.(notification.targetView, notification.targetTab, {
+        overdueOnly: Boolean(notification.targetOverdue),
+      });
     }
     setIsOpen(false);
   }

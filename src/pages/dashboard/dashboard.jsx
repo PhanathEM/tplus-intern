@@ -184,6 +184,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     user,
     onSelectView: handleSelectView,
     onSelectEquipmentCategory: handleSelectEquipmentCategory,
+    onSelectTab: handleSelectNotificationTab,
   });
   const isDashboardHomeView = activeView === "Dashboard" && hasActiveViewAccess;
   // Declared up here (rather than with the other view flags below) because the
@@ -203,6 +204,10 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     onSelectEquipmentCategory: handleSelectEquipmentCategory,
     isSuspended: isEmployeeView || isDepartmentsView || isEquipmentView,
   });
+
+  const searchPlaceholder = isEmployeeView
+    ? t("employee_search_placeholder")
+    : undefined;
 
   function handleSelectGlobalSearchResult(type, item) {
     globalSearch.handleSelectResult(type, item);
@@ -239,6 +244,20 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
       resetBorrowTab(tab);
       setBorrowTab(tab);
     }
+    // Switching tabs by hand drops the notification's overdue filter, so the
+    // table never stays quietly narrowed after you've moved on.
+    setBorrowOverdueOnly(false);
+  }
+
+  // An overdue notification opens the Borrow page on Currently Borrowed with
+  // the table already filtered to the late loans.
+  function handleSelectNotificationTab(view, tab, { overdueOnly } = {}) {
+    if (view !== "Borrow") return;
+    if (tab !== borrowTab) {
+      resetBorrowTab(tab);
+      setBorrowTab(tab);
+    }
+    setBorrowOverdueOnly(Boolean(overdueOnly));
   }
 
   // Settings hosts Users/Activity Log/Recycle Bin the same way.
@@ -343,6 +362,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   const isUnassignView = isAssignView && assignationTab === "Unassign";
   const isBorrowView = activeView === "Borrow" && hasActiveViewAccess;
   const [borrowTab, setBorrowTab] = useState("Borrow");
+  const [borrowOverdueOnly, setBorrowOverdueOnly] = useState(false);
   const isBorrowFormView = isBorrowView && borrowTab === "Borrow";
   const isCurrentBorrowsView = isBorrowView && borrowTab === "Currently Borrowed";
   const isBorrowHistoryView = isBorrowView && borrowTab === "Borrow History";
@@ -517,7 +537,10 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
 
         {/* Main content */}
         <main className="min-w-0 flex-1">
-          <header className="sticky top-0 z-20 bg-[#fddd1c] backdrop-blur">
+          {/* z-30 keeps this above the pages' own sticky header bars, which
+              sit at z-20 — at the same level they won on DOM order and painted
+              over the notification and profile dropdowns hanging out of here. */}
+          <header className="sticky top-0 z-30 bg-[#fddd1c] backdrop-blur">
             <div className="flex h-14 items-center gap-3 px-4 sm:px-6 lg:px-8">
               {isMobileSearchOpen ? (
                 <div className="flex flex-1 items-center gap-2">
@@ -530,6 +553,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                     isLoading={globalSearch.isLoading}
                     onSelect={handleSelectGlobalSearchResult}
                     showResults={!isEmployeeView && !isDepartmentsView && !isEquipmentView}
+                    placeholder={searchPlaceholder}
                   />
                   <button
                     type="button"
@@ -552,13 +576,14 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                   </button>
 
                   <GlobalSearch
-                    className="hidden w-full max-w-lg lg:block"
+                    className="hidden w-full max-w-3xl lg:block"
                     value={globalSearch.query}
                     onChange={globalSearch.handleQueryChange}
                     results={globalSearch.results}
                     isLoading={globalSearch.isLoading}
                     onSelect={handleSelectGlobalSearchResult}
                     showResults={!isEmployeeView && !isDepartmentsView && !isEquipmentView}
+                    placeholder={searchPlaceholder}
                   />
 
                   {/* flex-1 + justify-end keeps the icons pinned to the right
@@ -786,7 +811,9 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
 
           {isReplacementView && (
             <>
-              <div className="px-4 pt-6 sm:px-6 lg:px-8">
+              {/* Pinned under the page header (h-14) so the category tabs stay
+                  reachable while scrolling a long device list. */}
+              <div className="sticky top-14 z-20 bg-white px-4 pt-6 dark:bg-slate-950 sm:px-6 lg:px-8">
                 <DeviceReplacementCategoryBar
                   categories={replacements.categories}
                   selected={replacements.selectedCategory}
@@ -978,6 +1005,8 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                 error: currentBorrows.error,
                 onRetry: currentBorrows.handleRetry,
                 onReturn: currentBorrows.handleOpenReturn,
+                overdueOnly: borrowOverdueOnly,
+                onClearOverdueOnly: () => setBorrowOverdueOnly(false),
               }}
               borrowHistoryProps={{
                 history: borrowHistory.history,
@@ -1278,6 +1307,29 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                 isExportingExcel={isExportingReportExcel}
                 onDownloadEmployeesPdf={report.handleDownloadEmployeesPdf}
                 onDownloadEmployeesExcel={report.handleDownloadEmployeesExcel}
+                onDownloadEmployeesBySexPdf={report.handleDownloadEmployeesBySexPdf}
+                onDownloadEmployeesBySexExcel={report.handleDownloadEmployeesBySexExcel}
+                downloadingSex={report.downloadingSex}
+                onDownloadDepartmentEmployeesPdf={report.handleDownloadDepartmentEmployeesPdf}
+                onDownloadDepartmentEmployeesExcel={report.handleDownloadDepartmentEmployeesExcel}
+                onDownloadDepartmentEquipmentPdf={report.handleDownloadDepartmentEquipmentPdf}
+                onDownloadDepartmentEquipmentExcel={report.handleDownloadDepartmentEquipmentExcel}
+                downloadingDepartment={report.downloadingDepartment}
+                onDownloadManagementPdf={report.handleDownloadManagementPdf}
+                onDownloadManagementExcel={report.handleDownloadManagementExcel}
+                onDownloadManagementsPdf={report.handleDownloadManagementsPdf}
+                onDownloadManagementsExcel={report.handleDownloadManagementsExcel}
+                downloadingManagement={report.downloadingManagement}
+                onDownloadReplacementPdf={report.handleDownloadReplacementPdf}
+                onDownloadReplacementExcel={report.handleDownloadReplacementExcel}
+                onDownloadReplacementsPdf={report.handleDownloadReplacementsPdf}
+                onDownloadReplacementsExcel={report.handleDownloadReplacementsExcel}
+                downloadingReplacement={report.downloadingReplacement}
+                onDownloadLicenseByStatusPdf={report.handleDownloadLicenseByStatusPdf}
+                onDownloadLicenseByStatusExcel={report.handleDownloadLicenseByStatusExcel}
+                onDownloadLicensesPdf={report.handleDownloadLicensesPdf}
+                onDownloadLicensesExcel={report.handleDownloadLicensesExcel}
+                downloadingLicense={report.downloadingLicense}
                 isDownloadingEmployeesPdf={report.isDownloadingEmployeesPdf}
                 isDownloadingEmployeesExcel={report.isDownloadingEmployeesExcel}
                 onDownloadDepartmentsPdf={report.handleDownloadDepartmentsPdf}

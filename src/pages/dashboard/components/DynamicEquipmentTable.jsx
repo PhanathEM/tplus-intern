@@ -110,7 +110,7 @@ export function DynamicEquipmentTable({
             <tr
               key={rowKey(record, index)}
               onClick={onRowClick ? () => onRowClick(record) : undefined}
-              className={`group ${onRowClick ? "cursor-pointer" : ""} ${getRowClassName?.(record) || ""}`}
+              className={`${onRowClick ? "group cursor-pointer" : ""} ${getRowClassName?.(record) || ""}`}
             >
               {selectable && (
                 <td className={`${cellClass} ${roundLeft} whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>

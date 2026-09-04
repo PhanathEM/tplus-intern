@@ -7,7 +7,7 @@ import {
   FiUser as UserIcon,
   FiUserPlus as UserPlus,
 } from "react-icons/fi";
-import { FormField, formInputClass, RadioSelect, RollingText } from "../../components/SharedControls";
+import { RadioSelect, RollingText } from "../../components/SharedControls";
 import {
   DeviceResultRow,
   EmployeeResultRow,
@@ -15,6 +15,7 @@ import {
   PickerSearch,
   SectionCard,
   SelectedCard,
+  StepBadge,
   SummarySlot,
 } from "../../components/PickerForm";
 import { translateLabel } from "../../../../lib/i18nLabel";
@@ -24,7 +25,6 @@ export function AssignEquipmentView({
   formDataError,
   onRetryFormData,
   categories = [],
-  statuses = [],
 
   deviceQuery,
   onDeviceQueryChange,
@@ -45,11 +45,6 @@ export function AssignEquipmentView({
   selectedEmployee,
   onSelectEmployee,
   onClearEmployee,
-
-  status,
-  onStatusChange,
-  assignedDate,
-  onAssignedDateChange,
 
   onSubmit,
   isSubmitting,
@@ -172,7 +167,7 @@ export function AssignEquipmentView({
               ) : (
                 <>
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <PickerSearch value={deviceQuery} onChange={onDeviceQueryChange} placeholder={t("Search...")} />
+                    <PickerSearch value={deviceQuery} onChange={onDeviceQueryChange} placeholder={t("Search Device")} />
                     <div className="sm:w-52">
                       <RadioSelect
                         id="assign-device-category"
@@ -216,7 +211,7 @@ export function AssignEquipmentView({
                 />
               ) : (
                 <>
-                  <PickerSearch value={employeeQuery} onChange={onEmployeeQueryChange} placeholder={t("Search...")} />
+                  <PickerSearch value={employeeQuery} onChange={onEmployeeQueryChange} placeholder={t("Search Employee")} />
 
                   <PickerList
                     isLoading={isEmployeeLoading}
@@ -239,16 +234,21 @@ export function AssignEquipmentView({
             </SectionCard>
           </div>
 
-          <div className="lg:sticky lg:top-20 lg:self-start">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-              <h3 className="text-[14px] font-semibold text-slate-950 dark:text-white">{t("Summary")}</h3>
+          {/* top-32 clears the page header (top-14, h-14) plus the sticky tab
+              bar stacked under it — at top-20 the panel parked mid-way behind
+              the tab bar, which paints over it at z-20. */}
+          <div className="lg:sticky lg:top-32 lg:self-start">
+            <div className="rounded-xl bg-white py-5 dark:bg-slate-900">
+              <div className="flex items-center gap-3">
+                <StepBadge step={3} isComplete={canSubmit} />
+                <h3 className="text-[14px] font-semibold text-slate-950 dark:text-white">{t("Summary")}</h3>
+              </div>
 
               <div className="mt-4 space-y-2">
                 <SummarySlot
                   icon={Box}
                   label={t("Device")}
                   title={selectedDevice?.display_name}
-                  detail={deviceDetail}
                   placeholder={t("Pick a device")}
                 />
                 <div className="flex justify-center text-slate-300 dark:text-slate-600">
@@ -258,33 +258,8 @@ export function AssignEquipmentView({
                   icon={UserIcon}
                   label={t("Employee")}
                   title={selectedEmployee?.full_name}
-                  detail={employeeDetail}
                   placeholder={t("Pick an employee")}
                 />
-              </div>
-
-              <div className="mt-5 grid grid-cols-1 gap-4">
-                <FormField label={t("Status")} htmlFor="assign-page-status">
-                  <RadioSelect
-                    id="assign-page-status"
-                    options={statuses.map((item) => ({
-                      value: item.status_name,
-                      label: translateLabel(t, i18n, item.status_name),
-                    }))}
-                    value={status}
-                    onSelect={onStatusChange}
-                    placeholder={t("Select a status...")}
-                  />
-                </FormField>
-                <FormField label={t("Assigned Date")} htmlFor="assign-page-date">
-                  <input
-                    id="assign-page-date"
-                    type="date"
-                    value={assignedDate}
-                    onChange={(e) => onAssignedDateChange(e.target.value)}
-                    className={formInputClass}
-                  />
-                </FormField>
               </div>
 
               <button

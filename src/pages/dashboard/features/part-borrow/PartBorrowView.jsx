@@ -1,13 +1,14 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  FiPlus as Plus,
+  FiPlusCircle as PlusCircle,
   FiRotateCcw as RotateCcw,
   FiTrash2 as Trash2,
   FiX as X,
 } from "react-icons/fi";
 import { partBorrowColumns } from "../../dashboard.config";
-import { ConfirmDialog, EmployeeSelectDropdown, FormField, formInputClass, RadioSelect, RollingText, RowActionsMenu } from "../../components/SharedControls";
+import { DatePicker } from "../../components/DatePickers";
+import { ConfirmDialog, EmployeeSelectDropdown, FormField, formInputClass, RadioSelect, RollingText } from "../../components/SharedControls";
 import { RecordCellValue, RecordsTableView } from "../../components/RecordsTableView";
 
 function getBorrowedItemLabel(record, t) {
@@ -67,7 +68,7 @@ export function PartBorrowView({
             onClick={onAddBorrow}
             className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
           >
-            <Plus size={14} />
+            <PlusCircle size={15} />
             <RollingText text={t("Borrow a Part")} />
           </button>
         )
@@ -82,14 +83,27 @@ export function PartBorrowView({
       renderRowActions={
         canManage &&
         ((borrow) => (
-          <RowActionsMenu
-            items={[
-              { icon: RotateCcw, label: t("Return"), onClick: () => onReturn(borrow) },
-              ...(canDelete
-                ? [{ divider: true }, { icon: Trash2, label: t("Delete"), destructive: true, onClick: () => onDelete(borrow) }]
-                : []),
-            ]}
-          />
+          <div className="flex items-center justify-end gap-1">
+            <button
+              type="button"
+              onClick={() => onReturn(borrow)}
+              className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
+            >
+              <RotateCcw size={13} className="block" />
+              {t("Return")}
+            </button>
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(borrow)}
+                title={t("Delete")}
+                aria-label={t("Delete")}
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-rose-50 hover:text-rose-600 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-400"
+              >
+                <Trash2 size={14} className="block" />
+              </button>
+            )}
+          </div>
         ))
       }
     />
@@ -140,10 +154,10 @@ export function BorrowPartDialog({
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label={t("Close")}
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 
@@ -167,14 +181,16 @@ export function BorrowPartDialog({
                 </FormField>
               </div>
 
+              {/* Hidden until a part is chosen: on an empty form the field had
+                  nothing to offer and only said "Pick a part first.", which the
+                  Part selector above it already implies. */}
+              {values.part_type_id && (
               <div className="sm:col-span-2">
                 <FormField label={t("Stock line *")} htmlFor="part-borrow-stock_id">
                   {isAvailableStockLoading ? (
                     <p className="text-[13px] text-slate-500 dark:text-slate-400">{t("Loading stock...")}</p>
                   ) : availableStockError ? (
                     <p className="text-[13px] text-rose-600 dark:text-rose-400">{availableStockError}</p>
-                  ) : !values.part_type_id ? (
-                    <p className="text-[13px] text-slate-400 dark:text-slate-500">{t("Pick a part first.")}</p>
                   ) : stockOptions.length === 0 ? (
                     <p className="text-[13px] text-slate-400 dark:text-slate-500">{t("Nothing left in stock for this part.")}</p>
                   ) : (
@@ -189,33 +205,7 @@ export function BorrowPartDialog({
                   )}
                 </FormField>
               </div>
-
-              <FormField label={t("Quantity *")} htmlFor="part-borrow-quantity">
-                <input
-                  id="part-borrow-quantity"
-                  type="number"
-                  min="1"
-                  required
-                  autoComplete="off"
-                  value={values.quantity}
-                  onChange={(e) => onChange("quantity", e.target.value)}
-                  className={formInputClass}
-                  disabled={isSubmitting}
-                />
-              </FormField>
-
-              <FormField label={t("Borrow Date *")} htmlFor="part-borrow-borrow_date">
-                <input
-                  id="part-borrow-borrow_date"
-                  type="date"
-                  required
-                  autoComplete="off"
-                  value={values.borrow_date}
-                  onChange={(e) => onChange("borrow_date", e.target.value)}
-                  className={formInputClass}
-                  disabled={isSubmitting}
-                />
-              </FormField>
+              )}
 
               <div className="sm:col-span-2">
                 <FormField label={t("Borrower *")} htmlFor="part-borrow-borrower_id">
@@ -241,6 +231,28 @@ export function BorrowPartDialog({
                   />
                 </FormField>
               </div>
+
+              <FormField label={t("Quantity *")} htmlFor="part-borrow-quantity">
+                <input
+                  id="part-borrow-quantity"
+                  type="number"
+                  min="1"
+                  required
+                  autoComplete="off"
+                  value={values.quantity}
+                  onChange={(e) => onChange("quantity", e.target.value)}
+                  className={formInputClass}
+                  disabled={isSubmitting}
+                />
+              </FormField>
+
+              <FormField label={t("Borrow Date *")} htmlFor="part-borrow-borrow_date">
+                <DatePicker
+                  id="part-borrow-borrow_date"
+                  value={values.borrow_date}
+                  onChange={(day) => onChange("borrow_date", day)}
+                />
+              </FormField>
             </div>
           </div>
 
@@ -294,10 +306,10 @@ export function ReturnPartDialog({ borrow, values, partStatuses = [], onChange, 
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label={t("Close")}
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 
@@ -308,19 +320,6 @@ export function ReturnPartDialog({ borrow, values, partStatuses = [], onChange, 
             )}
 
             <div className="grid grid-cols-1 gap-4">
-              <FormField label={t("Return Date *")} htmlFor="part-return-return_date">
-                <input
-                  id="part-return-return_date"
-                  type="date"
-                  required
-                  autoComplete="off"
-                  value={values.return_date}
-                  onChange={(e) => onChange("return_date", e.target.value)}
-                  className={formInputClass}
-                  disabled={isSubmitting}
-                />
-              </FormField>
-
               <FormField label={t("Condition on Return")} htmlFor="part-return-condition_on_return">
                 <input
                   id="part-return-condition_on_return"
@@ -343,6 +342,14 @@ export function ReturnPartDialog({ borrow, values, partStatuses = [], onChange, 
                   onSelect={(value) => onChange("return_status", value)}
                   disabled={isSubmitting}
                   placeholder={t("Select a status...")}
+                />
+              </FormField>
+
+              <FormField label={t("Return Date *")} htmlFor="part-return-return_date">
+                <DatePicker
+                  id="part-return-return_date"
+                  value={values.return_date}
+                  onChange={(day) => onChange("return_date", day)}
                 />
               </FormField>
             </div>

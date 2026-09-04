@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FiAlertTriangle as AlertTriangle,
@@ -5,8 +6,17 @@ import {
   FiDownload as Download,
   FiFileText as FileText,
   FiRefreshCw as RefreshCw,
+  FiX as X,
 } from "react-icons/fi";
 import { EmptyState } from "../../components/SharedControls";
+import { getLicenseExpiryInfo } from "../../dashboard.notifications";
+import {
+  formatFieldValue,
+  getEquipmentDisplayName,
+  humanizeFieldKey,
+  matchesEmployeeDepartment,
+  matchesEquipmentDepartment,
+} from "../../dashboard.utils";
 
 function getCountByLabel(rows, label) {
   return rows.find((row) => row.label === label)?.count || 0;
@@ -23,9 +33,10 @@ function getReadableTextTone(hex) {
   return luminance > 0.6 ? "dark" : "light";
 }
 
-// Icon-only export action sized to sit inside a panel's coloured header
-// without competing with the title — the label rides in the tooltip.
-function PanelExportButton({ icon: Icon, label, onClick, disabled }) {
+// Export action sized to sit inside a panel's coloured header without
+// competing with the title. `text` names the format on the button itself; the
+// longer wording ("Download PDF", "Preparing PDF...") stays in the tooltip.
+function PanelExportButton({ icon: Icon, label, text, onClick, disabled }) {
   return (
     <button
       type="button"
@@ -33,10 +44,45 @@ function PanelExportButton({ icon: Icon, label, onClick, disabled }) {
       disabled={disabled}
       title={label}
       aria-label={label}
-      className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-slate-950/10 text-slate-950 outline-none transition hover:bg-slate-950/20 focus-visible:ring-2 focus-visible:ring-slate-950/40 disabled:cursor-not-allowed disabled:opacity-40"
+      className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-slate-950/10 px-2.5 text-xs font-semibold text-slate-950 outline-none transition hover:bg-slate-950/20 focus-visible:ring-2 focus-visible:ring-slate-950/40 disabled:cursor-not-allowed disabled:opacity-40"
     >
       <Icon size={14} className="block" />
+      {text}
     </button>
+  );
+}
+
+// Per-row export pair, for the breakdowns where each bucket is worth pulling
+// out on its own (Employees by gender).
+function RowExportButtons({ onPdf, onExcel, isPdfBusy, isExcelBusy, t }) {
+  // Named like the panel header's pair, just smaller so the rows keep their
+  // height.
+  const buttonClass =
+    "inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700";
+
+  return (
+    <span className="flex items-center gap-1.5">
+      <button
+        type="button"
+        onClick={onPdf}
+        disabled={isPdfBusy}
+        title={isPdfBusy ? t("Preparing PDF...") : t("Download PDF")}
+        className={buttonClass}
+      >
+        <FileText size={12} className="block" />
+        {t("PDF")}
+      </button>
+      <button
+        type="button"
+        onClick={onExcel}
+        disabled={isExcelBusy}
+        title={isExcelBusy ? t("Preparing Excel...") : t("Download Excel")}
+        className={buttonClass}
+      >
+        <Download size={12} className="block" />
+        {t("Excel")}
+      </button>
+    </span>
   );
 }
 
@@ -77,6 +123,186 @@ function ReportPanel({ title, total, totalLabel, headerColor, headerTextTone, he
   );
 }
 
+const HIDDEN_DETAIL_KEYS = /(^_)|(_id$)|^id$/;
+
+// The Replacement lists each have their own shape - stock lines carry
+// per-part-type fields - so their columns are read off the rows rather than
+// declared. Capped at six so the popup stays readable.
+function autoDetailColumns(rows, limit = 6) {
+  const keys = [];
+  rows.forEach((row) => {
+    Object.keys(row || {}).forEach((key) => {
+      if (!HIDDEN_DETAIL_KEYS.test(key) && !keys.includes(key)) keys.push(key);
+    });
+  });
+  return keys.slice(0, limit).map((key) => ({ key, label: humanizeFieldKey(key) }));
+}
+
+function toDetailRows(rows, columns) {
+  return rows.map((row, index) => {
+    const shaped = { id: row.equipment_id ?? row.replacement_id ?? row.borrow_id ?? row.license_id ?? index };
+    columns.forEach((column) => {
+      shaped[column.key] = formatFieldValue(row[column.key]);
+    });
+    return shaped;
+  });
+}
+
+// The two record shapes the popup can show, flattened to the column keys.
+function toEmployeeRow(employee) {
+  return {
+    id: employee.employee_id,
+    full_name: employee.full_name,
+    position: employee.position,
+    phone: employee.phone,
+  };
+}
+
+function toEquipmentRow(item) {
+  return {
+    id: item.equipment_id,
+    device: getEquipmentDisplayName(item),
+    category: item.category_name || item.category,
+    asset_code: item.asset_code,
+    owner: item.owner_name,
+  };
+}
+
+// The list behind one breakdown row, with its exports at the bottom - the
+// numbers alone don't say who is in the group.
+function GroupDetailModal({ title, sections, onClose }) {
+  const { t } = useTranslation();
+  const [activeKey, setActiveKey] = useState(sections[0]?.key);
+  const active = sections.find((section) => section.key === activeKey) || sections[0];
+
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  const headCell =
+    "whitespace-nowrap border-y border-slate-100 px-5 py-2 text-left font-semibold uppercase leading-none tracking-wide dark:border-slate-800";
+  const cell = "whitespace-nowrap border-b border-slate-50 px-5 py-2 dark:border-slate-800/60";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="animate-modal-backdrop absolute inset-0 bg-slate-950/60"
+        onClick={onClose}
+        aria-label={t("Close")}
+      />
+      <div className="animate-modal-panel relative flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+          <div>
+            <h3 className="text-[15px] font-semibold text-slate-950 dark:text-white">{title}</h3>
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">{active.countLabel}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("Close")}
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+          >
+            <X size={15} className="block" />
+          </button>
+        </div>
+
+        {/* Only shown when a row really has two sides to it - the gender rows
+            pass a single section and get no tab bar. */}
+        {sections.length > 1 && (
+          <div className="flex items-center gap-1 border-b border-slate-100 px-4 pt-3 dark:border-slate-800">
+            {sections.map((section) => (
+              <button
+                key={section.key}
+                type="button"
+                onClick={() => setActiveKey(section.key)}
+                className={`relative rounded-t-lg border px-4 py-2 text-[13px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${section.key === active.key
+                  ? "border-slate-200 border-b-transparent bg-white text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                  : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                  }`}
+              >
+                {section.label} ({section.rows.length})
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="min-h-0 flex-1 overflow-auto">
+          {active.rows.length === 0 ? (
+            <p className="px-5 py-10 text-center text-[13px] text-slate-400 dark:text-slate-500">
+              {active.emptyText}
+            </p>
+          ) : (
+            <table className="min-w-full border-separate border-spacing-0 text-left text-[13px]">
+              <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                <tr>
+                  {active.columns.map((column) => (
+                    <th key={column.key} className={headCell}>
+                      {column.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {active.rows.map((row, index) => (
+                  <tr key={row.id ?? index}>
+                    {active.columns.map((column, columnIndex) => (
+                      <td
+                        key={column.key}
+                        className={`${cell} ${columnIndex === 0
+                          ? "font-semibold text-slate-950 dark:text-white"
+                          : "text-slate-600 dark:text-slate-300"
+                          }`}
+                      >
+                        {row[column.key] || "—"}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
+          >
+            {t("Close")}
+          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={active.onPdf}
+              disabled={active.isPdfBusy || active.rows.length === 0}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-4 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <FileText size={14} className="block" />
+              {active.isPdfBusy ? t("Preparing PDF...") : t("PDF")}
+            </button>
+            <button
+              type="button"
+              onClick={active.onExcel}
+              disabled={active.isExcelBusy || active.rows.length === 0}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-4 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Download size={14} className="block" />
+              {active.isExcelBusy ? t("Preparing Excel...") : t("Excel")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Only for numbers worth calling out — everything else stays neutral so a
 // highlight actually draws the eye when it's used.
 const ROW_TONE_CLASS = {
@@ -85,7 +311,7 @@ const ROW_TONE_CLASS = {
   success: "bg-[#00c16a]/10 text-[#00c16a] dark:bg-[#00c16a]/15",
 };
 
-function MetricRows({ rows, labelHeader, valueLabel, headerHighlight, t }) {
+function MetricRows({ rows, labelHeader, valueLabel, headerHighlight, renderRowActions, onRowClick, t }) {
   if (rows.length === 0) {
     return <p className="px-5 py-6 text-center text-[13px] text-slate-400 dark:text-slate-500">{t("No data yet.")}</p>;
   }
@@ -104,23 +330,47 @@ function MetricRows({ rows, labelHeader, valueLabel, headerHighlight, t }) {
           {valueLabel || t("Count")}
         </span>
       </div>
-      {rows.map((row) => (
-        <div key={row.label} className="flex items-center justify-between px-5 py-2.5 text-[13px]">
-          <span className="text-slate-700 dark:text-slate-300">{row.label}</span>
-          {row.tone && row.count > 0 ? (
-            <span className={`rounded-full px-2 py-0.5 font-semibold tabular-nums ${ROW_TONE_CLASS[row.tone]}`}>
-              {row.count.toLocaleString()}
+      {rows.map((row) => {
+        const content = (
+          <>
+            <span className="text-slate-700 dark:text-slate-300">{row.label}</span>
+            <span className="flex items-center gap-2">
+              {renderRowActions?.(row)}
+              {row.tone && row.count > 0 ? (
+                <span className={`rounded-full px-2 py-0.5 font-semibold tabular-nums ${ROW_TONE_CLASS[row.tone]}`}>
+                  {row.count.toLocaleString()}
+                </span>
+              ) : (
+                <span className="font-semibold tabular-nums text-slate-950 dark:text-white">
+                  {row.count.toLocaleString()}
+                </span>
+              )}
             </span>
-          ) : (
-            <span className="font-semibold tabular-nums text-slate-950 dark:text-white">{row.count.toLocaleString()}</span>
-          )}
-        </div>
-      ))}
+          </>
+        );
+
+        // A clickable row becomes a real button so it keeps keyboard focus and
+        // Enter/Space; the plain rows stay as divs.
+        return onRowClick ? (
+          <button
+            key={row.label}
+            type="button"
+            onClick={() => onRowClick(row)}
+            className="flex w-full items-center justify-between gap-3 px-5 py-2.5 text-left text-[13px] outline-none transition hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-800/60 dark:focus-visible:bg-slate-800/60"
+          >
+            {content}
+          </button>
+        ) : (
+          <div key={row.label} className="flex items-center justify-between gap-3 px-5 py-2.5 text-[13px]">
+            {content}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function DepartmentRows({ rows, headerHighlight, t }) {
+function DepartmentRows({ rows, headerHighlight, onRowClick, t }) {
   if (rows.length === 0) {
     return <p className="px-5 py-6 text-center text-[13px] text-slate-400 dark:text-slate-500">{t("No data yet.")}</p>;
   }
@@ -148,7 +398,11 @@ function DepartmentRows({ rows, headerHighlight, t }) {
         </thead>
         <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
           {rows.map((row) => (
-            <tr key={row.label}>
+            <tr
+              key={row.label}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              className={onRowClick ? "cursor-pointer transition hover:bg-slate-50 dark:hover:bg-slate-800/60" : undefined}
+            >
               <td className="px-5 py-2.5 font-medium text-slate-800 dark:text-slate-200">{row.label}</td>
               <td className="px-5 py-2.5 tabular-nums text-slate-600 dark:text-slate-300">{row.employeeCount.toLocaleString()}</td>
               <td className="px-5 py-2.5 tabular-nums text-slate-600 dark:text-slate-300">{row.equipmentCount.toLocaleString()}</td>
@@ -173,20 +427,108 @@ export function ReportView({
   onDownloadEmployeesExcel,
   isDownloadingEmployeesPdf,
   isDownloadingEmployeesExcel,
+  onDownloadEmployeesBySexPdf,
+  onDownloadEmployeesBySexExcel,
+  downloadingSex,
+  onDownloadReplacementPdf,
+  onDownloadReplacementExcel,
+  onDownloadReplacementsPdf,
+  onDownloadReplacementsExcel,
+  downloadingReplacement,
+  onDownloadLicenseByStatusPdf,
+  onDownloadLicenseByStatusExcel,
+  onDownloadLicensesPdf,
+  onDownloadLicensesExcel,
+  downloadingLicense,
+  onDownloadManagementPdf,
+  onDownloadManagementExcel,
+  onDownloadManagementsPdf,
+  onDownloadManagementsExcel,
+  downloadingManagement,
   onDownloadDepartmentsPdf,
   onDownloadDepartmentsExcel,
+  onDownloadDepartmentEmployeesPdf,
+  onDownloadDepartmentEmployeesExcel,
+  onDownloadDepartmentEquipmentPdf,
+  onDownloadDepartmentEquipmentExcel,
+  downloadingDepartment,
   onDownloadEquipmentPdf,
   onDownloadEquipmentExcel,
   isDownloadingEquipmentPdf,
   isDownloadingEquipmentExcel,
 }) {
   const { t } = useTranslation();
+  // Which gender row is open, if any.
+  const [genderDetail, setGenderDetail] = useState(null);
+
+  const [departmentDetail, setDepartmentDetail] = useState(null);
+
+  const departmentEmployees = departmentDetail
+    ? report.employees.list.filter(matchesEmployeeDepartment(departmentDetail))
+    : [];
+
+  const departmentEquipment = departmentDetail
+    ? report.equipment.list.filter(matchesEquipmentDepartment(departmentDetail))
+    : [];
+
+  const departmentKey = departmentDetail
+    ? departmentDetail.code || departmentDetail.name || departmentDetail.label
+    : "";
+
+  const [replacementDetail, setReplacementDetail] = useState(null);
+
+  const replacementListByKey = {
+    partStock: report.partStock.list,
+    partBorrow: report.partBorrow.list,
+    deviceReplacement: report.replacement.list,
+    replacementHistory: report.replacement.list,
+  };
+
+  const replacementRows = replacementDetail ? replacementListByKey[replacementDetail.key] || [] : [];
+  const replacementColumns = autoDetailColumns(replacementRows);
+
+  const [licenseDetail, setLicenseDetail] = useState(null);
+
+  // Bucketed by the label the panel shows, which comes from the expiry check
+  // rather than the raw status field - the same rule the export uses.
+  const licenseRows = licenseDetail
+    ? report.licenses.list.filter(
+      (license) => (getLicenseExpiryInfo(license)?.label || license.status) === licenseDetail.label
+    )
+    : [];
+  const licenseColumns = autoDetailColumns(licenseRows);
+
+  const employeeColumns = [
+    { key: "full_name", label: t("Full Name") },
+    { key: "position", label: t("Position") },
+    { key: "phone", label: t("Phone") },
+  ];
+
+  const equipmentColumns = [
+    { key: "device", label: t("Device") },
+    { key: "category", label: t("Category") },
+    { key: "asset_code", label: t("Asset Code") },
+    { key: "owner", label: t("Owner") },
+  ];
+
+  const genderEmployees = genderDetail
+    ? report.employees.list.filter((employee) => (employee.sex || "Unspecified") === genderDetail.key)
+    : [];
 
   return (
     <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-2 dark:bg-slate-900 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         <div>
           <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Report")}</h2>
+          {!isLoading && !error && (
+            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
+              {t("report_summary", {
+                employees: report.employees.total.toLocaleString(),
+                departments: report.departments.total.toLocaleString(),
+                equipment: report.equipment.total.toLocaleString(),
+              })}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -245,12 +587,14 @@ export function ReportView({
                 <>
                   <PanelExportButton
                     icon={FileText}
+                    text={t("PDF")}
                     label={isDownloadingEmployeesPdf ? t("Preparing PDF...") : t("Download PDF")}
                     onClick={onDownloadEmployeesPdf}
                     disabled={isLoading || Boolean(error) || isDownloadingEmployeesPdf}
                   />
                   <PanelExportButton
                     icon={Download}
+                    text={t("Excel")}
                     label={isDownloadingEmployeesExcel ? t("Preparing Excel...") : t("Download Excel")}
                     onClick={onDownloadEmployeesExcel}
                     disabled={isLoading || Boolean(error) || isDownloadingEmployeesExcel}
@@ -262,10 +606,11 @@ export function ReportView({
                 labelHeader={t("Gender")}
                 headerHighlight="#fddd1c"
                 rows={[
-                  { label: t("Unspecified"), count: getCountByLabel(report.employees.bySex, "Unspecified") },
-                  { label: t("Male"), count: getCountByLabel(report.employees.bySex, "Male") },
-                  { label: t("Female"), count: getCountByLabel(report.employees.bySex, "Female") },
+                  { key: "Unspecified", label: t("Unspecified"), count: getCountByLabel(report.employees.bySex, "Unspecified") },
+                  { key: "Male", label: t("Male"), count: getCountByLabel(report.employees.bySex, "Male") },
+                  { key: "Female", label: t("Female"), count: getCountByLabel(report.employees.bySex, "Female") },
                 ]}
+                onRowClick={setGenderDetail}
                 t={t}
               />
             </ReportPanel>
@@ -278,12 +623,14 @@ export function ReportView({
                 <>
                   <PanelExportButton
                     icon={FileText}
+                    text={t("PDF")}
                     label={t("Download PDF")}
                     onClick={onDownloadDepartmentsPdf}
                     disabled={isLoading || Boolean(error)}
                   />
                   <PanelExportButton
                     icon={Download}
+                    text={t("Excel")}
                     label={t("Download Excel")}
                     onClick={onDownloadDepartmentsExcel}
                     disabled={isLoading || Boolean(error)}
@@ -291,18 +638,45 @@ export function ReportView({
                 </>
               }
             >
-              <DepartmentRows rows={report.departments.rows} headerHighlight="#fddd1c" t={t} />
+              <DepartmentRows
+                rows={report.departments.rows}
+                headerHighlight="#fddd1c"
+                onRowClick={setDepartmentDetail}
+                t={t}
+              />
             </ReportPanel>
-            <ReportPanel title={t("Replacement")} headerColor="#fddd1c">
+            <ReportPanel
+              title={t("Replacement")}
+              headerColor="#fddd1c"
+              headerActions={
+                <>
+                  <PanelExportButton
+                    icon={FileText}
+                    text={t("PDF")}
+                    label={t("Download PDF")}
+                    onClick={onDownloadReplacementsPdf}
+                    disabled={isLoading || Boolean(error)}
+                  />
+                  <PanelExportButton
+                    icon={Download}
+                    text={t("Excel")}
+                    label={t("Download Excel")}
+                    onClick={onDownloadReplacementsExcel}
+                    disabled={isLoading || Boolean(error)}
+                  />
+                </>
+              }
+            >
               <MetricRows
                 labelHeader={t("Replacement")}
                 headerHighlight="#fddd1c"
                 rows={[
-                  { label: t("Stock of Replace a Part"), count: report.partStock.lineCount },
-                  { label: t("Borrow a Part"), count: report.partBorrow.current },
-                  { label: t("Device Replacement"), count: report.replacement.total },
-                  { label: t("Device Replacement History"), count: report.replacement.total },
+                  { key: "partStock", label: t("Stock of Replace a Part"), count: report.partStock.lineCount },
+                  { key: "partBorrow", label: t("Borrow a Part"), count: report.partBorrow.current },
+                  { key: "deviceReplacement", label: t("Device Replacement"), count: report.replacement.total },
+                  { key: "replacementHistory", label: t("Device Replacement History"), count: report.replacement.total },
                 ]}
+                onRowClick={setReplacementDetail}
                 t={t}
               />
             </ReportPanel>
@@ -311,8 +685,75 @@ export function ReportView({
               total={report.licenses.total}
               totalLabel={t("Total")}
               headerColor="#fddd1c"
+              headerActions={
+                <>
+                  <PanelExportButton
+                    icon={FileText}
+                    text={t("PDF")}
+                    label={t("Download PDF")}
+                    onClick={onDownloadLicensesPdf}
+                    disabled={isLoading || Boolean(error)}
+                  />
+                  <PanelExportButton
+                    icon={Download}
+                    text={t("Excel")}
+                    label={t("Download Excel")}
+                    onClick={onDownloadLicensesExcel}
+                    disabled={isLoading || Boolean(error)}
+                  />
+                </>
+              }
             >
-              <MetricRows rows={report.licenses.byStatus} labelHeader={t("Status")} headerHighlight="#fddd1c" t={t} />
+              <MetricRows
+                rows={report.licenses.byStatus}
+                labelHeader={t("Status")}
+                headerHighlight="#fddd1c"
+                onRowClick={setLicenseDetail}
+                t={t}
+              />
+            </ReportPanel>
+            <ReportPanel
+              title={t("Managements")}
+              headerColor="#fddd1c"
+              headerActions={
+                <>
+                  <PanelExportButton
+                    icon={FileText}
+                    text={t("PDF")}
+                    label={t("Download PDF")}
+                    onClick={onDownloadManagementsPdf}
+                    disabled={isLoading || Boolean(error)}
+                  />
+                  <PanelExportButton
+                    icon={Download}
+                    text={t("Excel")}
+                    label={t("Download Excel")}
+                    onClick={onDownloadManagementsExcel}
+                    disabled={isLoading || Boolean(error)}
+                  />
+                </>
+              }
+            >
+              <MetricRows
+                labelHeader={t("Managements")}
+                headerHighlight="#fddd1c"
+                rows={[
+                  { key: "statuses", label: t("Equipment Statuses"), count: report.managements.statuses },
+                  { key: "partStatuses", label: t("Part Types Statuses"), count: report.managements.partStatuses },
+                  { key: "categories", label: t("Category"), count: report.managements.categories },
+                  { key: "partTypes", label: t("Part Types of Stock"), count: report.managements.partTypes },
+                ]}
+                renderRowActions={(row) => (
+                  <RowExportButtons
+                    onPdf={() => onDownloadManagementPdf(row.key)}
+                    onExcel={() => onDownloadManagementExcel(row.key)}
+                    isPdfBusy={downloadingManagement === `${row.key}-pdf`}
+                    isExcelBusy={downloadingManagement === `${row.key}-excel`}
+                    t={t}
+                  />
+                )}
+                t={t}
+              />
             </ReportPanel>
             <ReportPanel
               title={t("Equipments")}
@@ -377,6 +818,102 @@ export function ReportView({
             <EmptyState icon={BarChartIcon} title={t("No data yet")} description={t("Once your data is entered, this report fills in automatically.")} />
           )}
         </>
+      )}
+
+      {departmentDetail && (
+        <GroupDetailModal
+          title={departmentDetail.label}
+          onClose={() => setDepartmentDetail(null)}
+          sections={[
+            {
+              key: "employees",
+              label: t("Employees"),
+              countLabel: t("employees_count", { count: departmentEmployees.length }),
+              emptyText: t("No employees found"),
+              columns: employeeColumns,
+              rows: departmentEmployees.map(toEmployeeRow),
+              onPdf: () => onDownloadDepartmentEmployeesPdf(departmentDetail),
+              onExcel: () => onDownloadDepartmentEmployeesExcel(departmentDetail),
+              isPdfBusy: downloadingDepartment === `${departmentKey}-pdf`,
+              isExcelBusy: downloadingDepartment === `${departmentKey}-excel`,
+            },
+            {
+              key: "equipment",
+              label: t("Equipment"),
+              countLabel: t("equipment_count", { count: departmentEquipment.length }),
+              emptyText: t("No equipment found"),
+              columns: equipmentColumns,
+              rows: departmentEquipment.map(toEquipmentRow),
+              onPdf: () => onDownloadDepartmentEquipmentPdf(departmentDetail),
+              onExcel: () => onDownloadDepartmentEquipmentExcel(departmentDetail),
+              isPdfBusy: downloadingDepartment === `${departmentKey}-equipment-pdf`,
+              isExcelBusy: downloadingDepartment === `${departmentKey}-equipment-excel`,
+            },
+          ]}
+        />
+      )}
+
+      {replacementDetail && (
+        <GroupDetailModal
+          title={replacementDetail.label}
+          onClose={() => setReplacementDetail(null)}
+          sections={[
+            {
+              key: "records",
+              label: replacementDetail.label,
+              countLabel: `${replacementRows.length.toLocaleString()} ${t("records")}`,
+              emptyText: t("No data yet."),
+              columns: replacementColumns,
+              rows: toDetailRows(replacementRows, replacementColumns),
+              onPdf: () => onDownloadReplacementPdf(replacementDetail.key),
+              onExcel: () => onDownloadReplacementExcel(replacementDetail.key),
+              isPdfBusy: downloadingReplacement === `${replacementDetail.key}-pdf`,
+              isExcelBusy: downloadingReplacement === `${replacementDetail.key}-excel`,
+            },
+          ]}
+        />
+      )}
+
+      {licenseDetail && (
+        <GroupDetailModal
+          title={licenseDetail.label}
+          onClose={() => setLicenseDetail(null)}
+          sections={[
+            {
+              key: "licenses",
+              label: t("Software License"),
+              countLabel: `${licenseRows.length.toLocaleString()} ${t("records")}`,
+              emptyText: t("No data yet."),
+              columns: licenseColumns,
+              rows: toDetailRows(licenseRows, licenseColumns),
+              onPdf: () => onDownloadLicenseByStatusPdf(licenseDetail.label),
+              onExcel: () => onDownloadLicenseByStatusExcel(licenseDetail.label),
+              isPdfBusy: downloadingLicense === `${licenseDetail.label}-pdf`,
+              isExcelBusy: downloadingLicense === `${licenseDetail.label}-excel`,
+            },
+          ]}
+        />
+      )}
+
+      {genderDetail && (
+        <GroupDetailModal
+          title={genderDetail.label}
+          onClose={() => setGenderDetail(null)}
+          sections={[
+            {
+              key: "employees",
+              label: t("Employees"),
+              countLabel: t("employees_count", { count: genderEmployees.length }),
+              emptyText: t("No employees found"),
+              columns: employeeColumns,
+              rows: genderEmployees.map(toEmployeeRow),
+              onPdf: () => onDownloadEmployeesBySexPdf(genderDetail.key),
+              onExcel: () => onDownloadEmployeesBySexExcel(genderDetail.key),
+              isPdfBusy: downloadingSex === `${genderDetail.key}-pdf`,
+              isExcelBusy: downloadingSex === `${genderDetail.key}-excel`,
+            },
+          ]}
+        />
       )}
     </div>
   );

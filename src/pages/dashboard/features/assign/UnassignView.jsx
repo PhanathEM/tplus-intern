@@ -3,17 +3,34 @@ import {
   FiAlertTriangle as AlertTriangle,
   FiBox as Box,
   FiCheckCircle as CheckCircle,
+  FiHash as Hash,
+  FiLayers as Layers,
   FiRefreshCw as RefreshCw,
   FiSearch as Search,
+  FiSettings as Settings,
   FiUser as UserIcon,
   FiUserX as UserX,
   FiX as X,
 } from "react-icons/fi";
 import { ConfirmDialog, EmptyState, Pagination } from "../../components/SharedControls";
 import { getEquipmentDisplayName } from "../../dashboard.utils";
-import { translateLabel } from "../../../../lib/i18nLabel";
 
-// A list rather than a picker form: unassigning is a one-click action per
+const UNASSIGN_HEAD_CELL =
+  "whitespace-nowrap border-y border-slate-100 px-5 py-2 font-semibold uppercase leading-none tracking-wide dark:border-slate-800";
+
+// No hover card here: the row itself does nothing on click, only the Unassign
+// button does, so the cells just carry the row separator.
+const UNASSIGN_CELL =
+  "whitespace-nowrap border-b border-slate-50 bg-white px-5 py-2 dark:border-slate-800/60 dark:bg-slate-900";
+
+const UNASSIGN_COLUMNS = [
+  { key: "owner", label: "Owner", icon: UserIcon },
+  { key: "device", label: "Device", icon: Box },
+  { key: "category", label: "Category", icon: Layers },
+  { key: "asset_code", label: "Asset Code", icon: Hash },
+];
+
+// A table rather than a picker form: unassigning is a one-click action per
 // device, so searching the things people currently hold and acting on a row is
 // faster than a two-step pick-then-confirm flow.
 export function UnassignView({
@@ -35,12 +52,12 @@ export function UnassignView({
   onCloseUnassign,
   onConfirmUnassign,
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   return (
     <div className="px-4 pb-6 sm:px-6 lg:px-8">
-      <div className="rounded-xl bg-white dark:bg-slate-900">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-2.5">
+      <div className="mx-auto max-w-6xl rounded-xl bg-white dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 py-2">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Assigned equipment")}</h2>
             {!isLoading && !error && (
@@ -50,14 +67,14 @@ export function UnassignView({
             )}
           </div>
 
-          <div className="relative w-64">
+          <div className="relative w-80">
             <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={14} />
             <input
               type="text"
               autoComplete="off"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder={t("Search...")}
+              placeholder={t("Owner / Equipment / Asset Code")}
               className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-9 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:bg-white dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500"
             />
             {search && (
@@ -74,7 +91,7 @@ export function UnassignView({
         </div>
 
         {successMessage && (
-          <div className="mx-5 mb-3 flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
             <CheckCircle size={16} className="mt-0.5 shrink-0" />
             <span>{successMessage}</span>
           </div>
@@ -105,54 +122,66 @@ export function UnassignView({
           />
         ) : (
           <>
-            <div className="divide-y divide-slate-50 px-2 dark:divide-slate-800/60">
-              {items.map((item) => (
-                <div
-                  key={item.equipment_id}
-                  className="group flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 transition hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                      <Box size={14} className="block" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-[13px] font-medium text-slate-900 dark:text-slate-100">
-                        {getEquipmentDisplayName(item)}
-                      </p>
-                      <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
-                        {[item.category_name || item.category, item.asset_code, item.status && translateLabel(t, i18n, item.status)]
-                          .filter(Boolean)
-                          .join(" · ") || "—"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-3">
-                    <div className="hidden min-w-0 items-center gap-2 sm:flex">
-                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                        <UserIcon size={13} className="block" />
+            <div className="overflow-x-auto">
+              {/* border-separate keeps the cell borders from collapsing into
+                  the header rule, so the row lines stay a single pixel. */}
+              <table className="min-w-full border-separate border-spacing-0 text-left text-[13px]">
+                <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                  <tr>
+                    {UNASSIGN_COLUMNS.map((column) => {
+                      const ColumnIcon = column.icon;
+                      // flex, not inline-flex: an inline box sits on the text
+                      // baseline and leaves descender space underneath, which
+                      // makes the padding look uneven against the data rows.
+                      return (
+                        <th key={column.key} className={UNASSIGN_HEAD_CELL}>
+                          <span className="flex items-center gap-1.5">
+                            <ColumnIcon size={13} className="shrink-0" />
+                            {t(column.label)}
+                          </span>
+                        </th>
+                      );
+                    })}
+                    <th className={`${UNASSIGN_HEAD_CELL} text-right`}>
+                      <span className="flex items-center justify-end gap-1.5">
+                        <Settings size={13} className="shrink-0" />
+                        {t("Action")}
                       </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-[13px] font-medium text-slate-800 dark:text-slate-200">
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => (
+                    <tr key={item.equipment_id}>
+                      <td className={`${UNASSIGN_CELL} font-semibold text-slate-950 dark:text-white`}>
+                        <div className="flex items-center gap-2.5">
+                          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                            <UserIcon size={13} />
+                          </span>
                           {item.owner_name || "—"}
-                        </span>
-                        <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
-                          {[item.owner_department, item.location].filter(Boolean).join(" · ") || "—"}
-                        </span>
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => onOpenUnassign(item)}
-                      className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-rose-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
-                    >
-                      <UserX size={13} className="block" />
-                      {t("Unassign")}
-                    </button>
-                  </div>
-                </div>
-              ))}
+                        </div>
+                      </td>
+                      <td className={`${UNASSIGN_CELL} text-slate-600 dark:text-slate-300`}>
+                        {getEquipmentDisplayName(item)}
+                      </td>
+                      <td className={`${UNASSIGN_CELL} text-slate-600 dark:text-slate-300`}>
+                        {item.category_name || item.category || "—"}
+                      </td>
+                      <td className={`${UNASSIGN_CELL} text-slate-600 dark:text-slate-300`}>{item.asset_code || "—"}</td>
+                      <td className={`${UNASSIGN_CELL} text-right`}>
+                        <button
+                          type="button"
+                          onClick={() => onOpenUnassign(item)}
+                          className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-rose-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
+                        >
+                          <UserX size={13} className="block" />
+                          {t("Unassign")}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             {pageCount > 1 && (

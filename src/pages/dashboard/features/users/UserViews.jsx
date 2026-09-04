@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   FiAlertTriangle as AlertTriangle,
   FiRefreshCw as RefreshCw,
+  FiSettings as Settings,
   FiTrash2 as Trash2,
   FiUsers as Users,
   FiX as X,
@@ -15,6 +16,14 @@ import {
   getAccessLevelSummary,
   normalizeUserPermissions,
 } from "../../../../lib/permissions";
+
+const USER_HEAD_CELL =
+  "whitespace-nowrap border-y border-slate-100 px-5 py-2 leading-none dark:border-slate-800";
+// Every cell keeps a full border at rest — top transparent, bottom the row
+// separator — so hover only recolours it into a card around the row, with no
+// 1px height jump.
+const USER_CELL =
+  "border border-x-transparent border-t-transparent border-b-slate-50 bg-white px-5 py-2 group-hover:border-y-slate-200 dark:border-b-slate-800/60 dark:bg-slate-900 dark:group-hover:border-y-slate-700";
 
 export function UsersView({
   users,
@@ -32,8 +41,8 @@ export function UsersView({
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+      <div className="rounded-xl bg-white dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 py-2">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("User accounts")}</h2>
             {!isLoading && !error && (
@@ -73,31 +82,36 @@ export function UsersView({
           <EmptyState icon={Users} title={t("No accounts found")} description={t("Registered accounts will appear here.")} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
+            <table className="min-w-full border-separate border-spacing-0 text-left text-[13px]">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
-                  <th className="px-5 py-3 font-semibold">{t("Username")}</th>
-                  <th className="px-5 py-3 font-semibold">{t("Email")}</th>
-                  <th className="px-5 py-3 font-semibold">{t("Permissions")}</th>
-                  <th className="px-5 py-3 font-semibold">{t("Status")}</th>
-                  <th className="px-5 py-3 font-semibold text-right">{t("Actions")}</th>
+                  <th className={`${USER_HEAD_CELL} font-semibold`}>{t("Username")}</th>
+                  <th className={`${USER_HEAD_CELL} font-semibold`}>{t("Email")}</th>
+                  <th className={`${USER_HEAD_CELL} font-semibold`}>{t("Permissions")}</th>
+                  <th className={`${USER_HEAD_CELL} font-semibold`}>{t("Status")}</th>
+                  <th className={`${USER_HEAD_CELL} text-right font-semibold`}>
+                    <span className="flex items-center justify-end gap-1.5">
+                      <Settings size={13} className="shrink-0" />
+                      {t("Action")}
+                    </span>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+              <tbody>
                 {users.map((user) => (
-                  <tr key={user.user_id} className="transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
-                    <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-950 dark:text-white">
+                  <tr key={user.user_id}>
+                    <td className={`${USER_CELL} whitespace-nowrap rounded-l-lg font-semibold text-slate-950 group-hover:border-l-slate-200 dark:text-white dark:group-hover:border-l-slate-700`}>
                       {user.username}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">
+                    <td className={`${USER_CELL} whitespace-nowrap text-slate-600 dark:text-slate-300`}>
                       {user.email || "—"}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">
+                    <td className={`${USER_CELL} whitespace-nowrap text-slate-600 dark:text-slate-300`}>
                       <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                         {getAccessLevelSummary(user, t)}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5">
+                    <td className={`${USER_CELL} whitespace-nowrap`}>
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-semibold ${user.is_active
                           ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
@@ -107,7 +121,7 @@ export function UsersView({
                         {user.is_active ? translateLabel(t, i18n, "Active") : translateLabel(t, i18n, "Pending")}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-right">
+                    <td className={`${USER_CELL} whitespace-nowrap rounded-r-lg text-right group-hover:border-r-slate-200 dark:group-hover:border-r-slate-700`}>
                       <div className="flex items-center justify-end gap-2">
                         {!user.is_active && (
                           <button
@@ -208,10 +222,10 @@ export function UserPermissionsModal({ isOpen, user, values, onChange, onSubmit,
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label={t("Close")}
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 
@@ -357,10 +371,10 @@ export function ResetPasswordModal({
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label={t("Close")}
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 

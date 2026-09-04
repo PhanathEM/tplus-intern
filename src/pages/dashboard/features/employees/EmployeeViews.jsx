@@ -443,10 +443,10 @@ export function EmployeeDetailModal({
             <button
               type="button"
               onClick={onClose}
-              className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
               aria-label="Close"
             >
-              <X size={16} />
+              <X size={15} className="block" />
             </button>
           </div>
         </div>
@@ -508,7 +508,7 @@ export function EmployeeDetailModal({
                   <div key={device.equipment_id ?? idx} className="rounded-xl border border-slate-100 dark:border-slate-800">
                     <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/60 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-800/40">
                       <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-200">
-                        {t("Device", { count: idx + 1 })}
+                        {t("device_numbered", { count: idx + 1 })}
                       </p>
                       {canManage && onUnassign && device.equipment_id && (
                         <button

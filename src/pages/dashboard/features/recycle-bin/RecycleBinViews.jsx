@@ -2,14 +2,37 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FiAlertTriangle as AlertTriangle,
+  FiBox as Box,
   FiChevronDown as ChevronDown,
+  FiClock as Clock,
   FiRefreshCw as RefreshCw,
   FiRotateCcw as RotateCcw,
+  FiSettings as Settings,
+  FiTag as Tag,
   FiTrash2 as Trash2,
+  FiUser as UserIcon,
 } from "react-icons/fi";
 import { EmptyState, Pagination, RadioSelect } from "../../components/SharedControls";
 import { formatFieldValue, humanizeFieldKey } from "../../dashboard.utils";
 import { translateLabel } from "../../../../lib/i18nLabel";
+
+const RECYCLE_HEAD_CELL =
+  "whitespace-nowrap border-y border-slate-100 px-5 py-2 font-semibold leading-none dark:border-slate-800";
+
+// Every cell keeps a full border at rest - top transparent, bottom the row
+// separator - so hover only has to recolour it into a card around the row,
+// with no 1px height jump. Only the top/bottom edges recolour on every cell;
+// the sides stay transparent except on the first and last, otherwise each
+// column divider lights up and the row reads as a grid instead of one card.
+const RECYCLE_CELL =
+  "border border-x-transparent border-t-transparent border-b-slate-50 bg-white px-5 py-2 group-hover:border-y-slate-200 dark:border-b-slate-800/60 dark:bg-slate-900 dark:group-hover:border-y-slate-700";
+
+const RECYCLE_COLUMNS = [
+  { key: "deleted", label: "Deleted", icon: Clock },
+  { key: "type", label: "Type", icon: Tag },
+  { key: "item", label: "Item", icon: Box },
+  { key: "deleted_by", label: "Deleted By", icon: UserIcon },
+];
 
 const IGNORED_KEYS = new Set([
   "id",
@@ -93,18 +116,20 @@ function RecycleBinRow({ entry, onRestore, onDeleteForever, isRestoring, isDelet
 
   return (
     <>
-      <tr className="transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
-        <td className="whitespace-nowrap px-4 py-3 text-slate-500 dark:text-slate-400">{formatTimestamp(getEntryTimestamp(entry))}</td>
-        <td className="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-300">{translateLabel(t, i18n, getEntryType(entry))}</td>
-        <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{getEntryLabel(entry, t)}</td>
-        <td className="whitespace-nowrap px-4 py-3 text-slate-500 dark:text-slate-400">{getEntryDeletedBy(entry) || "—"}</td>
-        <td className="whitespace-nowrap px-4 py-3 text-right">
+      <tr>
+        <td className={`${RECYCLE_CELL} whitespace-nowrap rounded-l-lg text-slate-500 group-hover:border-l-slate-200 dark:text-slate-400 dark:group-hover:border-l-slate-700`}>
+          {formatTimestamp(getEntryTimestamp(entry))}
+        </td>
+        <td className={`${RECYCLE_CELL} whitespace-nowrap text-slate-600 dark:text-slate-300`}>{translateLabel(t, i18n, getEntryType(entry))}</td>
+        <td className={`${RECYCLE_CELL} font-medium text-slate-800 dark:text-slate-200`}>{getEntryLabel(entry, t)}</td>
+        <td className={`${RECYCLE_CELL} whitespace-nowrap text-slate-500 dark:text-slate-400`}>{getEntryDeletedBy(entry) || "—"}</td>
+        <td className={`${RECYCLE_CELL} whitespace-nowrap rounded-r-lg text-right group-hover:border-r-slate-200 dark:group-hover:border-r-slate-700`}>
           <div className="flex items-center justify-end gap-2">
             {entries.length > 0 && (
               <button
                 type="button"
                 onClick={() => setExpanded((value) => !value)}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
+                className="inline-flex h-7 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
               >
                 {t("Details")}
                 <ChevronDown size={12} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
@@ -114,7 +139,7 @@ function RecycleBinRow({ entry, onRestore, onDeleteForever, isRestoring, isDelet
               type="button"
               onClick={() => onRestore(entry)}
               disabled={isBusy}
-              className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-emerald-700 outline-none transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:bg-slate-800 dark:text-emerald-300 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40 dark:focus-visible:ring-offset-slate-900"
+              className="inline-flex h-7 items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2.5 text-xs font-semibold text-emerald-700 outline-none transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:bg-slate-800 dark:text-emerald-300 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/40"
             >
               <RotateCcw size={12} className={isRestoring ? "animate-spin" : ""} />
               {isRestoring ? t("Restoring...") : t("Restore")}
@@ -123,7 +148,7 @@ function RecycleBinRow({ entry, onRestore, onDeleteForever, isRestoring, isDelet
               type="button"
               onClick={() => onDeleteForever(entry)}
               disabled={isBusy}
-              className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-800 dark:bg-slate-800 dark:text-rose-400 dark:hover:border-rose-700 dark:hover:bg-rose-950/40 dark:focus-visible:ring-offset-slate-900"
+              className="inline-flex h-7 items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 text-xs font-semibold text-rose-600 outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-800 dark:bg-slate-800 dark:text-rose-400 dark:hover:border-rose-700 dark:hover:bg-rose-950/40"
             >
               <Trash2 size={12} />
               {isDeleting ? t("Deleting...") : t("Delete Forever")}
@@ -133,7 +158,7 @@ function RecycleBinRow({ entry, onRestore, onDeleteForever, isRestoring, isDelet
       </tr>
       {expanded && entries.length > 0 && (
         <tr className="bg-slate-50/60 dark:bg-slate-800/40">
-          <td colSpan={5} className="px-4 py-3">
+          <td colSpan={5} className="px-5 py-3">
             <dl className="grid gap-x-4 gap-y-1.5 sm:grid-cols-3">
               {entries.map(([key, value]) => (
                 <div key={key} className="min-w-0">
@@ -153,7 +178,7 @@ function RecycleBinRow({ entry, onRestore, onDeleteForever, isRestoring, isDelet
   );
 }
 
-const RECYCLE_BIN_PAGE_SIZE = 15;
+const RECYCLE_BIN_PAGE_SIZE = 20;
 
 export function RecycleBinView({
   entries,
@@ -196,8 +221,10 @@ export function RecycleBinView({
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+      <div className="rounded-xl bg-white dark:bg-slate-900">
+        {/* z-20 beats the hovered row's own stacking so a lifted row passes
+            under this bar rather than over it. */}
+        <div className="sticky top-14 z-20 flex flex-wrap items-center justify-between gap-3 bg-white py-2 dark:bg-slate-900">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Recycle Bin")}</h2>
             {!isLoading && !error && (
@@ -234,7 +261,7 @@ export function RecycleBinView({
         </div>
 
         {actionError && (
-          <div className="mx-5 mt-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
+          <div className="mb-3 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
             <AlertTriangle size={14} />
             {actionError}
           </div>
@@ -262,17 +289,36 @@ export function RecycleBinView({
           <EmptyState icon={Trash2} title={t("Recycle bin is empty")} description={t("Deleted records will show up here.")} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
+            {/* border-separate (not the default collapse) so the hovered row
+                can round its end cells - border-radius on a cell is ignored
+                in the collapsed model. Row lines therefore live on the cells
+                rather than on the row element, which cannot carry them. */}
+            <table className="min-w-full border-separate border-spacing-0 text-left text-[13px]">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Deleted")}</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Type")}</th>
-                  <th className="px-4 py-3 font-semibold">{t("Item")}</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Deleted By")}</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold text-right">&nbsp;</th>
+                  {RECYCLE_COLUMNS.map((column) => {
+                    const ColumnIcon = column.icon;
+                    // flex, not inline-flex: an inline box sits on the text
+                    // baseline and leaves descender space underneath, which
+                    // makes the padding look uneven against the data rows.
+                    return (
+                      <th key={column.key} className={RECYCLE_HEAD_CELL}>
+                        <span className="flex items-center gap-1.5">
+                          <ColumnIcon size={13} className="shrink-0" />
+                          {t(column.label)}
+                        </span>
+                      </th>
+                    );
+                  })}
+                  <th className={`${RECYCLE_HEAD_CELL} text-right`}>
+                    <span className="flex items-center justify-end gap-1.5">
+                      <Settings size={13} className="shrink-0" />
+                      {t("Action")}
+                    </span>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+              <tbody>
                 {paginatedEntries.map((entry) => {
                   const id = getEntryId(entry);
                   return (
@@ -292,12 +338,7 @@ export function RecycleBinView({
         )}
 
         {!isLoading && !error && entries.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            <span>
-              {t("Showing")} {(currentPage - 1) * RECYCLE_BIN_PAGE_SIZE + 1}
-              {"–"}
-              {Math.min(currentPage * RECYCLE_BIN_PAGE_SIZE, entries.length)} {t("of")} {entries.length}
-            </span>
+          <div className="flex flex-wrap items-center justify-center gap-3 border-t border-slate-100 px-5 py-3 dark:border-slate-800">
             <Pagination currentPage={currentPage} pageCount={pageCount} onPageChange={setPage} />
           </div>
         )}

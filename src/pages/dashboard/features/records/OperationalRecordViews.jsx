@@ -16,6 +16,7 @@ import { getLicenseExpiryInfo } from "../../dashboard.notifications";
 import { formatFieldValue } from "../../dashboard.utils";
 import { translateLabel } from "../../../../lib/i18nLabel";
 import { RecordCellValue, RecordsTableView } from "../../components/RecordsTableView";
+import { DateRangePicker } from "../../components/DatePickers";
 import { EmptyState, FormField, formInputClass, Pagination, RadioSelect, RollingText, RowActionsMenu } from "../../components/SharedControls";
 
 function LicenseStatusCell({ license }) {
@@ -86,10 +87,10 @@ export function LicenseFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label={t("Close")}
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 
@@ -320,15 +321,29 @@ export function LicensesView({
 // grouping is the whole point of this particular table. The header's own
 // fixed light background is a deliberate design choice (like conditional
 // formatting in the source sheet), not tied to the app's light/dark toggle.
-const SERVER_USAGE_BASE_CELL =
-  "border border-slate-200 bg-[#f9fbfc] px-3 py-3 text-center text-xs font-bold uppercase tracking-wide text-slate-900";
-const SERVER_USAGE_GROUP_CELL =
-  "border border-slate-200 bg-[#f9fbfc] px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-slate-900";
-const SERVER_USAGE_FIELD_CELL = "border border-slate-200 bg-[#f9fbfc] px-3 py-1.5 text-center text-xs font-bold text-slate-900";
-const SERVER_USAGE_UNIT_CELL = "border border-slate-200 bg-[#f9fbfc] px-3 py-1 text-center text-[10px] font-medium text-slate-500";
-const SERVER_USAGE_DATA_CELL = "border border-slate-200 bg-white px-3 py-2 whitespace-nowrap text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300";
+// The header keeps its ruled grid — the three stacked rows (group / field /
+// unit) need the lines to show which columns each group covers. Only left and
+// top edges are drawn, plus the closing right/bottom: the table is
+// border-separate (so the hovered row can round its ends), and under that
+// model borders no longer collapse, so bordering all four sides would paint
+// every interior rule twice.
+const SERVER_USAGE_HEAD_BASE =
+  "border-slate-200 bg-[#f9fbfc] px-3 text-center text-xs font-bold uppercase tracking-wide text-slate-900 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-200";
+const SERVER_USAGE_BASE_CELL = `${SERVER_USAGE_HEAD_BASE} border-y border-l py-3`;
+// Closes the right-hand edge of the header block.
+const SERVER_USAGE_BASE_CELL_LAST = `${SERVER_USAGE_BASE_CELL} border-r`;
+const SERVER_USAGE_GROUP_CELL = `${SERVER_USAGE_HEAD_BASE} border-l border-t py-2`;
+const SERVER_USAGE_FIELD_CELL = `${SERVER_USAGE_HEAD_BASE} border-l border-t py-1.5 normal-case`;
+const SERVER_USAGE_UNIT_CELL = `${SERVER_USAGE_HEAD_BASE} border-y border-l py-1 text-[10px] font-medium normal-case text-slate-500 dark:text-slate-400`;
+// Every cell keeps a full border at rest — top transparent, bottom the row
+// separator — so hover only recolours it into a card around the row, with no
+// 1px height jump.
+const SERVER_USAGE_DATA_CELL =
+  "border border-x-transparent border-t-transparent border-b-slate-50 bg-white px-5 py-2 whitespace-nowrap text-slate-700 group-hover:border-y-slate-200 dark:border-b-slate-800/60 dark:bg-slate-900 dark:text-slate-300 dark:group-hover:border-y-slate-700";
+const SERVER_USAGE_ROUND_LEFT = "rounded-l-lg group-hover:border-l-slate-200 dark:group-hover:border-l-slate-700";
+const SERVER_USAGE_ROUND_RIGHT = "rounded-r-lg group-hover:border-r-slate-200 dark:group-hover:border-r-slate-700";
 
-const SERVER_USAGE_PAGE_SIZE = 15;
+const SERVER_USAGE_PAGE_SIZE = 20;
 
 export function ServerUsageView({
   usage,
@@ -338,7 +353,6 @@ export function ServerUsageView({
   onEdit,
   dateRange = { from: "", to: "" },
   onDateRangeChange,
-  onClearDateRange,
 }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
@@ -349,7 +363,7 @@ export function ServerUsageView({
     const term = search.trim().toLowerCase();
     if (!term) return usage;
     return usage.filter((record) =>
-      [record.device_name, record.ip_address, record.owner_name, record.due_date].some((value) =>
+      [record.device_name, record.ip_address, record.owner_name].some((value) =>
         String(value ?? "").toLowerCase().includes(term)
       )
     );
@@ -375,8 +389,10 @@ export function ServerUsageView({
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+      <div className="rounded-xl bg-white dark:bg-slate-900">
+        {/* z-20 matches the other pages' sticky bars, so a hovered row passes
+            under this one rather than over it. */}
+        <div className="sticky top-14 z-20 flex flex-wrap items-center justify-between gap-3 bg-white py-2 dark:bg-slate-900">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Server Usage")}</h2>
             {!isLoading && !error && (
@@ -385,75 +401,44 @@ export function ServerUsageView({
               </p>
             )}
           </div>
-          {!isLoading && !error && usage.length > 0 && (
-            <div className="relative w-56">
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={14} />
-              <input
-                id="server-usage-search"
-                type="text"
-                autoComplete="off"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("Search...")}
-                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-14 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:bg-white dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-800 "
-              />
-              {search ? (
-                <button
-                  type="button"
-                  onClick={() => setSearch("")}
-                  aria-label={t("Clear search")}
-                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                >
-                  <X size={13} />
-                </button>
-              ) : (
-                <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
-                  Ctrl K
-                </kbd>
+          {!isLoading && !error && (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative w-96">
+                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={14} />
+                <input
+                  id="server-usage-search"
+                  type="text"
+                  autoComplete="off"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t("Name / IP Address / Owner")}
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-9 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:bg-white dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    aria-label={t("Clear search")}
+                    className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                  >
+                    <X size={13} className="block" />
+                  </button>
+                )}
+              </div>
+
+              {onDateRangeChange && (
+                <DateRangePicker
+                  from={dateRange.from}
+                  to={dateRange.to}
+                  onApply={(from, to) => {
+                    onDateRangeChange("from", from);
+                    onDateRangeChange("to", to);
+                  }}
+                />
               )}
             </div>
           )}
         </div>
-
-        {onDateRangeChange && (
-          <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 bg-slate-50/60 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/40">
-            <div>
-              <label htmlFor="server-usage-from" className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-400">
-                {t("From")}
-              </label>
-              <input
-                id="server-usage-from"
-                type="date"
-                autoComplete="off"
-                value={dateRange.from}
-                onChange={(e) => onDateRangeChange("from", e.target.value)}
-                className={formInputClass}
-              />
-            </div>
-            <div>
-              <label htmlFor="server-usage-to" className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-400">
-                {t("To")}
-              </label>
-              <input
-                id="server-usage-to"
-                type="date"
-                autoComplete="off"
-                value={dateRange.to}
-                onChange={(e) => onDateRangeChange("to", e.target.value)}
-                className={formInputClass}
-              />
-            </div>
-            {hasActiveDateRange && (
-              <button
-                type="button"
-                onClick={onClearDateRange}
-                className="inline-flex h-10 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
-              >
-                {t("Clear filters")}
-              </button>
-            )}
-          </div>
-        )}
 
         {isLoading ? (
           <div className="px-5 py-10 text-center text-[13px] text-slate-500 dark:text-slate-400">{t("Loading server usage...")}</div>
@@ -474,12 +459,20 @@ export function ServerUsageView({
             </button>
           </div>
         ) : usage.length === 0 ? (
-          <EmptyState icon={Activity} title={t("No server usage found")} description={t("Server usage records will appear here.")} />
+          <EmptyState
+            icon={Activity}
+            title={t("No server usage found")}
+            description={
+              hasActiveDateRange
+                ? t("No server usage in this date range.")
+                : t("Server usage records will appear here.")
+            }
+          />
         ) : filteredUsage.length === 0 ? (
           <EmptyState icon={Activity} title={t("No server usage found")} description={t("No server usage matches", { term: search })} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-[13px]">
+            <table className="w-full border-separate border-spacing-0 text-left text-[13px]">
               <thead>
                 <tr>
                   <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>{t("No.")}</th>
@@ -487,8 +480,8 @@ export function ServerUsageView({
                   <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>{t("Name")}</th>
                   <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>{t("IP Address")}</th>
                   <th colSpan={3} className={SERVER_USAGE_GROUP_CELL}>{t("Total Capacity")}</th>
-                  <th colSpan={3} className={SERVER_USAGE_GROUP_CELL}>{t("Usage")}</th>
-                  <th rowSpan={3} className={SERVER_USAGE_BASE_CELL}>{t("Owner")}</th>
+                  <th colSpan={3} className={`${SERVER_USAGE_GROUP_CELL} border-r`}>{t("Usage")}</th>
+                  <th rowSpan={3} className={SERVER_USAGE_BASE_CELL_LAST}>{t("Owner")}</th>
                 </tr>
                 <tr>
                   <th className={SERVER_USAGE_FIELD_CELL}>{t("CPU")}</th>
@@ -496,7 +489,7 @@ export function ServerUsageView({
                   <th className={SERVER_USAGE_FIELD_CELL}>{t("HDD")}</th>
                   <th className={SERVER_USAGE_FIELD_CELL}>{t("CPU")}</th>
                   <th className={SERVER_USAGE_FIELD_CELL}>{t("Memory")}</th>
-                  <th className={SERVER_USAGE_FIELD_CELL}>{t("HDD")}</th>
+                  <th className={`${SERVER_USAGE_FIELD_CELL} border-r`}>{t("HDD")}</th>
                 </tr>
                 <tr>
                   {/* Usage's CPU/Memory are percentages in the real data, not
@@ -507,7 +500,7 @@ export function ServerUsageView({
                   <th className={SERVER_USAGE_UNIT_CELL}>GB</th>
                   <th className={SERVER_USAGE_UNIT_CELL}>%</th>
                   <th className={SERVER_USAGE_UNIT_CELL}>%</th>
-                  <th className={SERVER_USAGE_UNIT_CELL}>GB</th>
+                  <th className={`${SERVER_USAGE_UNIT_CELL} border-r`}>GB</th>
                 </tr>
               </thead>
               <tbody>
@@ -515,13 +508,9 @@ export function ServerUsageView({
                   <tr
                     key={record.usage_id ?? index}
                     onClick={onEdit ? () => onEdit(record) : undefined}
-                    className={
-                      onEdit
-                        ? "group relative cursor-pointer transition hover:z-10 hover:shadow-[0_1px_2px_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.35)]"
-                        : undefined
-                    }
+                    className={onEdit ? "group cursor-pointer" : undefined}
                   >
-                    <td className={`${SERVER_USAGE_DATA_CELL} ${onEdit ? "group-hover:relative group-hover:z-10 group-hover:rounded-l-lg" : ""}`}>
+                    <td className={`${SERVER_USAGE_DATA_CELL} ${SERVER_USAGE_ROUND_LEFT}`}>
                       {(page - 1) * SERVER_USAGE_PAGE_SIZE + index + 1}
                     </td>
                     <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.due_date)}</td>
@@ -533,7 +522,7 @@ export function ServerUsageView({
                     <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.cpu_usage_pct)}</td>
                     <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.memory_usage_pct)}</td>
                     <td className={SERVER_USAGE_DATA_CELL}>{formatFieldValue(record.hdd_usage_gb)}</td>
-                    <td className={`${SERVER_USAGE_DATA_CELL} ${onEdit ? "group-hover:relative group-hover:z-10 group-hover:rounded-r-lg" : ""}`}>
+                    <td className={`${SERVER_USAGE_DATA_CELL} ${SERVER_USAGE_ROUND_RIGHT}`}>
                       {formatFieldValue(record.owner_name)}
                     </td>
                   </tr>
@@ -544,12 +533,7 @@ export function ServerUsageView({
         )}
 
         {!isLoading && !error && filteredUsage.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            <span>
-              {t("Showing")} {(page - 1) * SERVER_USAGE_PAGE_SIZE + 1}
-              {"–"}
-              {Math.min(page * SERVER_USAGE_PAGE_SIZE, filteredUsage.length)} {t("of")} {filteredUsage.length}
-            </span>
+          <div className="flex flex-wrap items-center justify-center gap-3 border-t border-slate-100 px-5 py-3 dark:border-slate-800">
             <Pagination currentPage={page} pageCount={pageCount} onPageChange={setPage} />
           </div>
         )}
@@ -591,10 +575,10 @@ export function ServerUsageEditModal({ target, values, onChange, onSubmit, onClo
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label={t("Close")}
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 
@@ -613,6 +597,7 @@ export function ServerUsageEditModal({ target, values, onChange, onSubmit, onClo
                   autoComplete="off"
                   value={values.cpu_usage_pct}
                   onChange={(e) => onChange("cpu_usage_pct", e.target.value)}
+                  placeholder={t("e.g. 45")}
                   className={formInputClass}
                   disabled={isSubmitting}
                 />
@@ -624,6 +609,7 @@ export function ServerUsageEditModal({ target, values, onChange, onSubmit, onClo
                   autoComplete="off"
                   value={values.memory_usage_pct}
                   onChange={(e) => onChange("memory_usage_pct", e.target.value)}
+                  placeholder={t("e.g. 60")}
                   className={formInputClass}
                   disabled={isSubmitting}
                 />
@@ -635,6 +621,7 @@ export function ServerUsageEditModal({ target, values, onChange, onSubmit, onClo
                   autoComplete="off"
                   value={values.hdd_usage_gb}
                   onChange={(e) => onChange("hdd_usage_gb", e.target.value)}
+                  placeholder={t("e.g. 250")}
                   className={formInputClass}
                   disabled={isSubmitting}
                 />

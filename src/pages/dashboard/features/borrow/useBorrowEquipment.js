@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchAssignFormData, fetchAssignableEquipment, fetchAssignEmployees } from "../../../../services/assignService";
 import { createBorrow } from "../../../../services/borrowService";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
-import { getEquipmentDisplayName } from "../../dashboard.utils";
+import { filterDevicesByQuery, filterEmployeesByQuery, getEquipmentDisplayName } from "../../dashboard.utils";
 
 // Borrowing draws from the same pool as assigning: only "Working - IT Stock"
 // is flagged is_borrowable, which is exactly what /api/assign/available
@@ -65,7 +65,7 @@ export function useBorrowEquipment({ isActive, user, onBorrowed }) {
     let ignore = false;
     const timer = setTimeout(() => {
       setIsDeviceLoading(true);
-      fetchAssignableEquipment({ q: deviceQuery.trim(), category: deviceCategory })
+      fetchAssignableEquipment({ category: deviceCategory })
         .then((data) => {
           if (ignore) return;
           setDeviceOptions(Array.isArray(data?.equipment) ? data.equipment : []);
@@ -83,7 +83,14 @@ export function useBorrowEquipment({ isActive, user, onBorrowed }) {
       ignore = true;
       clearTimeout(timer);
     };
-  }, [isActive, selectedDevice, deviceQuery, deviceCategory]);
+  }, [isActive, selectedDevice, deviceCategory]);
+
+  // Refetching is per category only; the typed query narrows what came back.
+  const filteredDeviceOptions = useMemo(
+    () => filterDevicesByQuery(deviceOptions, deviceQuery),
+    [deviceOptions, deviceQuery]
+  );
+
 
   useEffect(() => {
     if (!isActive || selectedEmployee) return;
@@ -91,7 +98,7 @@ export function useBorrowEquipment({ isActive, user, onBorrowed }) {
     let ignore = false;
     const timer = setTimeout(() => {
       setIsEmployeeLoading(true);
-      fetchAssignEmployees({ q: employeeQuery.trim() })
+      fetchAssignEmployees()
         .then((data) => {
           if (ignore) return;
           setEmployeeOptions(Array.isArray(data?.employees) ? data.employees : []);
@@ -109,7 +116,14 @@ export function useBorrowEquipment({ isActive, user, onBorrowed }) {
       ignore = true;
       clearTimeout(timer);
     };
-  }, [isActive, selectedEmployee, employeeQuery]);
+  }, [isActive, selectedEmployee]);
+
+  // Fetched once; the typed query narrows what came back.
+  const filteredEmployeeOptions = useMemo(
+    () => filterEmployeesByQuery(employeeOptions, employeeQuery),
+    [employeeOptions, employeeQuery]
+  );
+
 
   function handleRetryFormData() {
     setIsFormDataLoading(true);
@@ -203,7 +217,7 @@ export function useBorrowEquipment({ isActive, user, onBorrowed }) {
     handleDeviceQueryChange: setDeviceQuery,
     deviceCategory,
     handleDeviceCategoryChange: setDeviceCategory,
-    deviceOptions,
+    deviceOptions: filteredDeviceOptions,
     isDeviceLoading,
     deviceError,
     selectedDevice,
@@ -212,7 +226,7 @@ export function useBorrowEquipment({ isActive, user, onBorrowed }) {
 
     employeeQuery,
     handleEmployeeQueryChange: setEmployeeQuery,
-    employeeOptions,
+    employeeOptions: filteredEmployeeOptions,
     isEmployeeLoading,
     employeeError,
     selectedEmployee,

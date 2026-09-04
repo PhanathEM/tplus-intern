@@ -132,13 +132,13 @@ export function DeviceReplacementCategoryBar({ categories = [], selected, onSele
   );
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-      <CategoryTabs options={categoryOptions} selected={selected} onSelect={onSelect} />
+    <div className="rounded-xl bg-white dark:bg-slate-900">
+      <CategoryTabs options={categoryOptions} selected={selected} onSelect={onSelect} centered />
     </div>
   );
 }
 
-const REPLACEABLE_PAGE_SIZE = 15;
+const REPLACEABLE_PAGE_SIZE = 20;
 
 export function ReplaceableDevicesView({
   devices,
@@ -183,8 +183,8 @@ export function ReplaceableDevicesView({
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+      <div className="rounded-xl bg-white dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 py-2">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Devices you can replace")}</h2>
             {!isLoading && !error && (
@@ -237,12 +237,7 @@ export function ReplaceableDevicesView({
         />
 
         {!isLoading && !error && numberedDevices.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            <span>
-              {t("Showing")} {(page - 1) * REPLACEABLE_PAGE_SIZE + 1}
-              {"–"}
-              {Math.min(page * REPLACEABLE_PAGE_SIZE, numberedDevices.length)} {t("of")} {numberedDevices.length}
-            </span>
+          <div className="flex flex-wrap items-center justify-center gap-3 border-t border-slate-100 px-5 py-3 dark:border-slate-800">
             <Pagination currentPage={page} pageCount={pageCount} onPageChange={setPage} />
           </div>
         )}
@@ -314,16 +309,15 @@ function ReplacementHistoryRow({ group, onViewDetails }) {
   const latest = group.latestEntry;
   const deviceLabel = latest.computer_name || latest.device_name || latest.device_model || latest.asset_code || "—";
 
-  // Gmail's row hover: the row lifts off the list as its own little white
-  // card (shadow + rounded ends) instead of just tinting the background.
-  const cellClass = "whitespace-nowrap px-4 py-3 group-hover:bg-white dark:group-hover:bg-slate-800";
+  // Every cell keeps a full border at rest — top transparent, bottom the row
+  // separator — so hover only recolours it into a card around the row, with no
+  // 1px height jump.
+  const cellClass =
+    "whitespace-nowrap border border-x-transparent border-t-transparent border-b-slate-50 bg-white px-5 py-2 group-hover:border-y-slate-200 dark:border-b-slate-800/60 dark:bg-slate-900 dark:group-hover:border-y-slate-700";
 
   return (
-    <tr
-      onClick={() => onViewDetails(group)}
-      className="group relative cursor-pointer transition hover:z-10 hover:shadow-[0_1px_2px_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.35)]"
-    >
-      <td className={`${cellClass} rounded-l-lg`}>
+    <tr onClick={() => onViewDetails(group)} className="group cursor-pointer">
+      <td className={`${cellClass} rounded-l-lg group-hover:border-l-slate-200 dark:group-hover:border-l-slate-700`}>
         <div className="flex items-center gap-2.5">
           <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
             {getInitials(group.owner_name)}
@@ -340,7 +334,7 @@ function ReplacementHistoryRow({ group, onViewDetails }) {
       </td>
       <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{latest.asset_code || "—"}</td>
       <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{latest.category_name || "—"}</td>
-      <td className={`${cellClass} rounded-r-lg`}>
+      <td className={`${cellClass} rounded-r-lg group-hover:border-r-slate-200 dark:group-hover:border-r-slate-700`}>
         <div className="inline-flex items-center gap-2 text-[13px]">
           <span className="font-semibold text-slate-700 dark:text-slate-300">{latest.part_name || t("Part")}</span>
           <span className="rounded-md bg-rose-50 px-2 py-0.5 font-mono text-xs font-semibold text-rose-600 line-through dark:bg-rose-950/40 dark:text-rose-400">
@@ -445,10 +439,10 @@ function ReplacementDetailModal({ group, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label={t("Close")}
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 
@@ -470,6 +464,8 @@ function formatReplacementDate(value) {
     : date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+const HISTORY_PAGE_SIZE = 20;
+
 export function ReplacementHistoryView({
   replacements,
   isLoading,
@@ -478,6 +474,8 @@ export function ReplacementHistoryView({
 }) {
   const { t } = useTranslation();
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   // One row per employee — repeated replacements for the same person are
   // folded into a single row instead of repeating their name; the full
@@ -515,16 +513,69 @@ export function ReplacementHistoryView({
     });
   }, [replacements]);
 
+  // Matches the four identifying columns; the computer name falls back the
+  // same way the cell does, so what you see in the row is what you can type.
+  const filteredGroups = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return employeeGroups;
+
+    return employeeGroups.filter((group) =>
+      [
+        group.owner_name,
+        group.staff_code,
+        group.latestEntry.computer_name,
+        group.latestEntry.device_name,
+        group.latestEntry.device_model,
+        group.latestEntry.asset_code,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term))
+    );
+  }, [employeeGroups, search]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredGroups.length / HISTORY_PAGE_SIZE));
+  // Clamped rather than reset in an effect: searching can drop the page count
+  // below the page you were on, which would otherwise show an empty table.
+  const safePage = Math.min(page, pageCount);
+  const paginatedGroups = filteredGroups.slice((safePage - 1) * HISTORY_PAGE_SIZE, safePage * HISTORY_PAGE_SIZE);
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-          <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Device Replacement History")}</h2>
-          {!isLoading && !error && (
-            <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-              {t("employee_count", { count: employeeGroups.length })} · {t("replacement_count", { count: replacements.length })}
-            </p>
-          )}
+      <div className="rounded-xl bg-white dark:bg-slate-900">
+        {/* z-20 matches the other pages' sticky bars, so a hovered row passes
+            under this one rather than over it. */}
+        <div className="sticky top-14 z-20 flex flex-wrap items-center justify-between gap-3 bg-white py-2 dark:bg-slate-900">
+          <div>
+            <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Device Replacement History")}</h2>
+            {!isLoading && !error && (
+              <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
+                {t("employee_count", { count: employeeGroups.length })} · {t("replacement_count", { count: replacements.length })}
+              </p>
+            )}
+          </div>
+
+          <div className="relative w-[26rem]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={14} />
+            <input
+              id="replacement-history-search"
+              type="text"
+              autoComplete="off"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("Employee / Staff Code / Computer / Asset Code")}
+              className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-9 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:bg-white dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label={t("Clear search")}
+                className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+              >
+                <X size={13} className="block" />
+              </button>
+            )}
+          </div>
         </div>
 
         {isLoading ? (
@@ -545,32 +596,44 @@ export function ReplacementHistoryView({
               {t("Retry")}
             </button>
           </div>
-        ) : employeeGroups.length === 0 ? (
+        ) : filteredGroups.length === 0 ? (
           <EmptyState
             icon={RefreshCw}
             title={t("No replacements found")}
-            description={t("Replacement records will appear here.")}
+            description={search ? t("No employee matches", { term: search }) : t("Replacement records will appear here.")}
           />
         ) : (
+          <>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
+            <table className="min-w-full border-separate border-spacing-0 text-left text-[13px]">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Employee")}</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Staff Code")}</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Computer")}</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Asset Code")}</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Category")}</th>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("Replacement")}</th>
+                  {[t("Employee"), t("Staff Code"), t("Computer"), t("Asset Code"), t("Category"), t("Replacement")].map(
+                    (label) => (
+                      <th
+                        key={label}
+                        className="whitespace-nowrap border-y border-slate-100 px-5 py-2 font-semibold leading-none dark:border-slate-800"
+                      >
+                        {label}
+                      </th>
+                    )
+                  )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
-                {employeeGroups.map((group) => (
+              <tbody>
+                {paginatedGroups.map((group) => (
                   <ReplacementHistoryRow key={group.key} group={group} onViewDetails={setSelectedGroup} />
                 ))}
               </tbody>
             </table>
           </div>
+
+          {pageCount > 1 && (
+            <div className="flex flex-wrap items-center justify-center gap-3 border-t border-slate-100 px-5 py-3 dark:border-slate-800">
+              <Pagination currentPage={safePage} pageCount={pageCount} onPageChange={setPage} />
+            </div>
+          )}
+          </>
         )}
       </div>
 
@@ -660,10 +723,10 @@ export function ReplaceDeviceDialog({
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label={t("Close")}
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 
@@ -686,7 +749,7 @@ export function ReplaceDeviceDialog({
                       type="button"
                       onClick={() => onSelectPartType(partType.part_type_id)}
                       className={`inline-flex h-9 items-center rounded-full border px-3.5 text-[13px] font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${isSelected
-                        ? "border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-900"
+                        ? "border-[#fddd1c] bg-[#fddd1c] text-slate-900"
                         : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
                         }`}
                     >

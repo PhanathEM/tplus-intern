@@ -1,12 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { FiActivity as ActivityIcon, FiBell as Bell, FiPieChart as PieChartIcon } from "react-icons/fi";
+import { FiActivity as ActivityIcon, FiPieChart as PieChartIcon } from "react-icons/fi";
 import { EmptyState } from "../../components/SharedControls";
 import { DonutChart, DonutLegend } from "./charts";
-
-const TONE_DOT_CLASS = {
-  danger: "bg-rose-500",
-  warning: "bg-amber-500",
-};
 
 // A distinct solid gradient per stat card — picked per label where it reads
 // naturally (Recycle Bin = slate, etc.), falling back to a cycling palette
@@ -78,10 +73,10 @@ function StatCard({ item, count, isLoading, onSelect, colorIndex }) {
   );
 }
 
-function InsightPanel({ title, icon: Icon, isLoading, isEmpty, emptyMessage, children }) {
+function InsightPanel({ title, icon: Icon, isLoading, isEmpty, emptyMessage, className = "", children }) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+    <div className={`rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 ${className}`}>
       <div className="mb-4 flex items-center gap-2">
         {Icon && <Icon className="text-slate-400 dark:text-slate-500" size={16} />}
         <h3 className="text-[13px] font-semibold text-slate-950 dark:text-white">{title}</h3>
@@ -116,9 +111,10 @@ function EquipmentStatusPanel({ statusBreakdown, isLoading, t }) {
   );
 }
 
-function CategoryOccupancyPanel({ categoryOccupancy, isLoading, t }) {
+function CategoryOccupancyPanel({ categoryOccupancy, isLoading, t, className }) {
   return (
     <InsightPanel
+      className={className}
       title={t("Equipment In Use by Category")}
       icon={ActivityIcon}
       isLoading={isLoading}
@@ -144,44 +140,6 @@ function CategoryOccupancyPanel({ categoryOccupancy, isLoading, t }) {
         ))}
       </ul>
     </InsightPanel>
-  );
-}
-
-function NotificationsPanel({ notifications, onOpenNotification }) {
-  const { t } = useTranslation();
-  return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-        <h3 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Notifications")}</h3>
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-          {notifications.length}
-        </span>
-      </div>
-      {notifications.length === 0 ? (
-        <EmptyState icon={Bell} title={t("All clear")} description={t("No alerts need your attention right now.")} />
-      ) : (
-        <div className="divide-y divide-slate-50 dark:divide-slate-800">
-          {notifications.slice(0, 6).map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onOpenNotification(item)}
-              className="flex w-full items-start gap-3 px-5 py-3 text-left outline-none transition hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-800/60 dark:focus-visible:bg-slate-800/60"
-            >
-              <span
-                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                  item.unread ? TONE_DOT_CLASS[item.tone] || "bg-orange-500" : "bg-transparent"
-                }`}
-              />
-              <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-slate-950 dark:text-white">{item.title}</p>
-                <p className="mt-0.5 truncate text-[13px] text-slate-500 dark:text-slate-400">{item.detail}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -236,8 +194,6 @@ export function DashboardHomeView({
   stats,
   isStatsLoading,
   onSelectView,
-  notifications,
-  onOpenNotification,
   recentActivity,
   statusBreakdown = [],
   categoryOccupancy = [],
@@ -288,16 +244,31 @@ export function DashboardHomeView({
         </div>
       ) : null}
 
-      {hasEquipmentAccess && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <EquipmentStatusPanel statusBreakdown={statusBreakdown} isLoading={isInsightsLoading} t={t} />
-          <CategoryOccupancyPanel categoryOccupancy={categoryOccupancy} isLoading={isInsightsLoading} t={t} />
-        </div>
-      )}
+      {/* Two explicit columns rather than one three-cell grid: grid rows are
+          uniform in height, so a third cell still started below the tall
+          category list. Stacking recent activity under the donut inside its
+          own column puts it right up against it. Notifications aren't
+          repeated here - they live in the header bell.
 
+          The grid stretches (no items-start), so the category panel matches
+          the combined height of the two panels beside it and the two columns
+          end level. */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <NotificationsPanel notifications={notifications} onOpenNotification={onOpenNotification} />
-        <RecentActivityPanel entries={recentActivity} />
+        <div className="flex flex-col gap-4">
+          {hasEquipmentAccess && (
+            <EquipmentStatusPanel statusBreakdown={statusBreakdown} isLoading={isInsightsLoading} t={t} />
+          )}
+          <RecentActivityPanel entries={recentActivity} />
+        </div>
+
+        {hasEquipmentAccess && (
+          <CategoryOccupancyPanel
+            categoryOccupancy={categoryOccupancy}
+            isLoading={isInsightsLoading}
+            t={t}
+            className="h-full"
+          />
+        )}
       </div>
     </div>
   );

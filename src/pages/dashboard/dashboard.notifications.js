@@ -117,7 +117,12 @@ export function buildDashboardNotifications({ currentBorrows = [], availableStoc
           loan.borrower_name ? ` by ${loan.borrower_name}` : ""
         }`,
         time: "Needs action",
-        targetView: "Currently Borrowed",
+        // Currently Borrowed stopped being its own sidebar route when it moved
+        // onto the Borrow page, so the jump names the page plus the tab.
+        targetView: "Borrow",
+        targetTab: "Currently Borrowed",
+        // Lands with the table already narrowed to the late loans.
+        targetOverdue: true,
         tone: "danger",
       });
     });
@@ -135,7 +140,8 @@ export function buildDashboardNotifications({ currentBorrows = [], availableStoc
         title: "Borrow return due soon",
         detail: `${equipmentName(loan)} is due ${days === 0 ? "today" : `in ${days} day${days === 1 ? "" : "s"}`}`,
         time: formatDate(loan.expected_return_date),
-        targetView: "Currently Borrowed",
+        targetView: "Borrow",
+        targetTab: "Currently Borrowed",
         tone: "warning",
       });
     });

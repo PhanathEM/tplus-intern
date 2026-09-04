@@ -10,8 +10,27 @@ import { fetchPartReplacements } from "../../../../services/partReplacementServi
 import { fetchPartStock } from "../../../../services/partStockService";
 import { fetchCurrentPartBorrows } from "../../../../services/partBorrowService";
 import { fetchServerUsage } from "../../../../services/serverUsageService";
+import { fetchStatuses } from "../../../../services/statusService";
+import { fetchPartStatuses } from "../../../../services/partStatusService";
+import { fetchCategories } from "../../../../services/categoryService";
+import { fetchPartTypes } from "../../../../services/partTypeService";
+import {
+  exportRecordListToExcel,
+  exportRecordListToPdf,
+  exportRecordSectionsToExcel,
+  exportRecordSectionsToPdf,
+  exportManagementListToExcel,
+  exportManagementListToPdf,
+  exportManagementsToExcel,
+  exportManagementsToPdf,
+} from "./reportExport";
 import { getLicenseExpiryInfo } from "../../dashboard.notifications";
-import { normalizeRecordList } from "../../dashboard.utils";
+import {
+  getEquipmentDisplayName,
+  matchesEmployeeDepartment,
+  matchesEquipmentDepartment,
+  normalizeRecordList,
+} from "../../dashboard.utils";
 
 const EMPTY_REPORT = {
   // `list` is the raw directory rows, kept alongside the counts so the
@@ -19,14 +38,33 @@ const EMPTY_REPORT = {
   // reproduce names, phones or assigned devices).
   employees: { total: 0, bySex: [], list: [] },
   departments: { total: 0, rows: [], list: [] },
-  equipment: { total: 0, byStatus: [], byCategory: [], byAssignment: [] },
-  licenses: { total: 0, byStatus: [] },
+  equipment: { total: 0, byStatus: [], byCategory: [], byAssignment: [], list: [] },
+  licenses: { total: 0, byStatus: [], list: [] },
   borrow: { currentlyBorrowed: 0, overdue: 0, historyTotal: 0 },
-  replacement: { total: 0 },
-  partStock: { lineCount: 0, totalQuantity: 0 },
-  partBorrow: { current: 0 },
+  replacement: { total: 0, list: [] },
+  partStock: { lineCount: 0, totalQuantity: 0, list: [] },
+  partBorrow: { current: 0, list: [] },
   serverUsage: { total: 0 },
+  managements: {
+    statuses: 0,
+    partStatuses: 0,
+    categories: 0,
+    partTypes: 0,
+    // The rows themselves, so each line can be exported on its own -
+    // the counts alone can't reproduce names or descriptions.
+    lists: { statuses: [], partStatuses: [], categories: [], partTypes: [] },
+  },
 };
+
+// Each of these endpoints answers with either a bare array or a single
+// wrapper key, so the count goes through one place rather than four.
+function toList(result, key) {
+  if (result.status !== "fulfilled") return [];
+  const data = result.value;
+  if (Array.isArray(data)) return data;
+  if (key && Array.isArray(data?.[key])) return data[key];
+  return [];
+}
 
 function countBy(list, getKey, fallback = "Unspecified") {
   const counts = new Map();
@@ -51,6 +89,10 @@ function loadReport() {
     fetchPartStock(),
     fetchCurrentPartBorrows(),
     fetchServerUsage(),
+    fetchStatuses(),
+    fetchPartStatuses(),
+    fetchCategories(),
+    fetchPartTypes(),
   ]).then(
     ([
       employeesResult,
@@ -63,6 +105,10 @@ function loadReport() {
       partStockResult,
       partBorrowResult,
       serverUsageResult,
+      statusesResult,
+      partStatusesResult,
+      categoriesResult,
+      partTypesResult,
     ]) => {
       const report = { ...EMPTY_REPORT };
 
@@ -81,6 +127,10 @@ function loadReport() {
           total: departments.length,
           rows: departments.map((dept) => ({
             label: dept.department_name || dept.department_code || "—",
+            // Kept alongside the label so a row export can match employees on
+            // either the code or the full name, whichever they carry.
+            code: dept.department_code || "",
+            name: dept.department_name || "",
             employeeCount: dept.employee_count ?? 0,
             equipmentCount: dept.equipment_count ?? 0,
           })),
@@ -92,6 +142,7 @@ function loadReport() {
         const items = Array.isArray(equipmentResult.value) ? equipmentResult.value : [];
         report.equipment = {
           total: items.length,
+          list: items,
           byStatus: countBy(items, (item) => item.status_name || item.status),
           byCategory: countBy(items, (item) => item.category_name || item.category),
           // An item with an owner on file is currently assigned to someone —
@@ -105,6 +156,7 @@ function loadReport() {
         report.licenses = {
           total: licenses.length,
           byStatus: countBy(licenses, (license) => getLicenseExpiryInfo(license)?.label || license.status),
+          list: licenses,
         };
       }
 
@@ -121,8 +173,9 @@ function loadReport() {
 
       if (replacementsResult.status === "fulfilled") {
         const data = replacementsResult.value;
-        report.replacement.total =
-          typeof data?.count === "number" ? data.count : Array.isArray(data?.replacements) ? data.replacements.length : 0;
+        const rows = Array.isArray(data?.replacements) ? data.replacements : [];
+        report.replacement.total = typeof data?.count === "number" ? data.count : rows.length;
+        report.replacement.list = rows;
       }
 
       if (partStockResult.status === "fulfilled") {
@@ -130,6 +183,7 @@ function loadReport() {
         report.partStock = {
           lineCount: stock.length,
           totalQuantity: stock.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0),
+          list: stock,
         };
       }
 
@@ -137,11 +191,27 @@ function loadReport() {
         const data = partBorrowResult.value;
         const borrowed = Array.isArray(data?.borrowed) ? data.borrowed : Array.isArray(data) ? data : [];
         report.partBorrow.current = borrowed.length;
+        report.partBorrow.list = borrowed;
       }
 
       if (serverUsageResult.status === "fulfilled") {
         report.serverUsage.total = normalizeRecordList(serverUsageResult.value).length;
       }
+
+      const managementLists = {
+        statuses: toList(statusesResult, "statuses"),
+        partStatuses: toList(partStatusesResult, "statuses"),
+        categories: toList(categoriesResult, "categories"),
+        partTypes: toList(partTypesResult, "part_types"),
+      };
+
+      report.managements = {
+        statuses: managementLists.statuses.length,
+        partStatuses: managementLists.partStatuses.length,
+        categories: managementLists.categories.length,
+        partTypes: managementLists.partTypes.length,
+        lists: managementLists,
+      };
 
       return report;
     }
@@ -155,6 +225,15 @@ export function useReport({ isActive }) {
   const [fetchToken, setFetchToken] = useState(0);
   const [isDownloadingEmployeesPdf, setIsDownloadingEmployeesPdf] = useState(false);
   const [isDownloadingEmployeesExcel, setIsDownloadingEmployeesExcel] = useState(false);
+  // "<sex>-pdf" / "<sex>-excel" while that one row is exporting.
+  const [downloadingSex, setDownloadingSex] = useState("");
+  // "<listKey>-pdf" / "<listKey>-excel" while that row is exporting.
+  const [downloadingManagement, setDownloadingManagement] = useState("");
+  // "<department code or name>-pdf" / "-excel" while that row is exporting.
+  const [downloadingDepartment, setDownloadingDepartment] = useState("");
+  // "<row key>-pdf" / "-excel" for the Replacement and Software License rows.
+  const [downloadingReplacement, setDownloadingReplacement] = useState("");
+  const [downloadingLicense, setDownloadingLicense] = useState("");
 
   useEffect(() => {
     if (!isActive) return;
@@ -194,10 +273,13 @@ export function useReport({ isActive }) {
   // The staff-list export needs each employee's assigned devices, which only
   // the per-employee endpoint returns. A failure for one employee leaves that
   // row deviceless rather than sinking the whole export.
-  function downloadEmployeeList(setIsDownloading, exportAll) {
+  // `filter` narrows the staff list before the per-employee device lookups,
+  // so a gender export only fetches the rows it actually needs.
+  function downloadEmployeeList(setIsDownloading, exportAll, filter) {
+    const list = filter ? report.employees.list.filter(filter) : report.employees.list;
     setIsDownloading(true);
     Promise.all(
-      report.employees.list.map((employee) =>
+      list.map((employee) =>
         fetchEmployeeFull(employee.employee_id)
           .then((data) => ({ employee, devices: Array.isArray(data?.equipment) ? data.equipment : [] }))
           .catch(() => ({ employee, devices: [] }))
@@ -213,6 +295,161 @@ export function useReport({ isActive }) {
 
   function handleDownloadEmployeesExcel() {
     downloadEmployeeList(setIsDownloadingEmployeesExcel, exportAllEmployeesToExcel);
+  }
+
+  // countBy() buckets a blank sex as "Unspecified", so the filter has to
+  // match that same fallback rather than looking for the literal value.
+  function matchesSex(sex) {
+    return (employee) => (employee.sex || "Unspecified") === sex;
+  }
+
+  function handleDownloadEmployeesBySexPdf(sex) {
+    setDownloadingSex(`${sex}-pdf`);
+    downloadEmployeeList(
+      (value) => setDownloadingSex(value ? `${sex}-pdf` : ""),
+      exportAllEmployeesToPdf,
+      matchesSex(sex)
+    );
+  }
+
+  function handleDownloadEmployeesBySexExcel(sex) {
+    setDownloadingSex(`${sex}-excel`);
+    downloadEmployeeList(
+      (value) => setDownloadingSex(value ? `${sex}-excel` : ""),
+      exportAllEmployeesToExcel,
+      matchesSex(sex)
+    );
+  }
+
+  function departmentKey(row) {
+    return row.code || row.name || row.label;
+  }
+
+  function handleDownloadDepartmentEmployeesPdf(row) {
+    const key = departmentKey(row);
+    downloadEmployeeList(
+      (value) => setDownloadingDepartment(value ? `${key}-pdf` : ""),
+      exportAllEmployeesToPdf,
+      matchesEmployeeDepartment(row)
+    );
+  }
+
+  function handleDownloadDepartmentEmployeesExcel(row) {
+    const key = departmentKey(row);
+    downloadEmployeeList(
+      (value) => setDownloadingDepartment(value ? `${key}-excel` : ""),
+      exportAllEmployeesToExcel,
+      matchesEmployeeDepartment(row)
+    );
+  }
+
+  // The four Replacement rows and the lists behind them. Device Replacement
+  // and its History are the same records, which is why both rows read 51.
+  function replacementSections() {
+    return [
+      { key: "partStock", title: "Part Types of Stock Replacement", rows: report.partStock.list },
+      { key: "partBorrow", title: "Borrow a Part", rows: report.partBorrow.list },
+      { key: "deviceReplacement", title: "Device Replacement", rows: report.replacement.list },
+      { key: "replacementHistory", title: "Device Replacement History", rows: report.replacement.list },
+    ];
+  }
+
+  // The equipment side of a department row, shaped for export: the display
+  // name the tables use, plus the fields worth reading in a sheet.
+  function departmentEquipmentRows(row) {
+    return report.equipment.list.filter(matchesEquipmentDepartment(row)).map((item) => ({
+      device: getEquipmentDisplayName(item),
+      category: item.category_name || item.category || "",
+      asset_code: item.asset_code || "",
+      status: item.status_name || item.status || "",
+      owner: item.owner_name || "",
+    }));
+  }
+
+  function handleDownloadDepartmentEquipmentPdf(row) {
+    const key = departmentKey(row);
+    setDownloadingDepartment(`${key}-equipment-pdf`);
+    exportRecordListToPdf(`tplus-${key}-equipment`, `${row.label} - Equipment`, departmentEquipmentRows(row));
+    setDownloadingDepartment("");
+  }
+
+  function handleDownloadDepartmentEquipmentExcel(row) {
+    const key = departmentKey(row);
+    setDownloadingDepartment(`${key}-equipment-excel`);
+    exportRecordListToExcel(`tplus-${key}-equipment`, `${row.label} - Equipment`, departmentEquipmentRows(row));
+    setDownloadingDepartment("");
+  }
+
+  function handleDownloadReplacementPdf(rowKey) {
+    const section = replacementSections().find((item) => item.key === rowKey);
+    if (!section) return;
+    setDownloadingReplacement(`${rowKey}-pdf`);
+    exportRecordListToPdf(`tplus-${rowKey}`, section.title, section.rows);
+    setDownloadingReplacement("");
+  }
+
+  function handleDownloadReplacementExcel(rowKey) {
+    const section = replacementSections().find((item) => item.key === rowKey);
+    if (!section) return;
+    setDownloadingReplacement(`${rowKey}-excel`);
+    exportRecordListToExcel(`tplus-${rowKey}`, section.title, section.rows);
+    setDownloadingReplacement("");
+  }
+
+  function handleDownloadReplacementsPdf() {
+    exportRecordSectionsToPdf("tplus-replacement", replacementSections());
+  }
+
+  function handleDownloadReplacementsExcel() {
+    exportRecordSectionsToExcel("tplus-replacement", replacementSections());
+  }
+
+  // Licenses are bucketed by the same label the panel shows, so a row export
+  // matches on that rather than on the raw status field.
+  function licensesWithLabel(label) {
+    return report.licenses.list.filter(
+      (license) => (getLicenseExpiryInfo(license)?.label || license.status) === label
+    );
+  }
+
+  function handleDownloadLicenseByStatusPdf(label) {
+    setDownloadingLicense(`${label}-pdf`);
+    exportRecordListToPdf(`tplus-licenses-${label}`, `Software License - ${label}`, licensesWithLabel(label));
+    setDownloadingLicense("");
+  }
+
+  function handleDownloadLicenseByStatusExcel(label) {
+    setDownloadingLicense(`${label}-excel`);
+    exportRecordListToExcel(`tplus-licenses-${label}`, `Software License - ${label}`, licensesWithLabel(label));
+    setDownloadingLicense("");
+  }
+
+  function handleDownloadLicensesPdf() {
+    exportRecordListToPdf("tplus-licenses", "Software License", report.licenses.list);
+  }
+
+  function handleDownloadLicensesExcel() {
+    exportRecordListToExcel("tplus-licenses", "Software License", report.licenses.list);
+  }
+
+  function handleDownloadManagementPdf(listKey) {
+    setDownloadingManagement(`${listKey}-pdf`);
+    exportManagementListToPdf(listKey, report.managements.lists[listKey]);
+    setDownloadingManagement("");
+  }
+
+  function handleDownloadManagementExcel(listKey) {
+    setDownloadingManagement(`${listKey}-excel`);
+    exportManagementListToExcel(listKey, report.managements.lists[listKey]);
+    setDownloadingManagement("");
+  }
+
+  function handleDownloadManagementsPdf() {
+    exportManagementsToPdf(report.managements.lists);
+  }
+
+  function handleDownloadManagementsExcel() {
+    exportManagementsToExcel(report.managements.lists);
   }
 
   function handleDownloadDepartmentsPdf() {
@@ -231,6 +468,29 @@ export function useReport({ isActive }) {
     resetForEntry,
     handleDownloadEmployeesPdf,
     handleDownloadEmployeesExcel,
+    handleDownloadEmployeesBySexPdf,
+    handleDownloadEmployeesBySexExcel,
+    downloadingSex,
+    handleDownloadDepartmentEmployeesPdf,
+    handleDownloadDepartmentEmployeesExcel,
+    handleDownloadDepartmentEquipmentPdf,
+    handleDownloadDepartmentEquipmentExcel,
+    downloadingDepartment,
+    handleDownloadReplacementPdf,
+    handleDownloadReplacementExcel,
+    handleDownloadReplacementsPdf,
+    handleDownloadReplacementsExcel,
+    downloadingReplacement,
+    handleDownloadLicenseByStatusPdf,
+    handleDownloadLicenseByStatusExcel,
+    handleDownloadLicensesPdf,
+    handleDownloadLicensesExcel,
+    downloadingLicense,
+    handleDownloadManagementPdf,
+    handleDownloadManagementExcel,
+    handleDownloadManagementsPdf,
+    handleDownloadManagementsExcel,
+    downloadingManagement,
     isDownloadingEmployeesPdf,
     isDownloadingEmployeesExcel,
     handleDownloadDepartmentsPdf,

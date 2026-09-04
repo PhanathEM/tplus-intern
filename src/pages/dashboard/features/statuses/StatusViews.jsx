@@ -3,15 +3,24 @@ import { useTranslation } from "react-i18next";
 import {
   FiAlertTriangle as AlertTriangle,
   FiEdit2 as Edit2,
-  FiFileText as FileText,
-  FiGrid as Grid,
   FiPlusCircle as PlusCircle,
   FiRefreshCw as RefreshCw,
+  FiSettings as Settings,
   FiSliders as Sliders,
   FiTrash2 as Trash2,
   FiX as X,
 } from "react-icons/fi";
-import { EmptyState, FormField, formInputClass, RollingText, RowActionsMenu } from "../../components/SharedControls";
+import { EmptyState, FormField, formInputClass, RollingText } from "../../components/SharedControls";
+
+const STATUS_HEAD_CELL =
+  "whitespace-nowrap border-y border-slate-100 px-5 py-2 leading-none dark:border-slate-800";
+// Every cell keeps a full border at rest — top transparent, bottom the row
+// separator — so hover only recolours it into a card around the row, with no
+// 1px height jump.
+const STATUS_CELL =
+  "border border-x-transparent border-t-transparent border-b-slate-50 bg-white px-5 py-2 group-hover:border-y-slate-200 dark:border-b-slate-800/60 dark:bg-slate-900 dark:group-hover:border-y-slate-700";
+const STATUS_ICON_BUTTON =
+  "grid h-7 w-7 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white";
 
 export function StatusesView({
   statuses,
@@ -21,14 +30,6 @@ export function StatusesView({
   onAddNew,
   onEdit,
   onDelete,
-  onDownloadStatusPdf,
-  onDownloadStatusExcel,
-  downloadingPdfId,
-  downloadingExcelId,
-  onDownloadAllPdf,
-  onDownloadAllExcel,
-  isDownloadingAllPdf,
-  isDownloadingAllExcel,
   downloadError,
   canManage = true,
 }) {
@@ -36,8 +37,8 @@ export function StatusesView({
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+      <div className="rounded-xl bg-white dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 py-2">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Equipment statuses")}</h2>
             {!isLoading && !error && (
@@ -89,66 +90,55 @@ export function StatusesView({
           <EmptyState icon={Sliders} title={t("No statuses found")} description={t("Equipment statuses will appear here.")} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
+            <table className="min-w-full border-separate border-spacing-0 text-left text-[13px]">
               <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
-                  <th className="px-5 py-3 font-semibold">{t("Status Name")}</th>
-                  <th className="px-5 py-3 font-semibold">{t("Description")}</th>
-                  <th className="px-5 py-3 font-semibold">{t("Equipment")}</th>
-                  <th className="px-5 py-3 text-right font-semibold">
-                    <RowActionsMenu
-                      items={[
-                        {
-                          icon: FileText,
-                          label: isDownloadingAllPdf ? t("Preparing PDF...") : t("Download All PDFs"),
-                          onClick: onDownloadAllPdf,
-                        },
-                        {
-                          icon: Grid,
-                          label: isDownloadingAllExcel ? t("Preparing Excel...") : t("Download All Excel"),
-                          onClick: onDownloadAllExcel,
-                        },
-                      ]}
-                    />
+                  {[t("Status Name"), t("Description"), t("Equipment")].map((label) => (
+                    <th key={label} className={`${STATUS_HEAD_CELL} font-semibold`}>
+                      {label}
+                    </th>
+                  ))}
+                  <th className={`${STATUS_HEAD_CELL} text-right font-semibold`}>
+                    <span className="flex items-center justify-end gap-1.5">
+                      <Settings size={13} className="shrink-0" />
+                      {t("Action")}
+                    </span>
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+              <tbody>
                 {statuses.map((status) => (
-                  <tr key={status.status_id} className={`transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40 ${status.is_active ? "" : "opacity-60"}`}>
-                    <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-950 dark:text-white">
+                  <tr key={status.status_id} className={status.is_active ? undefined : "opacity-60"}>
+                    <td className={`${STATUS_CELL} whitespace-nowrap rounded-l-lg font-semibold text-slate-950 group-hover:border-l-slate-200 dark:text-white dark:group-hover:border-l-slate-700`}>
                       {status.status_name}
                     </td>
-                    <td className="max-w-72 truncate px-5 py-3.5 text-slate-600 dark:text-slate-300" title={status.description || ""}>
+                    <td className={`${STATUS_CELL} max-w-72 truncate text-slate-600 dark:text-slate-300`} title={status.description || ""}>
                       {status.description || "—"}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-slate-600 dark:text-slate-300">
+                    <td className={`${STATUS_CELL} whitespace-nowrap text-slate-600 dark:text-slate-300`}>
                       {status.equipment_count ?? 0}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 text-right">
+                    <td className={`${STATUS_CELL} whitespace-nowrap rounded-r-lg text-right group-hover:border-r-slate-200 dark:group-hover:border-r-slate-700`}>
                       {canManage && (
-                        <div className="flex items-center justify-end">
-                          <RowActionsMenu
-                            items={[
-                              {
-                                icon: FileText,
-                                label:
-                                  downloadingPdfId === status.status_id ? t("Preparing PDF...") : t("Download as PDF"),
-                                onClick: () => onDownloadStatusPdf(status),
-                              },
-                              {
-                                icon: Grid,
-                                label:
-                                  downloadingExcelId === status.status_id
-                                    ? t("Preparing Excel...")
-                                    : t("Download as Excel"),
-                                onClick: () => onDownloadStatusExcel(status),
-                              },
-                              { divider: true },
-                              { icon: Edit2, label: t("Edit"), onClick: () => onEdit(status) },
-                              { icon: Trash2, label: t("Delete"), onClick: () => onDelete(status), destructive: true },
-                            ]}
-                          />
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => onEdit(status)}
+                            title={t("Edit")}
+                            aria-label={t("Edit")}
+                            className={STATUS_ICON_BUTTON}
+                          >
+                            <Edit2 size={14} className="block" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDelete(status)}
+                            title={t("Delete")}
+                            aria-label={t("Delete")}
+                            className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-rose-50 hover:text-rose-600 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-400"
+                          >
+                            <Trash2 size={14} className="block" />
+                          </button>
                         </div>
                       )}
                     </td>
@@ -197,10 +187,10 @@ export function StatusFormModal({ isOpen, mode, values, onChange, onSubmit, onCl
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label={t("Close")}
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 

@@ -8,6 +8,7 @@ import {
   FiUser as UserIcon,
 } from "react-icons/fi";
 import { FormField, formInputClass, RadioSelect, RollingText } from "../../components/SharedControls";
+import { DatePicker } from "../../components/DatePickers";
 import {
   DeviceResultRow,
   EmployeeResultRow,
@@ -15,6 +16,7 @@ import {
   PickerSearch,
   SectionCard,
   SelectedCard,
+  StepBadge,
   SummarySlot,
 } from "../../components/PickerForm";
 import { translateLabel } from "../../../../lib/i18nLabel";
@@ -50,8 +52,6 @@ export function BorrowFormView({
 
   expectedReturnDate,
   onExpectedReturnDateChange,
-  purpose,
-  onPurposeChange,
   conditionOnBorrow,
   onConditionOnBorrowChange,
   remark,
@@ -145,7 +145,7 @@ export function BorrowFormView({
               ) : (
                 <>
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <PickerSearch value={deviceQuery} onChange={onDeviceQueryChange} placeholder={t("Search...")} />
+                    <PickerSearch value={deviceQuery} onChange={onDeviceQueryChange} placeholder={t("Device / Asset Code / Device Model / Serial Number")} />
                     <div className="sm:w-52">
                       <RadioSelect
                         id="borrow-device-category"
@@ -189,7 +189,7 @@ export function BorrowFormView({
                 />
               ) : (
                 <>
-                  <PickerSearch value={employeeQuery} onChange={onEmployeeQueryChange} placeholder={t("Search...")} />
+                  <PickerSearch value={employeeQuery} onChange={onEmployeeQueryChange} placeholder={t("Employee / Staff Code / Phone")} />
 
                   <PickerList
                     isLoading={isEmployeeLoading}
@@ -213,15 +213,17 @@ export function BorrowFormView({
           </div>
 
           <div className="lg:sticky lg:top-20 lg:self-start">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-              <h3 className="text-[14px] font-semibold text-slate-950 dark:text-white">{t("Summary")}</h3>
+            <div className="rounded-xl bg-white py-5 dark:bg-slate-900">
+              <div className="flex items-center gap-3">
+                <StepBadge step={3} isComplete={canSubmit} />
+                <h3 className="text-[14px] font-semibold text-slate-950 dark:text-white">{t("Summary")}</h3>
+              </div>
 
               <div className="mt-4 space-y-2">
                 <SummarySlot
                   icon={Box}
                   label={t("Device")}
                   title={selectedDevice?.display_name}
-                  detail={deviceDetail}
                   placeholder={t("Pick a device")}
                 />
                 <div className="flex justify-center text-slate-300 dark:text-slate-600">
@@ -231,33 +233,11 @@ export function BorrowFormView({
                   icon={UserIcon}
                   label={t("Borrower")}
                   title={selectedEmployee?.full_name}
-                  detail={employeeDetail}
                   placeholder={t("Pick an employee")}
                 />
               </div>
 
               <div className="mt-5 grid grid-cols-1 gap-4">
-                <FormField label={t("Expected Return Date *")} htmlFor="borrow-page-return-date">
-                  <input
-                    id="borrow-page-return-date"
-                    type="date"
-                    required
-                    value={expectedReturnDate}
-                    onChange={(e) => onExpectedReturnDateChange(e.target.value)}
-                    className={formInputClass}
-                  />
-                </FormField>
-                <FormField label={t("Purpose")} htmlFor="borrow-page-purpose">
-                  <input
-                    id="borrow-page-purpose"
-                    type="text"
-                    autoComplete="off"
-                    value={purpose}
-                    onChange={(e) => onPurposeChange(e.target.value)}
-                    placeholder={t("e.g. Site visit in Pakse")}
-                    className={formInputClass}
-                  />
-                </FormField>
                 <FormField label={t("Condition On Borrow")} htmlFor="borrow-page-condition">
                   <input
                     id="borrow-page-condition"
@@ -276,7 +256,15 @@ export function BorrowFormView({
                     autoComplete="off"
                     value={remark}
                     onChange={(e) => onRemarkChange(e.target.value)}
+                    placeholder={t("e.g. Charger and bag included")}
                     className={`${formInputClass} h-auto resize-none py-2`}
+                  />
+                </FormField>
+                <FormField label={t("Expected Return Date *")} htmlFor="borrow-page-return-date">
+                  <DatePicker
+                    id="borrow-page-return-date"
+                    value={expectedReturnDate}
+                    onChange={onExpectedReturnDateChange}
                   />
                 </FormField>
               </div>

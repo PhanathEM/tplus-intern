@@ -1,4 +1,4 @@
-import { FiHash as Hash, FiTag as TagIcon, FiType as TypeIcon, FiBox as BoxIcon, FiActivity as Activity, FiBarChart2 as BarChart2, FiBox as Box, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiSettings as SettingsIcon, FiSliders as Sliders, FiTag as Tag, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
+import { FiClock as Clock, FiUser as UserIcon, FiHash as Hash, FiTag as TagIcon, FiType as TypeIcon, FiBox as BoxIcon, FiActivity as Activity, FiBarChart2 as BarChart2, FiBox as Box, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiSettings as SettingsIcon, FiSliders as Sliders, FiTag as Tag, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
 import { PERMISSIONS } from "../../lib/permissions";
 
 export const navSections = [
@@ -328,20 +328,14 @@ export const BORROW_EQUIPMENT_INITIAL_VALUES = {
 };
 
 export const currentBorrowColumns = [
-  { key: "borrow_id", label: "Borrow ID" },
-  { key: "category_name", label: "Category" },
-  { key: "device_model", label: "Device Model" },
+  { key: "borrower_name", label: "Borrower" },
   { key: "computer_name", label: "Computer Name" },
   { key: "asset_code", label: "Asset Code" },
-  { key: "service_tag", label: "Service Tag" },
-  { key: "borrower_name", label: "Borrower" },
-  { key: "borrower_department", label: "Department" },
   { key: "borrow_date", label: "Borrow Date" },
   { key: "expected_return_date", label: "Expected Return" },
   { key: "days_out", label: "Days Out" },
   { key: "is_overdue", label: "Overdue" },
   { key: "condition_on_borrow", label: "Condition on Borrow" },
-  { key: "purpose", label: "Purpose" },
   { key: "remark", label: "Remark" },
 ];
 
@@ -359,7 +353,6 @@ export const borrowHistoryColumns = [
   { key: "return_date", label: "Return Date" },
   { key: "condition_on_borrow", label: "Condition (Borrow)" },
   { key: "condition_on_return", label: "Condition (Return)" },
-  { key: "purpose", label: "Purpose" },
   { key: "remark", label: "Remark" },
 ];
 
@@ -389,12 +382,12 @@ export const PART_RETURN_INITIAL_VALUES = {
 };
 
 export const partBorrowColumns = [
-  { key: "borrowed_item", label: "Borrowed Item" },
-  { key: "quantity", label: "Quantity" },
-  { key: "borrower_name", label: "Borrower" },
-  { key: "issued_by", label: "Lender" },
-  { key: "borrow_date", label: "Borrowed Date" },
-  { key: "condition_on_borrow", label: "Condition at Borrowing" },
+  { key: "borrowed_item", label: "Borrowed Item", icon: BoxIcon },
+  { key: "quantity", label: "Quantity", icon: Hash },
+  { key: "borrower_name", label: "Borrower", icon: UserIcon },
+  { key: "issued_by", label: "Lender", icon: UserCheck },
+  { key: "borrow_date", label: "Borrowed Date", icon: Clock },
+  { key: "condition_on_borrow", label: "Condition at Borrowing", icon: Activity },
 ];
 
 export const EMPLOYEE_FORM_INITIAL_VALUES = {

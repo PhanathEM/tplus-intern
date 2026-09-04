@@ -97,7 +97,7 @@ export function RecordsTableView({
       <div className="rounded-xl bg-white dark:bg-slate-900">
         {/* z-20 beats the hovered row's own stacking so a lifted row passes
             under this bar rather than over it. */}
-        <div className="sticky top-14 z-20 flex flex-wrap items-center justify-between gap-3 bg-white px-5 py-2.5 dark:bg-slate-900">
+        <div className="sticky top-14 z-20 flex flex-wrap items-center justify-between gap-3 bg-white py-2 dark:bg-slate-900">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">
               {title}
@@ -218,7 +218,7 @@ export function RecordsTableView({
                     return (
                       <tr
                         key={rowKey(record, index)}
-                        className={`group ${getRowClassName?.(record) || ""}`}
+                        className={getRowClassName?.(record) || undefined}
                       >
                         {columns.map((column, columnIndex) => (
                           <td

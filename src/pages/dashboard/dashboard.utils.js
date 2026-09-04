@@ -512,3 +512,69 @@ export function formatDate(date) {
   const pad = (num) => String(num).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
+
+// Every field a device row puts on screen - name, category, asset code,
+// location and status - is searchable, so typing "Floor2" or "Working"
+// narrows the picker just like typing part of the name does. Filtered here
+// rather than through /api/assign/available's own `q`, which only matches
+// some of them.
+export function filterDevicesByQuery(devices, query) {
+  const term = String(query || "").trim().toLowerCase();
+  if (!term) return devices;
+
+  return devices.filter((device) =>
+    [
+      getEquipmentDisplayName(device),
+      device.device_model,
+      device.category_name,
+      device.category,
+      device.asset_code,
+      // Serial arrives under either name depending on the category's schema,
+      // and service_tag is the same idea on the Dell-style records.
+      device.serial_no,
+      device.serial_number,
+      device.service_tag,
+      device.location,
+      device.status,
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(term))
+  );
+}
+
+// The employee picker searches name, staff code and phone. Same reasoning as
+// filterDevicesByQuery: the list arrives whole and is narrowed here, so a
+// staff code or phone number matches even though neither is on screen.
+export function filterEmployeesByQuery(employees, query) {
+  const term = String(query || "").trim().toLowerCase();
+  if (!term) return employees;
+
+  return employees.filter((employee) =>
+    [employee.full_name, employee.staff_code, employee.phone]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(term))
+  );
+}
+
+// Employees list their department by code on some records and by full name on
+// others, so a department row matches on either. Shared by the Report's
+// department popup and its per-department export, which must agree on who is
+// in the group.
+export function matchesEmployeeDepartment(row) {
+  return (employee) => {
+    const code = getEmployeeDepartmentCode(employee);
+    if (row.code && code === row.code) return true;
+    return Boolean(row.name) && (employee.department_name === row.name || code === row.name);
+  };
+}
+
+// Equipment records name their holder's department in one field, so the same
+// row can match on its code or its full name. Paired with
+// matchesEmployeeDepartment so the popup and the export agree.
+export function matchesEquipmentDepartment(row) {
+  return (item) => {
+    const department = item.owner_department || item.department_code || item.department_name || "";
+    if (!department) return false;
+    return department === row.code || department === row.name || department === row.label;
+  };
+}
