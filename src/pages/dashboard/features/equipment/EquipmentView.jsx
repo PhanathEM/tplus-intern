@@ -6,23 +6,17 @@ import {
   FiBox as Box,
   FiChevronDown as ChevronDown,
   FiEdit2 as Edit2,
-  FiFileText as FileText,
-  FiGrid as Grid,
   FiPlusCircle as PlusCircle,
   FiRefreshCw as RefreshCw,
-  FiRepeat as Repeat,
-  FiSearch as Search,
   FiTrash2 as Trash2,
-  FiUserX as UserX,
   FiX as X,
 } from "react-icons/fi";
 import { buildEquipmentDisplayColumns } from "../../dashboard.utils";
 import { EmptyState, Pagination, RadioSelect, RollingText, RowActionsMenu } from "../../components/SharedControls";
 import { DynamicEquipmentTable } from "../../components/DynamicEquipmentTable";
 import { CategoryTabs } from "../../components/CategoryTabs";
-import { exportAllEquipmentToExcel, exportAllEquipmentToPdf } from "./equipmentExport";
 
-const EQUIPMENT_PAGE_SIZE = 15;
+const EQUIPMENT_PAGE_SIZE = 20;
 
 export function EquipmentItemsTable({
   category,
@@ -33,10 +27,7 @@ export function EquipmentItemsTable({
   onRetry,
   onBack,
   onEdit,
-  onUnassign,
   onDelete,
-  onBorrow,
-  borrowableStatusNames,
   onAddNew,
   isUnconfigured = false,
   canCreate = true,
@@ -44,9 +35,10 @@ export function EquipmentItemsTable({
   showBackButton = true,
   idFilter = null,
   onClearIdFilter,
+  // From the header search bar — this page has no search box of its own.
+  search = "",
 }) {
   const { t, i18n } = useTranslation();
-  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
 
@@ -98,12 +90,17 @@ export function EquipmentItemsTable({
   }, [items, columns, search, statusFilter, idFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filteredItems.length / EQUIPMENT_PAGE_SIZE));
-  const paginatedItems = filteredItems.slice((page - 1) * EQUIPMENT_PAGE_SIZE, page * EQUIPMENT_PAGE_SIZE);
+  // Derived rather than reset in an effect: narrowing the header search can
+  // drop the page count below the page you were on, which would otherwise
+  // leave the table blank.
+  const safePage = Math.min(page, pageCount);
+  const paginatedItems = filteredItems.slice((safePage - 1) * EQUIPMENT_PAGE_SIZE, safePage * EQUIPMENT_PAGE_SIZE);
 
 return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-xl bg-white dark:bg-slate-900">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+      <div className="rounded-xl bg-white dark:bg-slate-900">
+        {/* z-20 beats the hovered row so a lifted row passes under this bar. */}
+        <div className="sticky top-14 z-20 flex flex-wrap items-start justify-between gap-3 bg-white px-5 py-2.5 dark:bg-slate-900">
           <div>
             {showBackButton && onBack && (
               <button
@@ -133,37 +130,6 @@ return (
             )}
           </div>
           <div className="flex items-center gap-2">
-            <div className="relative w-56">
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={14} />
-              <input
-                type="text"
-                autoComplete="off"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                placeholder={t("Search...")}
-                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-14 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-slate-500 dark:focus:bg-slate-800 dark:focus:ring-slate-700"
-              />
-              {search ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch("");
-                    setPage(1);
-                  }}
-                  aria-label={t("Clear search")}
-                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-slate-400 outline-none transition hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-slate-300 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                >
-                  <X size={13} />
-                </button>
-              ) : (
-                <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
-                  Ctrl K
-                </kbd>
-              )}
-            </div>
             <div className="w-56">
               <RadioSelect
                 id="equipment-status-filter"
@@ -211,42 +177,34 @@ return (
             emptyIcon={Box}
             emptyTitle={t("No equipment found")}
             emptyDescription={search ? t("No equipment matches", { term: search }) : t("This category has no items.")}
-            actionsHeader={
-              <RowActionsMenu
-                items={[
-                  {
-                    icon: FileText,
-                    label: t("Download PDF"),
-                    onClick: () => exportAllEquipmentToPdf([{ category, columns, items }], category),
-                  },
-                  {
-                    icon: Grid,
-                    label: t("Download Excel"),
-                    onClick: () => exportAllEquipmentToExcel([{ category, columns, items }], category),
-                  },
-                ]}
-              />
-            }
             renderRowActions={
               canManage &&
               ((item) => {
-                const hasOwner = Boolean(item.owner_id || item.owner_name);
-                const menuItems = [];
-
-                if (hasOwner && onUnassign) {
-                  menuItems.push({ icon: UserX, label: t("Unassign"), onClick: () => onUnassign(item) });
-                }
-                if (!hasOwner && onBorrow && borrowableStatusNames?.has(item.status)) {
-                  menuItems.push({ icon: Repeat, label: t("Borrow"), onClick: () => onBorrow(item) });
-                }
-                menuItems.push({ icon: Edit2, label: t("Edit"), onClick: () => onEdit(item) });
-                if (onDelete) {
-                  menuItems.push({ icon: Trash2, label: t("Delete"), onClick: () => onDelete(item), destructive: true });
-                }
+                const iconButtonClass =
+                  "grid h-7 w-7 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white";
 
                 return (
-                  <div className="flex items-center justify-end">
-                    <RowActionsMenu items={menuItems} />
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onEdit(item)}
+                      title={t("Edit")}
+                      aria-label={t("Edit")}
+                      className={iconButtonClass}
+                    >
+                      <Edit2 size={14} className="block" />
+                    </button>
+                    {onDelete && (
+                      <button
+                        type="button"
+                        onClick={() => onDelete(item)}
+                        title={t("Delete")}
+                        aria-label={t("Delete")}
+                        className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-rose-50 hover:text-rose-600 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-400"
+                      >
+                        <Trash2 size={14} className="block" />
+                      </button>
+                    )}
                   </div>
                 );
               })
@@ -255,13 +213,8 @@ return (
         )}
 
         {!isUnconfigured && !isLoading && !error && filteredItems.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-[13px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            <span>
-              {t("Showing")} {(page - 1) * EQUIPMENT_PAGE_SIZE + 1}
-              {"–"}
-              {Math.min(page * EQUIPMENT_PAGE_SIZE, filteredItems.length)} {t("of")} {filteredItems.length}
-            </span>
-            <Pagination currentPage={page} pageCount={pageCount} onPageChange={setPage} />
+          <div className="flex flex-wrap items-center justify-center gap-3 border-t border-slate-100 px-5 py-3 dark:border-slate-800">
+            <Pagination currentPage={safePage} pageCount={pageCount} onPageChange={setPage} />
           </div>
         )}
       </div>
@@ -280,24 +233,15 @@ export function EquipmentView({
   itemsError,
   onAddNew,
   onEdit,
-  onUnassign,
   onDelete,
-  onBorrow,
-  statuses,
-  onDownloadAllExcel,
-  onDownloadAllPdf,
-  isDownloadingAllExcel = false,
-  isDownloadingAllPdf = false,
   idFilter = null,
   onClearIdFilter,
   canManage = true,
   canCreate = true,
+  // From the header search bar — this page has no search box of its own.
+  search = "",
 }) {
   const { t } = useTranslation();
-  const borrowableStatusNames = useMemo(
-    () => new Set(statuses.filter((item) => item.is_borrowable).map((item) => item.status_name)),
-    [statuses]
-  );
 
   const categoryOptions = useMemo(
     () => categories.map((item) => ({ value: item.slug, label: item.label })),
@@ -326,27 +270,10 @@ export function EquipmentView({
           options={categoryOptions}
           selected={selectedCategory}
           onSelect={onSelectCategory}
-          trailing={
-            canCreate && (
-              <RowActionsMenu
-                items={[
-                  {
-                    icon: FileText,
-                    label: isDownloadingAllPdf ? t("Preparing PDF...") : t("Download All PDFs"),
-                    onClick: onDownloadAllPdf,
-                  },
-                  {
-                    icon: Grid,
-                    label: isDownloadingAllExcel ? t("Preparing Excel...") : t("Download All Excel"),
-                    onClick: onDownloadAllExcel,
-                  },
-                ]}
-              />
-            )
-          }
         />
 
         <EquipmentItemsTable
+          search={search}
           category={selectedCategoryLabel}
           items={items}
           configuredColumns={columns}
@@ -356,10 +283,7 @@ export function EquipmentView({
           onRetry={onRetry}
           onBack={null}
           onEdit={onEdit}
-          onUnassign={onUnassign}
           onDelete={onDelete}
-          onBorrow={onBorrow}
-          borrowableStatusNames={borrowableStatusNames}
           onAddNew={onAddNew}
           canCreate={canCreate}
           canManage={canManage}

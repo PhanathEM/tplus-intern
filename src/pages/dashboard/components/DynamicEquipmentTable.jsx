@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { FiAlertTriangle as AlertTriangle, FiRefreshCw as RefreshCw } from "react-icons/fi";
+import { FiAlertTriangle as AlertTriangle, FiRefreshCw as RefreshCw, FiSettings as Settings } from "react-icons/fi";
 import { translateLabel } from "../../../lib/i18nLabel";
 import { EmptyState } from "./SharedControls";
 import { RecordCellValue } from "./RecordsTableView";
@@ -24,11 +24,6 @@ export function DynamicEquipmentTable({
   getRowClassName,
   onRowClick,
   selectable,
-  // Gmail's row hover (used by Device Replacement's clickable lists): the
-  // row lifts off the list as its own white card with rounded ends and a
-  // shadow, instead of just tinting the background. Opt-in so the rest of
-  // this table's other callers (Equipment, Assign) keep the flat hover.
-  elevatedRowHover = false,
 }) {
   const { t, i18n } = useTranslation();
 
@@ -70,75 +65,89 @@ export function DynamicEquipmentTable({
     );
   }
 
+  const headerCellClass =
+    "whitespace-nowrap border-y border-slate-100 px-5 py-2 font-semibold leading-none dark:border-slate-800";
+  // Every cell keeps a full border at rest — top transparent, bottom the row
+  // separator — so hover only recolours it into a card around the row, with
+  // no 1px height jump.
+  const cellClass =
+    "border border-x-transparent border-t-transparent border-b-slate-50 bg-white px-5 py-2 group-hover:border-y-slate-200 dark:border-b-slate-800/60 dark:bg-slate-900 dark:group-hover:border-y-slate-700";
+  const roundLeft = "rounded-l-lg group-hover:border-l-slate-200 dark:group-hover:border-l-slate-700";
+  const roundRight = "rounded-r-lg group-hover:border-r-slate-200 dark:group-hover:border-r-slate-700";
+
   return (
+    // border-separate (not the default collapse) so a hovered row can round
+    // its end cells — border-radius on a cell is ignored in the collapsed
+    // model. Row lines therefore live on the cells rather than on <tr>.
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
+      <table className="min-w-full border-separate border-spacing-0 text-left text-[13px]">
         <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
           <tr>
-            {selectable && <th className="w-10 px-4 py-3" />}
-            {columns.map((column) => (
-              <th key={column.key} className="whitespace-nowrap px-4 py-3 font-semibold">
-                {translateLabel(t, i18n, column.label)}
-              </th>
-            ))}
+            {selectable && <th className={`w-10 ${headerCellClass}`} />}
+            {columns.map((column) => {
+              const ColumnIcon = column.icon;
+              return (
+                <th key={column.key} className={headerCellClass}>
+                  <span className="flex items-center gap-1.5">
+                    {ColumnIcon && <ColumnIcon size={13} className="shrink-0" />}
+                    {translateLabel(t, i18n, column.label)}
+                  </span>
+                </th>
+              );
+            })}
             {renderRowActions && (
-              <th className="whitespace-nowrap px-4 py-3 font-semibold text-right">{actionsHeader || t("Actions")}</th>
+              <th className={`${headerCellClass} text-right`}>
+                <span className="flex items-center justify-end gap-1.5">
+                  <Settings size={13} className="shrink-0" />
+                  {actionsHeader || t("Action")}
+                </span>
+              </th>
             )}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
-          {records.map((record, index) => {
-            const hoverBg = elevatedRowHover ? "group-hover:bg-white dark:group-hover:bg-slate-800" : "";
-            return (
-              <tr
-                key={rowKey(record, index)}
-                onClick={onRowClick ? () => onRowClick(record) : undefined}
-                className={`${elevatedRowHover
-                  ? "group relative transition hover:z-10 hover:shadow-[0_1px_2px_rgba(0,0,0,0.15),0_2px_6px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.35)]"
-                  : "transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40"
-                  } ${onRowClick ? "cursor-pointer" : ""} ${getRowClassName?.(record) || ""}`}
-              >
-                {selectable && (
+        <tbody>
+          {records.map((record, index) => (
+            <tr
+              key={rowKey(record, index)}
+              onClick={onRowClick ? () => onRowClick(record) : undefined}
+              className={`group ${onRowClick ? "cursor-pointer" : ""} ${getRowClassName?.(record) || ""}`}
+            >
+              {selectable && (
+                <td className={`${cellClass} ${roundLeft} whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={selectable.isSelected(record)}
+                    onChange={() => selectable.onSelect(record)}
+                    className="h-4 w-4 rounded border-slate-300 text-orange-500 outline-none focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-600 dark:bg-slate-800"
+                  />
+                </td>
+              )}
+              {columns.map((column, columnIndex) => {
+                const isFirstCell = !selectable && columnIndex === 0;
+                const isLastCell = !renderRowActions && columnIndex === columns.length - 1;
+                return (
                   <td
-                    className={`whitespace-nowrap px-4 py-3 ${elevatedRowHover ? `rounded-l-lg ${hoverBg}` : ""}`}
-                    onClick={(e) => e.stopPropagation()}
+                    key={column.key}
+                    className={`${cellClass} text-slate-600 dark:text-slate-300 ${column.key === "remark" ? "min-w-72 whitespace-normal" : "whitespace-nowrap"
+                      } ${isFirstCell ? roundLeft : ""} ${isLastCell ? roundRight : ""}`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={selectable.isSelected(record)}
-                      onChange={() => selectable.onSelect(record)}
-                      className="h-4 w-4 rounded border-slate-300 text-orange-500 outline-none focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-600 dark:bg-slate-800"
+                    <RecordCellValue
+                      value={
+                        column.key === "status" && record[column.key]
+                          ? translateLabel(t, i18n, record[column.key])
+                          : record[column.key]
+                      }
                     />
                   </td>
-                )}
-                {columns.map((column, columnIndex) => {
-                  const isFirstCell = !selectable && columnIndex === 0;
-                  const isLastCell = !renderRowActions && columnIndex === columns.length - 1;
-                  return (
-                    <td
-                      key={column.key}
-                      className={`px-4 py-3 text-slate-600 dark:text-slate-300 ${column.key === "remark" ? "min-w-72 whitespace-normal" : "whitespace-nowrap"
-                        } ${elevatedRowHover ? hoverBg : ""} ${elevatedRowHover && isFirstCell ? "rounded-l-lg" : ""} ${elevatedRowHover && isLastCell ? "rounded-r-lg" : ""
-                        }`}
-                    >
-                      <RecordCellValue
-                        value={
-                          column.key === "status" && record[column.key]
-                            ? translateLabel(t, i18n, record[column.key])
-                            : record[column.key]
-                        }
-                      />
-                    </td>
-                  );
-                })}
-                {renderRowActions && (
-                  <td className={`whitespace-nowrap px-4 py-3 text-right ${elevatedRowHover ? `rounded-r-lg ${hoverBg}` : ""}`}>
-                    {renderRowActions(record)}
-                  </td>
-                )}
-              </tr>
-            );
-          })}
+                );
+              })}
+              {renderRowActions && (
+                <td className={`${cellClass} ${roundRight} whitespace-nowrap text-right`}>
+                  {renderRowActions(record)}
+                </td>
+              )}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

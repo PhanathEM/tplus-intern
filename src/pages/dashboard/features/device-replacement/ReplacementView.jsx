@@ -205,7 +205,7 @@ export function ReplaceableDevicesView({
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder={t("Search Employee")}
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:ring-slate-700"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-sm outline-none transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 "
               />
               {search && (
                 <button
@@ -234,7 +234,6 @@ export function ReplaceableDevicesView({
           emptyTitle={t("No devices found")}
           emptyDescription={t("Owned devices will appear here.")}
           onRowClick={canManage ? onOpenReplaceDialog : undefined}
-          elevatedRowHover={canManage}
         />
 
         {!isLoading && !error && numberedDevices.length > 0 && (

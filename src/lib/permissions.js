@@ -27,7 +27,7 @@ export const PERMISSION_DEFINITIONS = [
   { value: PERMISSIONS.EMPLOYEE, label: "Employee" },
   { value: PERMISSIONS.DEPARTMENTS, label: "Departments" },
   { value: PERMISSIONS.EQUIPMENT, label: "All Equipment" },
-  { value: PERMISSIONS.ASSIGN_EQUIPMENT, label: "Assign" },
+  { value: PERMISSIONS.ASSIGN_EQUIPMENT, label: "Assignation" },
   { value: PERMISSIONS.CURRENTLY_BORROWED, label: "Currently Borrowed" },
   { value: PERMISSIONS.BORROW_HISTORY, label: "Borrow History" },
   { value: PERMISSIONS.PART_STOCK, label: "Stock of Replace a Part" },

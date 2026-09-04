@@ -23,14 +23,31 @@ function getReadableTextTone(hex) {
   return luminance > 0.6 ? "dark" : "light";
 }
 
-function ReportPanel({ title, total, totalLabel, headerColor, headerTextTone, children }) {
+// Icon-only export action sized to sit inside a panel's coloured header
+// without competing with the title — the label rides in the tooltip.
+function PanelExportButton({ icon: Icon, label, onClick, disabled }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-slate-950/10 text-slate-950 outline-none transition hover:bg-slate-950/20 focus-visible:ring-2 focus-visible:ring-slate-950/40 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      <Icon size={14} className="block" />
+    </button>
+  );
+}
+
+function ReportPanel({ title, total, totalLabel, headerColor, headerTextTone, headerActions, children }) {
   const textTone = headerColor ? headerTextTone || getReadableTextTone(headerColor) : null;
   const isDarkText = textTone === "dark";
 
   return (
     <div className="mb-4 break-inside-avoid overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div
-        className={`flex items-center justify-between px-5 py-4 ${headerColor ? "" : "border-b border-slate-100 dark:border-slate-800"}`}
+        className={`flex items-center justify-between gap-3 px-5 py-4 ${headerColor ? "" : "border-b border-slate-100 dark:border-slate-800"}`}
         style={headerColor ? { backgroundColor: headerColor } : undefined}
       >
         <h3
@@ -39,18 +56,21 @@ function ReportPanel({ title, total, totalLabel, headerColor, headerTextTone, ch
         >
           {title}
         </h3>
-        {typeof total === "number" && (
-          <span
-            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${headerColor
-              ? isDarkText
-                ? "bg-slate-950/10 text-slate-950"
-                : "bg-white/20 text-white"
-              : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-              }`}
-          >
-            {totalLabel}: {total.toLocaleString()}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {headerActions}
+          {typeof total === "number" && (
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${headerColor
+                ? isDarkText
+                  ? "bg-slate-950/10 text-slate-950"
+                  : "bg-white/20 text-white"
+                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                }`}
+            >
+              {totalLabel}: {total.toLocaleString()}
+            </span>
+          )}
+        </div>
       </div>
       {children}
     </div>
@@ -140,7 +160,26 @@ function DepartmentRows({ rows, headerHighlight, t }) {
   );
 }
 
-export function ReportView({ report, isLoading, error, onRetry, onDownloadPdf, onDownloadExcel, isExportingPdf, isExportingExcel }) {
+export function ReportView({
+  report,
+  isLoading,
+  error,
+  onRetry,
+  onDownloadPdf,
+  onDownloadExcel,
+  isExportingPdf,
+  isExportingExcel,
+  onDownloadEmployeesPdf,
+  onDownloadEmployeesExcel,
+  isDownloadingEmployeesPdf,
+  isDownloadingEmployeesExcel,
+  onDownloadDepartmentsPdf,
+  onDownloadDepartmentsExcel,
+  onDownloadEquipmentPdf,
+  onDownloadEquipmentExcel,
+  isDownloadingEquipmentPdf,
+  isDownloadingEquipmentExcel,
+}) {
   const { t } = useTranslation();
 
   return (
@@ -202,6 +241,22 @@ export function ReportView({ report, isLoading, error, onRetry, onDownloadPdf, o
               totalLabel={t("Total")}
               headerColor="#fddd1c"
               headerTextTone="dark"
+              headerActions={
+                <>
+                  <PanelExportButton
+                    icon={FileText}
+                    label={isDownloadingEmployeesPdf ? t("Preparing PDF...") : t("Download PDF")}
+                    onClick={onDownloadEmployeesPdf}
+                    disabled={isLoading || Boolean(error) || isDownloadingEmployeesPdf}
+                  />
+                  <PanelExportButton
+                    icon={Download}
+                    label={isDownloadingEmployeesExcel ? t("Preparing Excel...") : t("Download Excel")}
+                    onClick={onDownloadEmployeesExcel}
+                    disabled={isLoading || Boolean(error) || isDownloadingEmployeesExcel}
+                  />
+                </>
+              }
             >
               <MetricRows
                 labelHeader={t("Gender")}
@@ -214,7 +269,28 @@ export function ReportView({ report, isLoading, error, onRetry, onDownloadPdf, o
                 t={t}
               />
             </ReportPanel>
-            <ReportPanel title={t("Departments")} total={report.departments.total} totalLabel={t("Total")} headerColor="#fddd1c">
+            <ReportPanel
+              title={t("Departments")}
+              total={report.departments.total}
+              totalLabel={t("Total")}
+              headerColor="#fddd1c"
+              headerActions={
+                <>
+                  <PanelExportButton
+                    icon={FileText}
+                    label={t("Download PDF")}
+                    onClick={onDownloadDepartmentsPdf}
+                    disabled={isLoading || Boolean(error)}
+                  />
+                  <PanelExportButton
+                    icon={Download}
+                    label={t("Download Excel")}
+                    onClick={onDownloadDepartmentsExcel}
+                    disabled={isLoading || Boolean(error)}
+                  />
+                </>
+              }
+            >
               <DepartmentRows rows={report.departments.rows} headerHighlight="#fddd1c" t={t} />
             </ReportPanel>
             <ReportPanel title={t("Replacement")} headerColor="#fddd1c">
@@ -238,7 +314,28 @@ export function ReportView({ report, isLoading, error, onRetry, onDownloadPdf, o
             >
               <MetricRows rows={report.licenses.byStatus} labelHeader={t("Status")} headerHighlight="#fddd1c" t={t} />
             </ReportPanel>
-            <ReportPanel title={t("Equipments")} total={report.equipment.total} totalLabel={t("Total")} headerColor="#fddd1c">
+            <ReportPanel
+              title={t("Equipments")}
+              total={report.equipment.total}
+              totalLabel={t("Total")}
+              headerColor="#fddd1c"
+              headerActions={
+                <>
+                  <PanelExportButton
+                    icon={FileText}
+                    label={isDownloadingEquipmentPdf ? t("Preparing PDF...") : t("Download PDF")}
+                    onClick={onDownloadEquipmentPdf}
+                    disabled={isLoading || Boolean(error) || isDownloadingEquipmentPdf}
+                  />
+                  <PanelExportButton
+                    icon={Download}
+                    label={isDownloadingEquipmentExcel ? t("Preparing Excel...") : t("Download Excel")}
+                    onClick={onDownloadEquipmentExcel}
+                    disabled={isLoading || Boolean(error) || isDownloadingEquipmentExcel}
+                  />
+                </>
+              }
+            >
               <MetricRows rows={report.equipment.byStatus} labelHeader={t("Status")} headerHighlight="#fddd1c" t={t} />
               <MetricRows rows={report.equipment.byCategory} labelHeader={t("Category")} headerHighlight="#fddd1c" t={t} />
               <MetricRows

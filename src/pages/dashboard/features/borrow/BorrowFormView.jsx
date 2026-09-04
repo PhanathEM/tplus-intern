@@ -4,8 +4,8 @@ import {
   FiArrowRight as ArrowRight,
   FiBox as Box,
   FiCheckCircle as CheckCircle,
+  FiRepeat as Repeat,
   FiUser as UserIcon,
-  FiUserPlus as UserPlus,
 } from "react-icons/fi";
 import { FormField, formInputClass, RadioSelect, RollingText } from "../../components/SharedControls";
 import {
@@ -19,12 +19,14 @@ import {
 } from "../../components/PickerForm";
 import { translateLabel } from "../../../../lib/i18nLabel";
 
-export function AssignEquipmentView({
+// Same shape as the Assign page — pick a device, pick a person, confirm in a
+// panel that stays put — because it's the same job with a return date instead
+// of an owner change.
+export function BorrowFormView({
   isFormDataLoading,
   formDataError,
   onRetryFormData,
   categories = [],
-  statuses = [],
 
   deviceQuery,
   onDeviceQueryChange,
@@ -46,28 +48,28 @@ export function AssignEquipmentView({
   onSelectEmployee,
   onClearEmployee,
 
-  status,
-  onStatusChange,
-  assignedDate,
-  onAssignedDateChange,
+  expectedReturnDate,
+  onExpectedReturnDateChange,
+  purpose,
+  onPurposeChange,
+  conditionOnBorrow,
+  onConditionOnBorrowChange,
+  remark,
+  onRemarkChange,
 
   onSubmit,
   isSubmitting,
   submitError,
   submitSuccess,
-
-  conflict,
-  onResolveConflict,
-  isResolvingConflict,
 }) {
   const { t, i18n } = useTranslation();
-  const canSubmit = Boolean(selectedDevice && selectedEmployee);
+  const canSubmit = Boolean(selectedDevice && selectedEmployee && expectedReturnDate);
 
   if (isFormDataLoading) {
     return (
-      <div className="px-4 py-6 sm:px-6 lg:px-8">
+      <div className="px-4 pb-6 sm:px-6 lg:px-8">
         <div className="rounded-xl border border-slate-200 bg-white px-5 py-10 text-center text-[13px] text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-          {t("Loading assign form...")}
+          {t("Loading...")}
         </div>
       </div>
     );
@@ -75,17 +77,16 @@ export function AssignEquipmentView({
 
   if (formDataError) {
     return (
-      <div className="px-4 py-6 sm:px-6 lg:px-8">
+      <div className="px-4 pb-6 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-10 text-center dark:border-slate-800 dark:bg-slate-900">
           <div className="grid h-10 w-10 place-items-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400">
             <AlertTriangle size={18} />
           </div>
-          <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">{t("Couldn't load the assign form")}</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">{formDataError}</p>
           <button
             type="button"
             onClick={onRetryFormData}
-            className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
+            className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
           >
             {t("Retry")}
           </button>
@@ -115,15 +116,8 @@ export function AssignEquipmentView({
     : "";
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8">
+    <div className="px-4 pb-6 sm:px-6 lg:px-8">
       <form onSubmit={onSubmit} className="mx-auto max-w-6xl" autoComplete="off">
-        <div className="mb-4">
-          <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Assign equipment")}</h2>
-          <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-            {t("Give a device in stock to an employee.")}
-          </p>
-        </div>
-
         {submitSuccess && (
           <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
             <CheckCircle size={16} className="mt-0.5 shrink-0" />
@@ -131,33 +125,12 @@ export function AssignEquipmentView({
           </div>
         )}
 
-        {conflict && (
-          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-            <p className="font-semibold">{t("This device already belongs to someone.")}</p>
-            <p className="mt-0.5">
-              {t("Currently assigned to")}{" "}
-              <span className="font-semibold">{conflict.current_owner || t("another employee")}</span>.
-            </p>
-            <button
-              type="button"
-              onClick={onResolveConflict}
-              disabled={isResolvingConflict}
-              className="mt-2 inline-flex h-8 items-center gap-1.5 rounded-lg bg-amber-600 px-3 text-xs font-semibold text-white outline-none transition hover:bg-amber-700 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-slate-900"
-            >
-              {isResolvingConflict ? t("Unassigning...") : t("Unassign it, then retry")}
-            </button>
-          </div>
-        )}
-
-        {submitError && !conflict && (
+        {submitError && (
           <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
             {submitError}
           </div>
         )}
 
-        {/* Pickers left, a summary that stays put on the right — so the choices
-            made so far and the submit button remain visible while scrolling
-            through a long device or employee list. */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex flex-col gap-4">
             <SectionCard step={1} title={t("Pick a device")} isComplete={Boolean(selectedDevice)}>
@@ -175,12 +148,12 @@ export function AssignEquipmentView({
                     <PickerSearch value={deviceQuery} onChange={onDeviceQueryChange} placeholder={t("Search...")} />
                     <div className="sm:w-52">
                       <RadioSelect
-                        id="assign-device-category"
+                        id="borrow-device-category"
                         options={[
                           { value: "All", label: t("All categories") },
                           ...categories.map((category) => ({
                             value: category.category_name,
-                            label: `${category.category_name} (${category.available_count})`,
+                            label: category.category_name,
                           })),
                         ]}
                         value={deviceCategory}
@@ -256,7 +229,7 @@ export function AssignEquipmentView({
                 </div>
                 <SummarySlot
                   icon={UserIcon}
-                  label={t("Employee")}
+                  label={t("Borrower")}
                   title={selectedEmployee?.full_name}
                   detail={employeeDetail}
                   placeholder={t("Pick an employee")}
@@ -264,25 +237,46 @@ export function AssignEquipmentView({
               </div>
 
               <div className="mt-5 grid grid-cols-1 gap-4">
-                <FormField label={t("Status")} htmlFor="assign-page-status">
-                  <RadioSelect
-                    id="assign-page-status"
-                    options={statuses.map((item) => ({
-                      value: item.status_name,
-                      label: translateLabel(t, i18n, item.status_name),
-                    }))}
-                    value={status}
-                    onSelect={onStatusChange}
-                    placeholder={t("Select a status...")}
+                <FormField label={t("Expected Return Date *")} htmlFor="borrow-page-return-date">
+                  <input
+                    id="borrow-page-return-date"
+                    type="date"
+                    required
+                    value={expectedReturnDate}
+                    onChange={(e) => onExpectedReturnDateChange(e.target.value)}
+                    className={formInputClass}
                   />
                 </FormField>
-                <FormField label={t("Assigned Date")} htmlFor="assign-page-date">
+                <FormField label={t("Purpose")} htmlFor="borrow-page-purpose">
                   <input
-                    id="assign-page-date"
-                    type="date"
-                    value={assignedDate}
-                    onChange={(e) => onAssignedDateChange(e.target.value)}
+                    id="borrow-page-purpose"
+                    type="text"
+                    autoComplete="off"
+                    value={purpose}
+                    onChange={(e) => onPurposeChange(e.target.value)}
+                    placeholder={t("e.g. Site visit in Pakse")}
                     className={formInputClass}
+                  />
+                </FormField>
+                <FormField label={t("Condition On Borrow")} htmlFor="borrow-page-condition">
+                  <input
+                    id="borrow-page-condition"
+                    type="text"
+                    autoComplete="off"
+                    value={conditionOnBorrow}
+                    onChange={(e) => onConditionOnBorrowChange(e.target.value)}
+                    placeholder={t("e.g. Good, no scratches")}
+                    className={formInputClass}
+                  />
+                </FormField>
+                <FormField label={t("Remark")} htmlFor="borrow-page-remark">
+                  <textarea
+                    id="borrow-page-remark"
+                    rows={2}
+                    autoComplete="off"
+                    value={remark}
+                    onChange={(e) => onRemarkChange(e.target.value)}
+                    className={`${formInputClass} h-auto resize-none py-2`}
                   />
                 </FormField>
               </div>
@@ -292,19 +286,19 @@ export function AssignEquipmentView({
                 disabled={!canSubmit || isSubmitting}
                 className="group/roll mt-5 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-[#fddd1c] px-5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
               >
-                <UserPlus size={15} />
-                <RollingText text={isSubmitting ? t("Assigning...") : t("Assign equipment")} />
+                <Repeat size={15} />
+                <RollingText text={isSubmitting ? t("Borrowing...") : t("Borrow equipment")} />
               </button>
 
-              {/* Says which step is still outstanding rather than leaving a
-                  disabled button with no explanation. */}
+              {/* Names the outstanding step rather than leaving a disabled
+                  button with no explanation. */}
               {!canSubmit && (
                 <p className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">
-                  {!selectedDevice && !selectedEmployee
-                    ? t("Pick a device and an employee to continue.")
-                    : !selectedDevice
-                      ? t("Pick a device to continue.")
-                      : t("Pick an employee to continue.")}
+                  {!selectedDevice
+                    ? t("Pick a device to continue.")
+                    : !selectedEmployee
+                      ? t("Pick an employee to continue.")
+                      : t("Set an expected return date to continue.")}
                 </p>
               )}
             </div>

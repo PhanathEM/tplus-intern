@@ -65,7 +65,8 @@ import {
   DepartmentFormModal,
   DepartmentsView,
 } from "./features/departments/DepartmentViews";
-import { BorrowHistoryView, CurrentBorrowsView } from "./features/borrow/BorrowViews";
+import { BorrowView } from "./features/borrow/BorrowView";
+import { useBorrowEquipment } from "./features/borrow/useBorrowEquipment";
 import {
   EmployeeDetailModal,
   EmployeeDirectoryTable,
@@ -75,7 +76,8 @@ import { ResetPasswordModal, UserPermissionsModal } from "./features/users/UserV
 import { StatusesView, StatusFormModal } from "./features/statuses/StatusViews";
 import { PartStatusesView, PartStatusFormModal } from "./features/part-statuses/PartStatusViews";
 import { ProfileModal, ChangePasswordModal } from "./features/account/AccountViews";
-import { AssignEquipmentView } from "./features/assign/AssignView";
+import { AssignationView } from "./features/assign/AssignationView";
+import { useUnassign } from "./features/assign/useUnassign";
 import { useActivityLog } from "./features/activity/useActivityLog";
 import { useMyActivity } from "./features/activity/useMyActivity";
 import { getAccessProfileLabel } from "../../lib/permissions";
@@ -108,6 +110,8 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     canManageDepartments,
     canManageEmployees,
     canManageBorrows,
+    canViewCurrentBorrows,
+    canViewBorrowHistory,
     canManageActivityLog,
     canManageRecycleBin,
     canManageReport,
@@ -186,6 +190,8 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   // global search needs it to know whether the Employees table is doing the
   // filtering instead of the dropdown.
   const isEmployeeView = activeView === "Employees" && hasActiveViewAccess;
+  const isDepartmentsView = activeView === "Departments" && hasActiveViewAccess;
+  const isEquipmentView = activeView === "Equipments" && hasActiveViewAccess;
   const home = useDashboardHome({ isActive: isDashboardHomeView, accessibleDashboardViews });
 
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -195,7 +201,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     user,
     onSelectView: handleSelectView,
     onSelectEquipmentCategory: handleSelectEquipmentCategory,
-    isSuspended: isEmployeeView,
+    isSuspended: isEmployeeView || isDepartmentsView || isEquipmentView,
   });
 
   function handleSelectGlobalSearchResult(type, item) {
@@ -207,10 +213,35 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   const profileMenuRef = useRef(null);
   const displayName = user?.name || "Admin User";
 
-  // Settings hosts Users/Activity Log/Recycle Bin as tabs on one page —
-  // switching tabs never changes `activeView` (it stays "Settings" the
-  // whole time), so it needs its own reset instead of going through
-  // handleSelectView's resetMap.
+  // Borrow hosts Currently Borrowed / Borrow History as tabs on one page —
+  // switching tabs never changes `activeView` (it stays "Borrow" the whole
+  // time), so it needs its own reset instead of going through
+  // handleSelectView's resetMap. Settings below works the same way.
+  function resetAssignationTab(tab) {
+    if (tab === "Unassign") unassign.resetForEntry();
+  }
+
+  function handleAssignationTabChange(tab) {
+    if (tab !== assignationTab) {
+      resetAssignationTab(tab);
+      setAssignationTab(tab);
+    }
+  }
+
+  function resetBorrowTab(tab) {
+    if (tab === "Borrow") borrowEquipment.resetForEntry();
+    else if (tab === "Currently Borrowed") currentBorrows.resetForEntry();
+    else borrowHistory.resetForEntry();
+  }
+
+  function handleBorrowTabChange(tab) {
+    if (tab !== borrowTab) {
+      resetBorrowTab(tab);
+      setBorrowTab(tab);
+    }
+  }
+
+  // Settings hosts Users/Activity Log/Recycle Bin the same way.
   function resetSettingsTab(tab) {
     if (tab === "Users") users.resetForEntry();
     else if (tab === "Recycle Bin") recycleBin.resetForEntry();
@@ -239,8 +270,8 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
       "Server Usage": serverUsage.resetForEntry,
       Statuses: statuses.resetForEntry,
       "Part Types Statuses": partStatuses.resetForEntry,
-      "Currently Borrowed": currentBorrows.resetForEntry,
-      "Borrow History": borrowHistory.resetForEntry,
+      Borrow: () => resetBorrowTab(borrowTab),
+      Assignation: () => resetAssignationTab(assignationTab),
       Employees: employees.resetForEntry,
       Departments: departments.resetForEntry,
       Report: report.resetForEntry,
@@ -300,8 +331,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   }, []);
 
   const activeNavItem = navItemsByLabel[activeView];
-  const isDepartmentsView = activeView === "Departments" && hasActiveViewAccess;
-  const isEquipmentView = activeView === "Equipments" && hasActiveViewAccess;
   const isReplacementView = activeView === "Device Replacement" && hasActiveViewAccess;
   const isReplacementHistoryView = activeView === "Device Replacement History" && hasActiveViewAccess;
   const isPartStockView = activeView === "Stock of Replace a Part" && hasActiveViewAccess;
@@ -309,9 +338,14 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   const isPartBorrowView = activeView === "Borrow a Part" && hasActiveViewAccess;
   const isLicenseView = activeView === "Software License" && hasActiveViewAccess;
   const isServerUsageView = activeView === "Server Usage" && hasActiveViewAccess;
-  const isAssignView = activeView === "Assign" && hasActiveViewAccess;
-  const isCurrentBorrowsView = activeView === "Currently Borrowed" && hasActiveViewAccess;
-  const isBorrowHistoryView = activeView === "Borrow History" && hasActiveViewAccess;
+  const isAssignView = activeView === "Assignation" && hasActiveViewAccess;
+  const [assignationTab, setAssignationTab] = useState("Assign");
+  const isUnassignView = isAssignView && assignationTab === "Unassign";
+  const isBorrowView = activeView === "Borrow" && hasActiveViewAccess;
+  const [borrowTab, setBorrowTab] = useState("Borrow");
+  const isBorrowFormView = isBorrowView && borrowTab === "Borrow";
+  const isCurrentBorrowsView = isBorrowView && borrowTab === "Currently Borrowed";
+  const isBorrowHistoryView = isBorrowView && borrowTab === "Borrow History";
   const isStatusView = activeView === "Statuses" && hasActiveViewAccess;
   const isPartStatusView = activeView === "Part Types Statuses" && hasActiveViewAccess;
   const isCategoryView = activeView === "Category" && hasActiveViewAccess;
@@ -325,6 +359,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   const departments = useDepartments({
     isActive: isDepartmentsView,
     user,
+    searchTerm: isDepartmentsView ? globalSearch.query : "",
   });
 
   const employees = useEmployees({
@@ -350,7 +385,8 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   const users = useUsers({ isActive: isUsersView, user });
 
   const equipment = useEquipment({
-    isActive: isEquipmentView || isCategoryView,
+    // Also live on Report, which offers the all-categories export.
+    isActive: isEquipmentView || isCategoryView || isReportView,
     user,
     loadDepartments: departments.loadDepartments,
     onEquipmentMutated: notifications.handleRetry,
@@ -399,6 +435,27 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     onReturned: notifications.handleRetry,
   });
   const borrowHistory = useBorrowHistory({ isActive: isBorrowHistoryView });
+  const unassign = useUnassign({
+    isActive: isUnassignView,
+    user,
+    // Returning a device to stock changes what the equipment list shows and
+    // what an open employee detail modal is displaying.
+    onUnassigned: () => {
+      equipment.handleRetry();
+      notifications.handleRetry();
+      employees.refreshAfterExternalEquipmentChange();
+    },
+  });
+  const borrowEquipment = useBorrowEquipment({
+    isActive: isBorrowFormView,
+    user,
+    // A new loan changes what's in stock and what's due back, so both the
+    // equipment list and the notification badges need re-reading.
+    onBorrowed: () => {
+      equipment.handleRetry();
+      notifications.handleRetry();
+    },
+  });
 
   return (
     <div className="min-h-screen bg-white text-slate-950 antialiased dark:bg-slate-950 dark:text-slate-100">
@@ -472,7 +529,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                     results={globalSearch.results}
                     isLoading={globalSearch.isLoading}
                     onSelect={handleSelectGlobalSearchResult}
-                    showResults={!isEmployeeView}
+                    showResults={!isEmployeeView && !isDepartmentsView && !isEquipmentView}
                   />
                   <button
                     type="button"
@@ -501,7 +558,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                     results={globalSearch.results}
                     isLoading={globalSearch.isLoading}
                     onSelect={handleSelectGlobalSearchResult}
-                    showResults={!isEmployeeView}
+                    showResults={!isEmployeeView && !isDepartmentsView && !isEquipmentView}
                   />
 
                   {/* flex-1 + justify-end keeps the icons pinned to the right
@@ -706,6 +763,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
 
           {(isEquipmentView) && (
             <EquipmentView
+              search={globalSearch.query}
               canManage={canManageEquipment}
               canCreate={canCreateRecords}
               categories={equipment.categories}
@@ -722,14 +780,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
               itemsError={equipment.itemsError}
               onAddNew={equipment.handleOpenAddItem}
               onEdit={equipment.handleOpenEditItem}
-              onUnassign={equipment.handleOpenUnassign}
               onDelete={equipment.handleOpenDelete}
-              onBorrow={currentBorrows.handleOpenBorrow}
-              onDownloadAllExcel={equipment.handleDownloadAllEquipmentExcel}
-              onDownloadAllPdf={equipment.handleDownloadAllEquipmentPdf}
-              isDownloadingAllExcel={equipment.isDownloadingAllExcel}
-              isDownloadingAllPdf={equipment.isDownloadingAllPdf}
-              statuses={equipment.statuses}
             />
           )}
 
@@ -857,13 +908,10 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
               isLoading={departments.isLoading}
               error={departments.error}
               onRetry={departments.handleRetry}
-              search={departments.departmentSearch}
-              onSearchChange={departments.handleDepartmentSearchChange}
+              search={globalSearch.query}
               onAddNew={departments.handleOpenAdd}
               onEdit={departments.handleOpenEdit}
               onDelete={departments.handleOpenDelete}
-              onDownloadAllExcel={departments.handleDownloadAllDepartmentsExcel}
-              onDownloadAllPdf={departments.handleDownloadAllDepartmentsPdf}
             />
           )}
 
@@ -880,26 +928,66 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
             />
           )}
 
-          {isCurrentBorrowsView && (
-            <CurrentBorrowsView
-              canManage={canManageBorrows}
-              loans={currentBorrows.loans}
-              isLoading={currentBorrows.isLoading}
-              error={currentBorrows.error}
-              onRetry={currentBorrows.handleRetry}
-              onReturn={currentBorrows.handleOpenReturn}
-            />
-          )}
-
-          {isBorrowHistoryView && (
-            <BorrowHistoryView
-              history={borrowHistory.history}
-              isLoading={borrowHistory.isLoading}
-              error={borrowHistory.error}
-              onRetry={borrowHistory.handleRetry}
-              filters={borrowHistory.filters}
-              onFilterChange={borrowHistory.handleFilterChange}
-              onClearFilters={borrowHistory.handleClearFilters}
+          {isBorrowView && (
+            <BorrowView
+              activeTab={borrowTab}
+              onTabChange={handleBorrowTabChange}
+              canBorrow={canManageBorrows}
+              canViewCurrentBorrows={canViewCurrentBorrows}
+              canViewBorrowHistory={canViewBorrowHistory}
+              borrowFormProps={{
+                isFormDataLoading: borrowEquipment.isFormDataLoading,
+                formDataError: borrowEquipment.formDataError,
+                onRetryFormData: borrowEquipment.handleRetryFormData,
+                categories: borrowEquipment.categories,
+                deviceQuery: borrowEquipment.deviceQuery,
+                onDeviceQueryChange: borrowEquipment.handleDeviceQueryChange,
+                deviceCategory: borrowEquipment.deviceCategory,
+                onDeviceCategoryChange: borrowEquipment.handleDeviceCategoryChange,
+                deviceOptions: borrowEquipment.deviceOptions,
+                isDeviceLoading: borrowEquipment.isDeviceLoading,
+                deviceError: borrowEquipment.deviceError,
+                selectedDevice: borrowEquipment.selectedDevice,
+                onSelectDevice: borrowEquipment.handleSelectDevice,
+                onClearDevice: borrowEquipment.handleClearDevice,
+                employeeQuery: borrowEquipment.employeeQuery,
+                onEmployeeQueryChange: borrowEquipment.handleEmployeeQueryChange,
+                employeeOptions: borrowEquipment.employeeOptions,
+                isEmployeeLoading: borrowEquipment.isEmployeeLoading,
+                employeeError: borrowEquipment.employeeError,
+                selectedEmployee: borrowEquipment.selectedEmployee,
+                onSelectEmployee: borrowEquipment.handleSelectEmployee,
+                onClearEmployee: borrowEquipment.handleClearEmployee,
+                expectedReturnDate: borrowEquipment.expectedReturnDate,
+                onExpectedReturnDateChange: borrowEquipment.handleExpectedReturnDateChange,
+                purpose: borrowEquipment.purpose,
+                onPurposeChange: borrowEquipment.handlePurposeChange,
+                conditionOnBorrow: borrowEquipment.conditionOnBorrow,
+                onConditionOnBorrowChange: borrowEquipment.handleConditionOnBorrowChange,
+                remark: borrowEquipment.remark,
+                onRemarkChange: borrowEquipment.handleRemarkChange,
+                onSubmit: borrowEquipment.handleSubmit,
+                isSubmitting: borrowEquipment.isSubmitting,
+                submitError: borrowEquipment.submitError,
+                submitSuccess: borrowEquipment.submitSuccess,
+              }}
+              currentBorrowsProps={{
+                canManage: canManageBorrows,
+                loans: currentBorrows.loans,
+                isLoading: currentBorrows.isLoading,
+                error: currentBorrows.error,
+                onRetry: currentBorrows.handleRetry,
+                onReturn: currentBorrows.handleOpenReturn,
+              }}
+              borrowHistoryProps={{
+                history: borrowHistory.history,
+                isLoading: borrowHistory.isLoading,
+                error: borrowHistory.error,
+                onRetry: borrowHistory.handleRetry,
+                filters: borrowHistory.filters,
+                onFilterChange: borrowHistory.handleFilterChange,
+                onClearFilters: borrowHistory.handleClearFilters,
+              }}
             />
           )}
 
@@ -967,12 +1055,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                 onAddNew={employees.handleOpenAdd}
                 onEdit={employees.handleOpenEdit}
                 onDelete={employees.handleOpenDelete}
-                onDownloadExcel={employees.handleDownloadEmployeeExcel}
-                onDownloadPdf={employees.handleDownloadEmployeePdf}
-                onDownloadAllExcel={employees.handleDownloadAllEmployeesExcel}
-                onDownloadAllPdf={employees.handleDownloadAllEmployeesPdf}
-                isDownloadingAllExcel={employees.isDownloadingAllExcel}
-                isDownloadingAllPdf={employees.isDownloadingAllPdf}
               />
             </div>
           )}
@@ -1113,44 +1195,67 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
 
           {isAssignView &&
             (canManageAssign ? (
-              <AssignEquipmentView
-                isFormDataLoading={assign.isFormDataLoading}
-                formDataError={assign.formDataError}
-                onRetryFormData={assign.handleRetryFormData}
-                categories={assign.formData.categories}
-                positions={assign.formData.positions}
-                statuses={assign.formData.statuses}
-                deviceQuery={assign.deviceQuery}
-                onDeviceQueryChange={assign.handleDeviceQueryChange}
-                deviceCategory={assign.deviceCategory}
-                onDeviceCategoryChange={assign.handleDeviceCategoryChange}
-                deviceOptions={assign.deviceOptions}
-                isDeviceLoading={assign.isDeviceLoading}
-                deviceError={assign.deviceError}
-                selectedDevice={assign.selectedDevice}
-                onSelectDevice={assign.handleSelectDevice}
-                onClearDevice={assign.handleClearDevice}
-                position={assign.position}
-                onPositionChange={assign.handlePositionChange}
-                employeeQuery={assign.employeeQuery}
-                onEmployeeQueryChange={assign.handleEmployeeQueryChange}
-                employeeOptions={assign.employeeOptions}
-                isEmployeeLoading={assign.isEmployeeLoading}
-                employeeError={assign.employeeError}
-                selectedEmployee={assign.selectedEmployee}
-                onSelectEmployee={assign.handleSelectEmployee}
-                onClearEmployee={assign.handleClearEmployee}
-                status={assign.status}
-                onStatusChange={assign.handleStatusChange}
-                assignedDate={assign.assignedDate}
-                onAssignedDateChange={assign.handleAssignedDateChange}
-                onSubmit={assign.handleSubmit}
-                isSubmitting={assign.isSubmitting}
-                submitError={assign.submitError}
-                submitSuccess={assign.submitSuccess}
-                conflict={assign.conflict}
-                onResolveConflict={assign.handleResolveConflict}
-                isResolvingConflict={assign.isResolvingConflict}
+              <AssignationView
+                activeTab={assignationTab}
+                onTabChange={handleAssignationTabChange}
+                assignProps={{
+                  isFormDataLoading: assign.isFormDataLoading,
+                  formDataError: assign.formDataError,
+                  onRetryFormData: assign.handleRetryFormData,
+                  categories: assign.formData.categories,
+                  positions: assign.formData.positions,
+                  statuses: assign.formData.statuses,
+                  deviceQuery: assign.deviceQuery,
+                  onDeviceQueryChange: assign.handleDeviceQueryChange,
+                  deviceCategory: assign.deviceCategory,
+                  onDeviceCategoryChange: assign.handleDeviceCategoryChange,
+                  deviceOptions: assign.deviceOptions,
+                  isDeviceLoading: assign.isDeviceLoading,
+                  deviceError: assign.deviceError,
+                  selectedDevice: assign.selectedDevice,
+                  onSelectDevice: assign.handleSelectDevice,
+                  onClearDevice: assign.handleClearDevice,
+                  position: assign.position,
+                  onPositionChange: assign.handlePositionChange,
+                  employeeQuery: assign.employeeQuery,
+                  onEmployeeQueryChange: assign.handleEmployeeQueryChange,
+                  employeeOptions: assign.employeeOptions,
+                  isEmployeeLoading: assign.isEmployeeLoading,
+                  employeeError: assign.employeeError,
+                  selectedEmployee: assign.selectedEmployee,
+                  onSelectEmployee: assign.handleSelectEmployee,
+                  onClearEmployee: assign.handleClearEmployee,
+                  status: assign.status,
+                  onStatusChange: assign.handleStatusChange,
+                  assignedDate: assign.assignedDate,
+                  onAssignedDateChange: assign.handleAssignedDateChange,
+                  onSubmit: assign.handleSubmit,
+                  isSubmitting: assign.isSubmitting,
+                  submitError: assign.submitError,
+                  submitSuccess: assign.submitSuccess,
+                  conflict: assign.conflict,
+                  onResolveConflict: assign.handleResolveConflict,
+                  isResolvingConflict: assign.isResolvingConflict,
+                }}
+                unassignProps={{
+                  items: unassign.items,
+                  totalCount: unassign.totalCount,
+                  isLoading: unassign.isLoading,
+                  error: unassign.error,
+                  onRetry: unassign.handleRetry,
+                  search: unassign.search,
+                  onSearchChange: unassign.handleSearchChange,
+                  page: unassign.page,
+                  pageCount: unassign.pageCount,
+                  onPageChange: unassign.setPage,
+                  target: unassign.target,
+                  isUnassigning: unassign.isUnassigning,
+                  unassignError: unassign.unassignError,
+                  successMessage: unassign.successMessage,
+                  onOpenUnassign: unassign.handleOpenUnassign,
+                  onCloseUnassign: unassign.handleCloseUnassign,
+                  onConfirmUnassign: unassign.handleConfirmUnassign,
+                }}
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -1171,6 +1276,16 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                 onDownloadExcel={handleDownloadReportExcel}
                 isExportingPdf={isExportingReportPdf}
                 isExportingExcel={isExportingReportExcel}
+                onDownloadEmployeesPdf={report.handleDownloadEmployeesPdf}
+                onDownloadEmployeesExcel={report.handleDownloadEmployeesExcel}
+                isDownloadingEmployeesPdf={report.isDownloadingEmployeesPdf}
+                isDownloadingEmployeesExcel={report.isDownloadingEmployeesExcel}
+                onDownloadDepartmentsPdf={report.handleDownloadDepartmentsPdf}
+                onDownloadDepartmentsExcel={report.handleDownloadDepartmentsExcel}
+                onDownloadEquipmentPdf={equipment.handleDownloadAllEquipmentPdf}
+                onDownloadEquipmentExcel={equipment.handleDownloadAllEquipmentExcel}
+                isDownloadingEquipmentPdf={equipment.isDownloadingAllPdf}
+                isDownloadingEquipmentExcel={equipment.isDownloadingAllExcel}
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">

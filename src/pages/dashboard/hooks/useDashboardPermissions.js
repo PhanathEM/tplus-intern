@@ -29,7 +29,10 @@ export function useDashboardPermissions({ user }) {
   const canManageCategory = canAccessDashboardView(user, "Category", navItemsByLabel);
   const canManagePartTypes = canAccessDashboardView(user, "Part Types", navItemsByLabel);
   const canManagePartStatuses = canAccessDashboardView(user, "Part Types Statuses", navItemsByLabel);
-  const canManageAssign = canAccessDashboardView(user, "Assign", navItemsByLabel);
+  const canManageAssign = canAccessDashboardView(user, "Assignation", navItemsByLabel);
+  // Borrow is one page with two tabs, each still gated by its own permission.
+  const canViewCurrentBorrows = canAccessDashboardView(user, "Currently Borrowed", navItemsByLabel);
+  const canViewBorrowHistory = canAccessDashboardView(user, "Borrow History", navItemsByLabel);
 
   const visibleHomeNavSections = useMemo(
     () => getVisibleNavSections(user, navSections).filter((section) => section.label !== "Overview"),
@@ -53,6 +56,8 @@ export function useDashboardPermissions({ user }) {
     canManagePartTypes,
     canManagePartStatuses,
     canManageAssign,
+    canViewCurrentBorrows,
+    canViewBorrowHistory,
     visibleHomeNavSections,
   };
 }

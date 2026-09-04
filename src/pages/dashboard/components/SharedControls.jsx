@@ -326,7 +326,7 @@ export function FormField({ label, htmlFor, children }) {
 }
 
 export const formInputClass =
-  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:ring-slate-700";
+  "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100";
 
 export function ConfirmDialog({
   isOpen,
@@ -496,7 +496,7 @@ export function RadioSelect({ id, options, value, onSelect, placeholder = "Selec
         id={id}
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
-        className="flex h-10 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 text-left text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:focus:border-slate-500 dark:focus:ring-slate-700"
+        className="flex h-10 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 text-left text-sm outline-none transition disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800"
       >
         <span className={`truncate ${selectedOption ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"}`}>
           {selectedOption ? selectedOption.label : placeholder}
@@ -616,7 +616,7 @@ export function EmployeeSelectDropdown({ employees, selectedId, onSelect, disabl
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search employee name"
-                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 text-sm outline-none transition focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-slate-500 dark:focus:bg-slate-900 dark:focus:ring-slate-700"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 text-sm outline-none transition focus:bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:bg-slate-900 "
               />
             </div>
           </div>

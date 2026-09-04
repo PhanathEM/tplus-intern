@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { fetchEmployees } from "../../../../services/employeeService";
+import { fetchEmployees, fetchEmployeeFull } from "../../../../services/employeeService";
+import { exportAllEmployeesToExcel, exportAllEmployeesToPdf } from "../employees/employeeExport";
+import { exportAllDepartmentsToExcel, exportAllDepartmentsToPdf } from "../departments/departmentExport";
 import { fetchDepartments } from "../../../../services/departmentService";
 import { fetchEquipmentByStatus } from "../../../../services/equipmentService";
 import { fetchLicenses } from "../../../../services/licenseService";
@@ -12,8 +14,11 @@ import { getLicenseExpiryInfo } from "../../dashboard.notifications";
 import { normalizeRecordList } from "../../dashboard.utils";
 
 const EMPTY_REPORT = {
-  employees: { total: 0, bySex: [] },
-  departments: { total: 0, rows: [] },
+  // `list` is the raw directory rows, kept alongside the counts so the
+  // Employees panel can export the full staff list (the counts alone can't
+  // reproduce names, phones or assigned devices).
+  employees: { total: 0, bySex: [], list: [] },
+  departments: { total: 0, rows: [], list: [] },
   equipment: { total: 0, byStatus: [], byCategory: [], byAssignment: [] },
   licenses: { total: 0, byStatus: [] },
   borrow: { currentlyBorrowed: 0, overdue: 0, historyTotal: 0 },
@@ -66,6 +71,7 @@ function loadReport() {
         report.employees = {
           total: employees.length,
           bySex: countBy(employees, (employee) => employee.sex),
+          list: employees,
         };
       }
 
@@ -78,6 +84,7 @@ function loadReport() {
             employeeCount: dept.employee_count ?? 0,
             equipmentCount: dept.equipment_count ?? 0,
           })),
+          list: departments,
         };
       }
 
@@ -146,6 +153,8 @@ export function useReport({ isActive }) {
   const [isLoading, setIsLoading] = useState(isActive);
   const [error, setError] = useState(null);
   const [fetchToken, setFetchToken] = useState(0);
+  const [isDownloadingEmployeesPdf, setIsDownloadingEmployeesPdf] = useState(false);
+  const [isDownloadingEmployeesExcel, setIsDownloadingEmployeesExcel] = useState(false);
 
   useEffect(() => {
     if (!isActive) return;
@@ -182,5 +191,49 @@ export function useReport({ isActive }) {
     setError(null);
   }
 
-  return { report, isLoading, error, handleRetry, resetForEntry };
+  // The staff-list export needs each employee's assigned devices, which only
+  // the per-employee endpoint returns. A failure for one employee leaves that
+  // row deviceless rather than sinking the whole export.
+  function downloadEmployeeList(setIsDownloading, exportAll) {
+    setIsDownloading(true);
+    Promise.all(
+      report.employees.list.map((employee) =>
+        fetchEmployeeFull(employee.employee_id)
+          .then((data) => ({ employee, devices: Array.isArray(data?.equipment) ? data.equipment : [] }))
+          .catch(() => ({ employee, devices: [] }))
+      )
+    )
+      .then((entries) => exportAll(entries))
+      .finally(() => setIsDownloading(false));
+  }
+
+  function handleDownloadEmployeesPdf() {
+    downloadEmployeeList(setIsDownloadingEmployeesPdf, exportAllEmployeesToPdf);
+  }
+
+  function handleDownloadEmployeesExcel() {
+    downloadEmployeeList(setIsDownloadingEmployeesExcel, exportAllEmployeesToExcel);
+  }
+
+  function handleDownloadDepartmentsPdf() {
+    exportAllDepartmentsToPdf(report.departments.list);
+  }
+
+  function handleDownloadDepartmentsExcel() {
+    exportAllDepartmentsToExcel(report.departments.list);
+  }
+
+  return {
+    report,
+    isLoading,
+    error,
+    handleRetry,
+    resetForEntry,
+    handleDownloadEmployeesPdf,
+    handleDownloadEmployeesExcel,
+    isDownloadingEmployeesPdf,
+    isDownloadingEmployeesExcel,
+    handleDownloadDepartmentsPdf,
+    handleDownloadDepartmentsExcel,
+  };
 }

@@ -1,12 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FiAlertTriangle as AlertTriangle,
   FiRefreshCw as RefreshCw,
+  FiSettings as Settings,
 } from "react-icons/fi";
 import { formatFieldValue } from "../dashboard.utils";
 import { translateLabel } from "../../../lib/i18nLabel";
-import { EmptyState } from "./SharedControls";
+import { EmptyState, Pagination } from "./SharedControls";
 
 export function RecordCellValue({ value }) {
   const { t } = useTranslation();
@@ -64,8 +65,12 @@ export function RecordsTableView({
   renderRowActions,
   actionsHeader,
   hideRefresh = false,
+  // Opt-in: pass a page size to paginate. Left off, the table renders every
+  // record exactly as before, so the other pages using this are unaffected.
+  pageSize = 0,
 }) {
   const { t, i18n } = useTranslation();
+  const [page, setPage] = useState(1);
 
   /*
    * IMPORTANT:
@@ -80,10 +85,19 @@ export function RecordsTableView({
     [columnsConfig]
   );
 
+  const pageCount = pageSize > 0 ? Math.max(1, Math.ceil(records.length / pageSize)) : 1;
+  // Derived rather than reset in an effect: filtering the list down can drop
+  // the page count below the page you were on, which would otherwise show
+  // an empty table until you clicked something.
+  const safePage = Math.min(page, pageCount);
+  const visibleRecords = pageSize > 0 ? records.slice((safePage - 1) * pageSize, safePage * pageSize) : records;
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+      <div className="rounded-xl bg-white dark:bg-slate-900">
+        {/* z-20 beats the hovered row's own stacking so a lifted row passes
+            under this bar rather than over it. */}
+        <div className="sticky top-14 z-20 flex flex-wrap items-center justify-between gap-3 bg-white px-5 py-2.5 dark:bg-slate-900">
           <div>
             <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">
               {title}
@@ -159,72 +173,99 @@ export function RecordsTableView({
           <>
             {topContent}
 
+            {/* border-separate (not the default collapse) so a hovered row can
+                round its end cells — border-radius on a cell is ignored in the
+                collapsed model. Row lines therefore live on the cells rather
+                than on <tr>, which can't carry borders here. */}
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-100 text-left text-[13px] dark:divide-slate-800">
+              <table className="min-w-full border-separate border-spacing-0 text-left text-[13px]">
                 <thead className="bg-slate-50/80 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                   <tr>
-                    {columns.map((column) => (
-                      <th
-                        key={column.key}
-                        className="whitespace-nowrap px-4 py-3 font-semibold"
-                      >
-                        {translateLabel(t, i18n, column.label)}
-                      </th>
-                    ))}
+                    {columns.map((column) => {
+                      const ColumnIcon = column.icon;
+                      return (
+                        <th
+                          key={column.key}
+                          className="whitespace-nowrap border-y border-slate-100 px-5 py-2 font-semibold leading-none dark:border-slate-800"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            {ColumnIcon && <ColumnIcon size={13} className="shrink-0" />}
+                            {translateLabel(t, i18n, column.label)}
+                          </span>
+                        </th>
+                      );
+                    })}
 
                     {renderRowActions && (
-                      <th className="whitespace-nowrap px-4 py-3 text-right font-semibold">
-                        {actionsHeader || t("Actions")}
+                      <th className="whitespace-nowrap border-y border-slate-100 px-5 py-2 text-right font-semibold leading-none dark:border-slate-800">
+                        <span className="flex items-center justify-end gap-1.5">
+                          <Settings size={13} className="shrink-0" />
+                          {actionsHeader || t("Action")}
+                        </span>
                       </th>
                     )}
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
-                  {records.map((record, index) => (
-                    <tr
-                      key={rowKey(record, index)}
-                      className={`transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40 ${getRowClassName?.(record) ||
-                        ""
-                        }`}
-                    >
-                      {columns.map((column) => (
-                        <td
-                          key={column.key}
-                          className={`px-4 py-3 text-slate-600 dark:text-slate-300 ${column.key === "remark"
-                              ? "min-w-72 whitespace-normal"
-                              : "whitespace-nowrap"
-                            }`}
-                        >
-                          {renderCell ? (
-                            renderCell(
-                              record,
-                              column
-                            )
-                          ) : (
-                            <RecordCellValue
-                              value={
-                                column.key === "status" && record[column.key]
-                                  ? translateLabel(t, i18n, record[column.key])
-                                  : record[column.key]
-                              }
-                            />
-                          )}
-                        </td>
-                      ))}
+                <tbody>
+                  {visibleRecords.map((record, index) => {
+                    // Every cell keeps a full border at rest — top transparent,
+                    // bottom the row separator — so hover only recolours it into
+                    // a card around the row, with no 1px height jump.
+                    const cellClass =
+                      "border border-x-transparent border-t-transparent border-b-slate-50 bg-white px-5 py-2 group-hover:border-y-slate-200 dark:border-b-slate-800/60 dark:bg-slate-900 dark:group-hover:border-y-slate-700";
+                    const lastIndex = columns.length - 1;
+                    return (
+                      <tr
+                        key={rowKey(record, index)}
+                        className={`group ${getRowClassName?.(record) || ""}`}
+                      >
+                        {columns.map((column, columnIndex) => (
+                          <td
+                            key={column.key}
+                            className={`${cellClass} text-slate-600 dark:text-slate-300 ${column.key === "remark" ? "min-w-72 whitespace-normal" : "whitespace-nowrap"
+                              } ${columnIndex === 0 ? "rounded-l-lg group-hover:border-l-slate-200 dark:group-hover:border-l-slate-700" : ""
+                              } ${!renderRowActions && columnIndex === lastIndex
+                                ? "rounded-r-lg group-hover:border-r-slate-200 dark:group-hover:border-r-slate-700"
+                                : ""
+                              }`}
+                          >
+                            {renderCell ? (
+                              renderCell(
+                                record,
+                                column
+                              )
+                            ) : (
+                              <RecordCellValue
+                                value={
+                                  column.key === "status" && record[column.key]
+                                    ? translateLabel(t, i18n, record[column.key])
+                                    : record[column.key]
+                                }
+                              />
+                            )}
+                          </td>
+                        ))}
 
-                      {renderRowActions && (
-                        <td className="whitespace-nowrap px-4 py-3 text-right">
-                          {renderRowActions(
-                            record
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
+                        {renderRowActions && (
+                          <td className={`${cellClass} whitespace-nowrap rounded-r-lg text-right group-hover:border-r-slate-200 dark:group-hover:border-r-slate-700`}>
+                            {renderRowActions(
+                              record
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+
+            {pageSize > 0 && pageCount > 1 && (
+              <div className="flex flex-wrap items-center justify-center gap-3 border-t border-slate-100 px-5 py-3 dark:border-slate-800">
+                <Pagination currentPage={safePage} pageCount={pageCount} onPageChange={setPage} />
+              </div>
+            )}
           </>
         )}
       </div>

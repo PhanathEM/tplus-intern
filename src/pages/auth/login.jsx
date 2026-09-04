@@ -610,7 +610,7 @@ export default function Login({ onLogin, theme, onToggleTheme }) {
                                     onPaste={handleCodePaste}
                                     disabled={isRequestingReset}
                                     aria-label={`Digit ${index + 1} of 6`}
-                                    className="h-14 w-full rounded-xl border border-slate-200 bg-white text-center text-lg font-semibold text-slate-900 outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                                    className="h-14 w-full rounded-xl border border-slate-200 bg-white text-center text-lg font-semibold text-slate-900 outline-none transition focus:border-orange-400 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                                 />
                             ))}
                         </div>

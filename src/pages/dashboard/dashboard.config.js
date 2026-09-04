@@ -1,4 +1,4 @@
-import { FiActivity as Activity, FiBarChart2 as BarChart2, FiBox as Box, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiSettings as SettingsIcon, FiSliders as Sliders, FiTag as Tag, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
+import { FiHash as Hash, FiTag as TagIcon, FiType as TypeIcon, FiBox as BoxIcon, FiActivity as Activity, FiBarChart2 as BarChart2, FiBox as Box, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiSettings as SettingsIcon, FiSliders as Sliders, FiTag as Tag, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
 import { PERMISSIONS } from "../../lib/permissions";
 
 export const navSections = [
@@ -21,9 +21,21 @@ export const navSections = [
         icon: Box,
         children: [
           { label: "Equipments", icon: Box, permission: PERMISSIONS.EQUIPMENT },
-          { label: "Assign", icon: UserPlus, permission: PERMISSIONS.ASSIGN_EQUIPMENT, adminOnly: true },
-          { label: "Currently Borrowed", icon: RefreshCw, permission: PERMISSIONS.CURRENTLY_BORROWED },
-          { label: "Borrow History", icon: Search, permission: PERMISSIONS.BORROW_HISTORY },
+          { label: "Assignation", icon: UserPlus, permission: PERMISSIONS.ASSIGN_EQUIPMENT, adminOnly: true },
+          {
+            label: "Borrow",
+            icon: RefreshCw,
+            // `standalone` opens this as one page (see Sidebar.jsx) rather than
+            // an expandable group — the children exist only so the existing
+            // children-based permission check keeps this visible whenever the
+            // account can reach either tab, and so each tab keeps its own
+            // individually grantable permission.
+            standalone: true,
+            children: [
+              { label: "Currently Borrowed", icon: RefreshCw, permission: PERMISSIONS.CURRENTLY_BORROWED },
+              { label: "Borrow History", icon: Search, permission: PERMISSIONS.BORROW_HISTORY },
+            ],
+          },
         ],
       },
       {
@@ -91,10 +103,18 @@ export const navSections = [
   },
 ];
 
-export const navItemsByLabel = navSections
-  .flatMap((section) => section.items)
-  .flatMap((item) => (item.children ? [item, ...item.children] : [item]))
-  .reduce((acc, item) => ({ ...acc, [item.label]: item }), {});
+// Nav items nest two deep in places (Equipments → Borrow → Currently
+// Borrowed), so this walks the whole tree rather than one level — otherwise a
+// tab inside a `standalone` page would vanish from the permission list and
+// from every canAccessDashboardView lookup.
+function flattenNavItems(items) {
+  return items.flatMap((item) => (item.children?.length ? [item, ...flattenNavItems(item.children)] : [item]));
+}
+
+export const navItemsByLabel = flattenNavItems(navSections.flatMap((section) => section.items)).reduce(
+  (acc, item) => ({ ...acc, [item.label]: item }),
+  {}
+);
 
 // A child view's page header reads "Parent/Child" (e.g. "Equipments/Assign")
 // instead of just its own label, so it's clear which group it's nested
@@ -112,8 +132,7 @@ export const parentLabelByChildLabel = navSections
 export const userPermissionSections = navSections
   .map((section) => ({
     label: section.label,
-    permissions: section.items
-      .flatMap((item) => (item.children ? item.children : [item]))
+    permissions: flattenNavItems(section.items)
       .filter((item) => item.permission)
       .map((item) => ({ value: item.permission, label: item.label })),
   }))
@@ -140,6 +159,72 @@ export const MODEL_NAME_PLACEHOLDER_BY_PART = {
   keyboard: "e.g. Logitech K120",
 };
 
+// Example values for the equipment form, whose fields are whatever columns the
+// API reports for a category — so this is a lookup by field key rather than a
+// placeholder written at each input. Anything not listed simply gets none.
+// Raw strings (not t() keys) to match MODEL_NAME_PLACEHOLDER_BY_PART below:
+// these are sample codes and model numbers, not prose to translate.
+export const EQUIPMENT_FIELD_PLACEHOLDERS = {
+  computer_name: "e.g. TPLUS-LT-014",
+  device_name: "e.g. ACT-FL-01-Electrical",
+  device_model: "e.g. C806",
+  device_type: "e.g. HIP",
+  type: "e.g. HIP",
+  location: "e.g. VTE",
+  asset_code: "e.g. AST-00123",
+  aset_code: "e.g. AST-00123",
+  service_tag: "e.g. 7SBQ2K3",
+  serial_number: "e.g. 69202105150019",
+  ip_address: "e.g. 198.155.155.222",
+  mac_address: "e.g. 00:1A:2B:3C:4D:5E",
+  cpu: "e.g. i5-1135G7",
+  ram: "e.g. 8 GB",
+  hd: "e.g. 512 GB SSD",
+  windows_license: "e.g. Windows 11 Pro",
+  bag_model: "e.g. HP Business Carry Case",
+  mouse_model: "e.g. Logitech M185",
+  keyboard_model: "e.g. Logitech K120",
+  monitor_model: "e.g. Dell P2422H",
+  battery_model: "e.g. HP OA04",
+  adapter_model: "e.g. HP 65W 7.4mm",
+  brand: "e.g. HP",
+  model: "e.g. ProBook 650 G1",
+  size: "e.g. 24 inch",
+  resolution: "e.g. 1920x1080",
+  port: "e.g. 8080",
+  hostname: "e.g. tplus-srv-01",
+  os: "e.g. Windows Server 2022",
+  type_os: "e.g. Windows Server",
+  os_version: "e.g. 2022 Standard",
+  manufacture: "e.g. Dell",
+  manufacturer: "e.g. Dell",
+  platform: "e.g. VMware ESXi",
+  remark: "e.g. Spare unit kept in IT stock",
+};
+
+// Matched with separators and case stripped, because the API names these
+// columns inconsistently — "device_type", "devicetype" and "Device Type" all
+// have to find the same example rather than needing an entry each.
+function normalizeFieldKey(value) {
+  return String(value || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
+}
+
+const PLACEHOLDER_BY_NORMALIZED_KEY = Object.fromEntries(
+  Object.entries(EQUIPMENT_FIELD_PLACEHOLDERS).map(([key, value]) => [normalizeFieldKey(key), value])
+);
+
+// Tries each candidate in turn — the column's key first, then its display
+// label. Some categories key a column something the map can't anticipate
+// (or something opaque), but the label is the human name this map is written
+// against, so it catches those without needing an entry per API spelling.
+export function getEquipmentFieldPlaceholder(...candidates) {
+  for (const candidate of candidates) {
+    const match = PLACEHOLDER_BY_NORMALIZED_KEY[normalizeFieldKey(candidate)];
+    if (match) return match;
+  }
+  return "";
+}
+
 export const MODEL_NUMBER_PLACEHOLDER_BY_PART = {
   bag: "e.g. BP-15.6-BLK",
   mouse: "e.g. 910-002235",
@@ -160,11 +245,11 @@ export const PART_ACTION_OPTIONS = [
 export const DEFAULT_PART_STOCK_STATUS = "Working - IT Stock";
 
 export const departmentColumns = [
-  { key: "department_id", label: "Department ID" },
-  { key: "department_code", label: "Department Code" },
-  { key: "department_name", label: "Department Name" },
-  { key: "employee_count", label: "Employees" },
-  { key: "equipment_count", label: "Equipment" },
+  { key: "department_id", label: "Department ID", icon: Hash },
+  { key: "department_code", label: "Department Code", icon: TagIcon },
+  { key: "department_name", label: "Department Name", icon: TypeIcon },
+  { key: "employee_count", label: "Employees", icon: Users },
+  { key: "equipment_count", label: "Equipment", icon: BoxIcon },
 ];
 
 export const PART_STOCK_COLUMNS = {
@@ -323,6 +408,7 @@ export const EMPLOYEE_FORM_INITIAL_VALUES = {
 };
 
 export const EMPLOYEES_PAGE_SIZE = 20;
+export const DEPARTMENTS_PAGE_SIZE = 20;
 
 // ---------------------------------------------------------------------------
 // Empty state

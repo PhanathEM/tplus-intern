@@ -5,14 +5,13 @@ import {
   FiBox as Box,
   FiBriefcase as Briefcase,
   FiEdit2 as Edit2,
-  FiFileText as FileText,
-  FiGrid as Grid,
   FiHash as Hash,
   FiLayers as Layers,
   FiMapPin as MapPin,
   FiPhone as Phone,
   FiPlusCircle as PlusCircle,
   FiRefreshCw as RefreshCw,
+  FiSettings as Settings,
   FiTrash2 as Trash2,
   FiUser as UserIcon,
   FiUsers as Users,
@@ -22,7 +21,7 @@ import {
   formatFieldValue,
   getEmployeeDepartmentCode,
 } from "../../dashboard.utils";
-import { EmptyState, FormField, formInputClass, Pagination, RadioSelect, RollingText, RowActionsMenu } from "../../components/SharedControls";
+import { EmptyState, FormField, formInputClass, Pagination, RadioSelect, RollingText } from "../../components/SharedControls";
 
 export function EmployeeFormModal({
   isOpen,
@@ -52,11 +51,11 @@ export function EmployeeFormModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        className="absolute inset-0 bg-slate-950/60"
+        className="animate-modal-backdrop absolute inset-0 bg-slate-950/60"
         onClick={onClose}
         aria-label="Close"
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
+      <div className="animate-modal-panel relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:shadow-black/40">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
             <h3 className="text-[15px] font-semibold text-slate-600 dark:text-slate-300">
@@ -66,10 +65,10 @@ export function EmployeeFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label="Close"
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 
@@ -91,6 +90,7 @@ export function EmployeeFormModal({
                     autoComplete="off"
                     value={values.full_name}
                     onChange={(e) => onChange("full_name", e.target.value)}
+                    placeholder={t("e.g. John Sey")}
                     className={formInputClass}
                     disabled={isSubmitting}
                   />
@@ -104,6 +104,7 @@ export function EmployeeFormModal({
                   autoComplete="off"
                   value={values.position}
                   onChange={(e) => onChange("position", e.target.value)}
+                  placeholder={t("e.g. Sales Executive")}
                   className={formInputClass}
                   disabled={isSubmitting}
                 />
@@ -127,6 +128,7 @@ export function EmployeeFormModal({
                   autoComplete="off"
                   value={values.location}
                   onChange={(e) => onChange("location", e.target.value)}
+                  placeholder={t("e.g. VTE")}
                   className={formInputClass}
                   disabled={isSubmitting}
                 />
@@ -139,6 +141,7 @@ export function EmployeeFormModal({
                   autoComplete="off"
                   value={values.staff_code}
                   onChange={(e) => onChange("staff_code", e.target.value)}
+                  placeholder={t("e.g. 1234dev")}
                   className={formInputClass}
                   disabled={isSubmitting}
                 />
@@ -151,6 +154,7 @@ export function EmployeeFormModal({
                   autoComplete="off"
                   value={values.phone}
                   onChange={(e) => onChange("phone", e.target.value)}
+                  placeholder={t("e.g. 0885564345")}
                   className={formInputClass}
                   disabled={isSubmitting}
                 />
@@ -209,12 +213,6 @@ export function EmployeeDirectoryTable({
   onAddNew,
   onEdit,
   onDelete,
-  onDownloadExcel,
-  onDownloadPdf,
-  onDownloadAllExcel,
-  onDownloadAllPdf,
-  isDownloadingAllExcel = false,
-  isDownloadingAllPdf = false,
   canManage = true,
   canCreate = true,
 }) {
@@ -290,30 +288,23 @@ export function EmployeeDirectoryTable({
                 <tr>
                   {columns.map((column) => {
                     const ColumnIcon = column.icon;
+                    // flex, not inline-flex: an inline box sits on the text
+                    // baseline and leaves descender space underneath, which
+                    // made the padding look uneven against the data rows.
                     return (
-                      <th key={column.key} className="whitespace-nowrap border-b border-slate-100 px-5 py-2 font-semibold uppercase tracking-wide dark:border-slate-800">
-                        <span className="inline-flex items-center gap-1.5">
+                      <th key={column.key} className="whitespace-nowrap border-y border-slate-100 px-5 py-2 font-semibold uppercase leading-none tracking-wide dark:border-slate-800">
+                        <span className="flex items-center gap-1.5">
                           {ColumnIcon && <ColumnIcon size={13} className="shrink-0" />}
                           {t(column.label)}
                         </span>
                       </th>
                     );
                   })}
-                  <th className="border-b border-slate-100 px-5 py-2 text-right dark:border-slate-800">
-                    <RowActionsMenu
-                      items={[
-                        {
-                          icon: FileText,
-                          label: isDownloadingAllPdf ? t("Preparing PDF...") : t("Download All PDFs"),
-                          onClick: onDownloadAllPdf,
-                        },
-                        {
-                          icon: Grid,
-                          label: isDownloadingAllExcel ? t("Preparing Excel...") : t("Download All Excel"),
-                          onClick: onDownloadAllExcel,
-                        },
-                      ]}
-                    />
+                  <th className="whitespace-nowrap border-y border-slate-100 px-5 py-2 text-right font-semibold uppercase leading-none tracking-wide dark:border-slate-800">
+                    <span className="flex items-center justify-end gap-1.5">
+                      <Settings size={13} className="shrink-0" />
+                      {t("Action")}
+                    </span>
                   </th>
                 </tr>
               </thead>
@@ -351,17 +342,36 @@ export function EmployeeDirectoryTable({
                       <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{employee.phone || "—"}</td>
                       <td className={`${cellClass} text-slate-600 dark:text-slate-300`}>{employee.location || "—"}</td>
                       <td className={`${cellClass} rounded-r-lg text-right group-hover:border-r-slate-200 dark:group-hover:border-r-slate-700`}>
-                        <div className="flex items-center justify-end">
+                        {/* stopPropagation: the whole row opens the detail
+                            modal on click, so an action icon must not do both. */}
+                        <div className="flex items-center justify-end gap-1">
                           {canManage && (
-                            <RowActionsMenu
-                              items={[
-                                { icon: FileText, label: t("Download PDF"), onClick: () => onDownloadPdf(employee) },
-                                { icon: Grid, label: t("Download Excel"), onClick: () => onDownloadExcel(employee) },
-                                { divider: true },
-                                { icon: Edit2, label: t("Edit"), onClick: () => onEdit(employee) },
-                                { icon: Trash2, label: t("Delete"), onClick: () => onDelete(employee), destructive: true },
-                              ]}
-                            />
+                            <>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onEdit(employee);
+                                }}
+                                title={t("Edit")}
+                                aria-label={t("Edit")}
+                                className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+                              >
+                                <Edit2 size={14} className="block" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onDelete(employee);
+                                }}
+                                title={t("Delete")}
+                                aria-label={t("Delete")}
+                                className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-rose-50 hover:text-rose-600 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-400"
+                              >
+                                <Trash2 size={14} className="block" />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>

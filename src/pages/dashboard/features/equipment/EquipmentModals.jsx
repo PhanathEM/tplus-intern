@@ -3,11 +3,15 @@ import { useTranslation } from "react-i18next";
 import { FiPlusCircle as PlusCircle, FiX as X } from "react-icons/fi";
 import { EmployeeSelectDropdown, FormField, formInputClass, RadioSelect, RollingText } from "../../components/SharedControls";
 import { OWNER_DERIVED_FIELDS } from "../../dashboard.utils";
+import { EQUIPMENT_FIELD_PLACEHOLDERS, getEquipmentFieldPlaceholder } from "../../dashboard.config";
 
 function EquipmentDynamicField({ field, values, onChange, isSubmitting, departments, employees, onRemove }) {
   const { t } = useTranslation();
   const id = `add-equipment-${field.key}`;
   const value = values[field.key] || "";
+  // Fields come from the API's per-category column config, so the example
+  // value is looked up by key instead of written at each input.
+  const placeholder = getEquipmentFieldPlaceholder(field.key, field.label);
   const [isRemoving, setIsRemoving] = useState(false);
   const [removeError, setRemoveError] = useState(null);
 
@@ -46,12 +50,12 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
       <RadioSelect
         id={id}
         value={value}
-        onSelect={(option) => onChange(field.key, option.value)}
+        onSelect={(value) => onChange(field.key, value)}
         options={[
-          { value: "", label: "—" },
+          { value: "", label: t("select_field", { label: field.label }) },
           ...departments.map((dept) => ({ value: dept.department_code, label: dept.department_name })),
         ]}
-        placeholder="—"
+        placeholder={t("select_field", { label: field.label })}
         disabled={isSubmitting}
       />
     );
@@ -91,13 +95,13 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
       <RadioSelect
         id={id}
         value={value}
-        onSelect={(option) => onChange(field.key, option.value)}
+        onSelect={(value) => onChange(field.key, value)}
         options={[
-          { value: "", label: "—" },
+          { value: "", label: t("select_field", { label: field.label }) },
           { value: "Cloud", label: t("Cloud") },
           { value: "Physical", label: t("Physical") },
         ]}
-        placeholder="—"
+        placeholder={t("select_field", { label: field.label })}
         disabled={isSubmitting}
       />
     );
@@ -106,13 +110,13 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
       <RadioSelect
         id={id}
         value={value}
-        onSelect={(option) => onChange(field.key, option.value)}
+        onSelect={(value) => onChange(field.key, value)}
         options={[
-          { value: "", label: "—" },
+          { value: "", label: t("select_field", { label: field.label }) },
           { value: "Yes", label: t("Yes") },
           { value: "No", label: t("No") },
         ]}
-        placeholder="—"
+        placeholder={t("select_field", { label: field.label })}
         disabled={isSubmitting}
       />
     );
@@ -136,6 +140,7 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
         autoComplete="off"
         value={value}
         onChange={(e) => onChange(field.key, e.target.value)}
+        placeholder={placeholder}
         className={formInputClass}
         disabled={isSubmitting}
       />
@@ -148,6 +153,7 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
         autoComplete="off"
         value={value}
         onChange={(e) => onChange(field.key, e.target.value)}
+        placeholder={placeholder}
         className={formInputClass}
         disabled={isSubmitting}
       />
@@ -226,7 +232,7 @@ export function AddCustomFieldControl({ onAdd, disabled, types }) {
         <div className="w-36">
           <RadioSelect
             value={type}
-            onSelect={(option) => setType(option.value)}
+            onSelect={(value) => setType(value)}
             options={typeOptions}
             disabled={isSaving}
           />
@@ -371,10 +377,10 @@ return (
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label={t("Close")}
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 
@@ -391,7 +397,7 @@ return (
                 <RadioSelect
                   id="add-equipment-category"
                   value={values.category}
-                  onSelect={(option) => onChange("category", option.value)}
+                  onSelect={(value) => onChange("category", value)}
                   options={categoryOptions.map((option) => ({ value: option, label: option }))}
                   placeholder={t("Select category")}
                   disabled={isSubmitting || categoryLocked}
@@ -415,12 +421,12 @@ return (
                 <RadioSelect
                   id="add-equipment-status"
                   value={values.status}
-                  onSelect={(option) => onChange("status", option.value)}
+                  onSelect={(value) => onChange("status", value)}
                   options={[
-                    { value: "", label: "—" },
+                    { value: "", label: t("Select Status") },
                     ...statuses.map((status) => ({ value: status.status_name, label: status.status_name })),
                   ]}
-                  placeholder="—"
+                  placeholder={t("Select Status")}
                   disabled={isSubmitting}
                 />
               </FormField>
@@ -434,6 +440,7 @@ return (
                   autoComplete="off"
                   value={values.remark}
                   onChange={(e) => onChange("remark", e.target.value)}
+                  placeholder={EQUIPMENT_FIELD_PLACEHOLDERS.remark}
                   className={`${formInputClass} h-auto resize-none py-2`}
                   disabled={isSubmitting}
                 />
@@ -494,7 +501,7 @@ return (
                 disabled={isSubmitting || !values.category}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:focus-visible:ring-offset-slate-900"
               >
-                {t("Add Columns")}
+                {t("Add More Columns")}
               </button>
             )}
             <button
@@ -561,10 +568,10 @@ export function ColumnsPickerModal({
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label={t("Close")}
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 
@@ -685,10 +692,10 @@ return (
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label={t("Close")}
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 
@@ -759,6 +766,7 @@ return (
                     autoComplete="off"
                     value={values.remark}
                     onChange={(e) => onChange("remark", e.target.value)}
+                    placeholder={EQUIPMENT_FIELD_PLACEHOLDERS.remark}
                     className={`${formInputClass} h-auto resize-none py-2`}
                     disabled={isSubmitting}
                   />
@@ -824,10 +832,10 @@ return (
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-slate-200 leading-none text-slate-500 outline-none transition hover:border-slate-300 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-orange-400 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             aria-label={t("Close")}
           >
-            <X size={16} />
+            <X size={15} className="block" />
           </button>
         </div>
 

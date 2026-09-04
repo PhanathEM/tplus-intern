@@ -6,11 +6,11 @@ import {
   updateDepartment,
 } from "../../../../services/departmentService";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
-import { exportAllDepartmentsToExcel, exportAllDepartmentsToPdf } from "./departmentExport";
 
-export function useDepartments({ isActive, user }) {
+// `searchTerm` comes from the header search bar — the directory has no search
+// box of its own, so typing up there filters this table in place.
+export function useDepartments({ isActive, user, searchTerm = "" }) {
   const [departments, setDepartments] = useState([]);
-  const [departmentSearch, setDepartmentSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [fetchToken, setFetchToken] = useState(0);
@@ -52,16 +52,12 @@ export function useDepartments({ isActive, user }) {
   // already-fetched list — the raw `departments` list is left untouched
   // since Employee/Equipment forms also read it for their department dropdown.
   const filteredDepartments = useMemo(() => {
-    const term = departmentSearch.trim().toLowerCase();
+    const term = searchTerm.trim().toLowerCase();
     if (!term) return departments;
     return departments.filter((department) =>
       `${department.department_code || ""} ${department.department_name || ""}`.toLowerCase().includes(term)
     );
-  }, [departments, departmentSearch]);
-
-  function handleDepartmentSearchChange(value) {
-    setDepartmentSearch(value);
-  }
+  }, [departments, searchTerm]);
 
   function handleRetry() {
     setIsLoading(true);
@@ -84,14 +80,6 @@ export function useDepartments({ isActive, user }) {
 
   // Departments load in full already, so unlike Employee's bulk export this
   // needs no extra per-row fetch — it's just the already-loaded list.
-  function handleDownloadAllDepartmentsExcel() {
-    exportAllDepartmentsToExcel(departments);
-  }
-
-  function handleDownloadAllDepartmentsPdf() {
-    exportAllDepartmentsToPdf(departments);
-  }
-
   function handleOpenAdd() {
     setFormMode("add");
     setFormTarget(null);
@@ -191,8 +179,6 @@ export function useDepartments({ isActive, user }) {
   return {
     departments,
     filteredDepartments,
-    departmentSearch,
-    handleDepartmentSearchChange,
     setDepartments,
     isLoading,
     error,
@@ -215,7 +201,5 @@ export function useDepartments({ isActive, user }) {
     handleOpenDelete,
     handleCloseDelete,
     handleConfirmDelete,
-    handleDownloadAllDepartmentsExcel,
-    handleDownloadAllDepartmentsPdf,
   };
 }

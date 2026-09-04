@@ -388,7 +388,7 @@ function EditStockDialog({ target, values, partTypes, partStatuses = [], customF
                 <RadioSelect
                   id="edit-stock-disk-type"
                   value={values.disk_type || ""}
-                  onSelect={(option) => onChange("disk_type", option.value)}
+                  onSelect={(value) => onChange("disk_type", value)}
                   options={DISK_TYPE_OPTIONS.map((type) => ({ value: type, label: type }))}
                   placeholder={t("Select disk type...")}
                 />
@@ -400,7 +400,7 @@ function EditStockDialog({ target, values, partTypes, partStatuses = [], customF
                 <RadioSelect
                   id="edit-stock-disk-interface"
                   value={values.disk_interface || ""}
-                  onSelect={(option) => onChange("disk_interface", option.value)}
+                  onSelect={(value) => onChange("disk_interface", value)}
                   options={DISK_INTERFACE_OPTIONS.map((type) => ({ value: type, label: type }))}
                   placeholder={t("Select disk interface...")}
                 />
@@ -412,7 +412,7 @@ function EditStockDialog({ target, values, partTypes, partStatuses = [], customF
                 <RadioSelect
                   id="edit-stock-ram-type"
                   value={values.ram_type || ""}
-                  onSelect={(option) => onChange("ram_type", option.value)}
+                  onSelect={(value) => onChange("ram_type", value)}
                   options={RAM_TYPE_OPTIONS.map((type) => ({ value: type, label: type }))}
                   placeholder={t("Select RAM type...")}
                 />
@@ -425,7 +425,7 @@ function EditStockDialog({ target, values, partTypes, partStatuses = [], customF
                   <RadioSelect
                     id="edit-stock-value"
                     value={values.part_value || ""}
-                    onSelect={(option) => onChange("part_value", option.value)}
+                    onSelect={(value) => onChange("part_value", value)}
                     options={capacityOptions.map((option) => ({ value: option, label: option }))}
                     placeholder={t("Select capacity...")}
                   />
