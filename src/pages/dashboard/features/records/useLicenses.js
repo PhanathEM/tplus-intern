@@ -18,6 +18,20 @@ const LICENSE_FORM_INITIAL_VALUES = {
   remark: "",
 };
 
+// Every field on the license form is required, except that only an annual
+// subscription can expire - the others have no expiry date to give. Which
+// fields are blank is all this hook decides; the modal owns the wording.
+function requiredLicenseFields(values) {
+  return [
+    "product_name",
+    "product_type",
+    "license_type",
+    "date_start",
+    ...(values.license_type === "Annual Subscription" ? ["date_expire"] : []),
+    "remark",
+  ];
+}
+
 export function useLicenses({ isActive, user, onLicensesLoaded }) {
   const [licenses, setLicenses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,6 +43,8 @@ export function useLicenses({ isActive, user, onLicensesLoaded }) {
   const [formValues, setFormValues] = useState(LICENSE_FORM_INITIAL_VALUES);
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState(null);
+  // The blank required fields as of the last submit attempt.
+  const [missingFields, setMissingFields] = useState([]);
   const [licenseToDelete, setLicenseToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
@@ -75,6 +91,7 @@ export function useLicenses({ isActive, user, onLicensesLoaded }) {
     setFormTarget(null);
     setFormValues(LICENSE_FORM_INITIAL_VALUES);
     setFormError(null);
+    setMissingFields([]);
     setIsFormOpen(true);
   }
 
@@ -90,6 +107,7 @@ export function useLicenses({ isActive, user, onLicensesLoaded }) {
       remark: license.remark || "",
     });
     setFormError(null);
+    setMissingFields([]);
     setIsFormOpen(true);
   }
 
@@ -100,22 +118,17 @@ export function useLicenses({ isActive, user, onLicensesLoaded }) {
 
   function handleFormFieldChange(key, value) {
     setFormValues((current) => ({ ...current, [key]: value }));
+    // Filling a flagged field clears its message as you type.
+    setMissingFields((current) => (current.includes(key) ? current.filter((item) => item !== key) : current));
   }
 
   function handleSubmitForm(event) {
     event.preventDefault();
 
-    if (!formValues.product_name.trim()) {
-      setFormError("Please enter a product name.");
-      return;
-    }
-
     const requiresExpiry = formValues.license_type === "Annual Subscription";
-
-    if (requiresExpiry && !formValues.date_expire.trim()) {
-      setFormError("Please choose the expiry date.");
-      return;
-    }
+    const missing = requiredLicenseFields(formValues).filter((key) => !String(formValues[key] ?? "").trim());
+    setMissingFields(missing);
+    if (missing.length > 0) return;
 
     setIsSaving(true);
     setFormError(null);
@@ -191,6 +204,7 @@ export function useLicenses({ isActive, user, onLicensesLoaded }) {
     formValues,
     isSaving,
     formError,
+    missingFields,
     handleOpenAdd,
     handleOpenEdit,
     handleCloseForm,

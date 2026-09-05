@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FiPlusCircle as PlusCircle, FiX as X } from "react-icons/fi";
-import { EmployeeSelectDropdown, FormField, formInputClass, RadioSelect, RollingText } from "../../components/SharedControls";
+import { EmployeeSelectDropdown, FieldError, FormField, formInputClass, formInvalidClass, RadioSelect, RollingText } from "../../components/SharedControls";
 import { OWNER_DERIVED_FIELDS } from "../../dashboard.utils";
 import { EQUIPMENT_FIELD_PLACEHOLDERS, getEquipmentFieldPlaceholder } from "../../dashboard.config";
+import { isEquipmentFieldRequired } from "./useEquipment";
 
-function EquipmentDynamicField({ field, values, onChange, isSubmitting, departments, employees, onRemove }) {
+function EquipmentDynamicField({ field, values, onChange, isSubmitting, departments, employees, onRemove, error }) {
   const { t } = useTranslation();
   const id = `add-equipment-${field.key}`;
   const value = values[field.key] || "";
@@ -24,11 +25,12 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
   }
 
   const canRemove = Boolean(onRemove);
+  const inputClass = error ? `${formInputClass} ${formInvalidClass}` : formInputClass;
 
   const label = (
     <div className="mb-1.5 flex items-center justify-between gap-2">
       <label className="text-xs font-semibold text-slate-600 dark:text-slate-400" htmlFor={id}>
-        {field.label}
+        {isEquipmentFieldRequired(field) ? `${field.label} *` : field.label}
       </label>
       {canRemove && (
         <button
@@ -57,6 +59,7 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
         ]}
         placeholder={t("select_field", { label: field.label })}
         disabled={isSubmitting}
+        invalid={Boolean(error)}
       />
     );
   } else if (field.type === "employee-select") {
@@ -103,6 +106,7 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
         ]}
         placeholder={t("select_field", { label: field.label })}
         disabled={isSubmitting}
+        invalid={Boolean(error)}
       />
     );
   } else if (field.type === "yes-no-select") {
@@ -118,6 +122,7 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
         ]}
         placeholder={t("select_field", { label: field.label })}
         disabled={isSubmitting}
+        invalid={Boolean(error)}
       />
     );
   } else if (field.type === "date") {
@@ -128,7 +133,7 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
         autoComplete="off"
         value={value}
         onChange={(e) => onChange(field.key, e.target.value)}
-        className={formInputClass}
+        className={inputClass}
         disabled={isSubmitting}
       />
     );
@@ -141,7 +146,7 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
         value={value}
         onChange={(e) => onChange(field.key, e.target.value)}
         placeholder={placeholder}
-        className={formInputClass}
+        className={inputClass}
         disabled={isSubmitting}
       />
     );
@@ -154,7 +159,7 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
         value={value}
         onChange={(e) => onChange(field.key, e.target.value)}
         placeholder={placeholder}
-        className={formInputClass}
+        className={inputClass}
         disabled={isSubmitting}
       />
     );
@@ -164,6 +169,7 @@ function EquipmentDynamicField({ field, values, onChange, isSubmitting, departme
     <div>
       {label}
       {input}
+      <FieldError id={`${id}-error`}>{error}</FieldError>
       {removeError && <p className="mt-1 text-[11px] font-medium text-rose-600">{removeError}</p>}
     </div>
   );
@@ -341,8 +347,12 @@ export function EquipmentFormModal({
   onToggleLicense,
   isLicensesLoading = false,
   licensesError = null,
+  missingFields = [],
 }) {
   const { t } = useTranslation();
+  // Our own "required" message, in place of the browser's bubble - the form
+  // is noValidate below so only this one ever shows.
+  const fieldError = (key) => (missingFields.includes(key) ? t("This field is required.") : null);
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -384,7 +394,7 @@ return (
           </button>
         </div>
 
-<form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+<form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off" noValidate>
           <div className="overflow-y-auto px-6 py-5">
             {error && (
               <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
@@ -393,7 +403,7 @@ return (
             )}
 
 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField label={t("Category *")} htmlFor="add-equipment-category">
+              <FormField label={`${t("Category")} *`} htmlFor="add-equipment-category" error={fieldError("category")}>
                 <RadioSelect
                   id="add-equipment-category"
                   value={values.category}
@@ -401,6 +411,7 @@ return (
                   options={categoryOptions.map((option) => ({ value: option, label: option }))}
                   placeholder={t("Select category")}
                   disabled={isSubmitting || categoryLocked}
+                  invalid={missingFields.includes("category")}
                 />
               </FormField>
 
@@ -414,10 +425,11 @@ return (
                   departments={departments}
                   employees={employees}
                   onRemove={onRemoveField}
+                  error={fieldError(field.key)}
                 />
               ))}
 
-              <FormField label={t("Status")} htmlFor="add-equipment-status">
+              <FormField label={`${t("Status")} *`} htmlFor="add-equipment-status" error={fieldError("status")}>
                 <RadioSelect
                   id="add-equipment-status"
                   value={values.status}
@@ -428,12 +440,13 @@ return (
                   ]}
                   placeholder={t("Select Status")}
                   disabled={isSubmitting}
+                  invalid={missingFields.includes("status")}
                 />
               </FormField>
             </div>
 
 <div className="mt-4">
-              <FormField label={t("Remark")} htmlFor="add-equipment-remark">
+              <FormField label={`${t("Remark")} *`} htmlFor="add-equipment-remark" error={fieldError("remark")}>
                 <textarea
                   id="add-equipment-remark"
                   rows={3}
@@ -441,7 +454,7 @@ return (
                   value={values.remark}
                   onChange={(e) => onChange("remark", e.target.value)}
                   placeholder={EQUIPMENT_FIELD_PLACEHOLDERS.remark}
-                  className={`${formInputClass} h-auto resize-none py-2`}
+                  className={`${formInputClass} h-auto resize-none py-2 ${missingFields.includes("remark") ? formInvalidClass : ""}`}
                   disabled={isSubmitting}
                 />
               </FormField>

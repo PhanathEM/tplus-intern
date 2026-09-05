@@ -93,8 +93,8 @@ export function GlobalSearch({
   placeholder,
   inputClassName,
   className = "w-full lg:w-72",
-  // Off on pages that filter their own table from this same box — the
-  // results are already on screen, so a dropdown over them is just clutter.
+  // Kept as an opt-out for callers that want the box without the dropdown;
+  // the dashboard header shows results on every page.
   showResults = true,
 }) {
   const { t } = useTranslation();
@@ -137,7 +137,7 @@ export function GlobalSearch({
     <div className={`relative ${className}`} ref={containerRef}>
       <label className="relative block">
         <span className="sr-only">Search</span>
-        <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
+        <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400" size={16} />
         <input
           ref={inputRef}
           autoFocus={autoFocus}
@@ -148,11 +148,11 @@ export function GlobalSearch({
           placeholder={placeholder || t("Search...")}
           className={
             inputClassName ||
-            "h-9 w-full rounded-lg border-0 bg-slate-50 pl-9 pr-14 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:bg-white dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-800"
+            "h-9 w-full rounded-lg border border-slate-950/10 bg-white/80 pl-9 pr-14 text-sm text-slate-800 outline-none transition placeholder:text-slate-500 hover:bg-white/90 focus:border-slate-950/20 focus:bg-white dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-400 dark:hover:bg-slate-900 dark:focus:border-slate-600 dark:focus:bg-slate-900"
           }
         />
         {!value && (
-          <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
+          <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-500 sm:flex dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
             Ctrl K
           </kbd>
         )}
@@ -187,7 +187,7 @@ export function GlobalSearch({
                         }}
                         className="flex w-full items-center gap-3 px-4 py-2 text-left outline-none transition hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-slate-700/60 dark:focus-visible:bg-slate-700/60"
                       >
-                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300">
                           <Icon size={14} />
                         </span>
                         <span className="min-w-0">

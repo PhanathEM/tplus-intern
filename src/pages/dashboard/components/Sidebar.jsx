@@ -136,26 +136,36 @@ export function SidebarNavigation({ collapsed = false, activeView, onSelect, use
                   </button>
 
                   {isDropdownOpen && (
-                    <div className="relative mt-0.5 space-y-0.5 pl-9">
-                      <span className="pointer-events-none absolute bottom-2 left-[20px] top-2 w-px bg-slate-200 dark:bg-slate-700" />
-                      {item.children.map((child) => {
+                    <div className="mt-0.5 space-y-0.5 pl-9">
+                      {item.children.map((child, index) => {
                         const isChildItemActive = child.label === activeView;
+                        const isLastChild = index === item.children.length - 1;
                         return (
-                          <button
-                            key={child.label}
-                            type="button"
-                            onClick={() => onSelect(child.label)}
-                            className={`group relative flex w-full items-center gap-2.5 rounded-lg py-2 pl-2 pr-3 text-left text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${isChildItemActive
-                              ? "text-[#ddbb00]"
-                              : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-                              }`}
-                          >
+                          <div key={child.label} className="relative">
+                            {/* Tree guide: a straight trunk down the left with a
+                                tick branching into each row. The trunk runs
+                                past the row plus the 2px row gap so it reads as
+                                one line, and stops at the last row's tick. */}
                             <span
-                              className={`relative z-10 h-1.5 w-1.5 shrink-0 rounded-full ${isChildItemActive ? "bg-[#ddbb00]" : "bg-slate-300 dark:bg-slate-600"
+                              aria-hidden="true"
+                              className={`pointer-events-none absolute left-[-16px] top-0 border-l border-slate-300 dark:border-slate-600 ${isLastChild ? "h-1/2" : "-bottom-0.5"
                                 }`}
                             />
-                            <span className="flex-1 truncate">{t(child.label)}</span>
-                          </button>
+                            <span
+                              aria-hidden="true"
+                              className="pointer-events-none absolute left-[-16px] top-1/2 w-3.5 border-t border-slate-300 dark:border-slate-600"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => onSelect(child.label)}
+                              className={`group flex w-full items-center rounded-lg py-2 pl-2 pr-3 text-left text-[13px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 ${isChildItemActive
+                                ? "text-[#ddbb00]"
+                                : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                                }`}
+                            >
+                              <span className="flex-1 truncate">{t(child.label)}</span>
+                            </button>
+                          </div>
                         );
                       })}
                     </div>

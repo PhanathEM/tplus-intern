@@ -32,29 +32,44 @@ import {
   normalizeRecordList,
 } from "../../dashboard.utils";
 
-const EMPTY_REPORT = {
-  // `list` is the raw directory rows, kept alongside the counts so the
-  // Employees panel can export the full staff list (the counts alone can't
-  // reproduce names, phones or assigned devices).
-  employees: { total: 0, bySex: [], list: [] },
-  departments: { total: 0, rows: [], list: [] },
-  equipment: { total: 0, byStatus: [], byCategory: [], byAssignment: [], list: [] },
-  licenses: { total: 0, byStatus: [], list: [] },
-  borrow: { currentlyBorrowed: 0, overdue: 0, historyTotal: 0 },
-  replacement: { total: 0, list: [] },
-  partStock: { lineCount: 0, totalQuantity: 0, list: [] },
-  partBorrow: { current: 0, list: [] },
-  serverUsage: { total: 0 },
-  managements: {
-    statuses: 0,
-    partStatuses: 0,
-    categories: 0,
-    partTypes: 0,
-    // The rows themselves, so each line can be exported on its own -
-    // the counts alone can't reproduce names or descriptions.
-    lists: { statuses: [], partStatuses: [], categories: [], partTypes: [] },
-  },
-};
+// Rebuilt for every load: the nested objects below are filled in place, so a
+// shared constant would carry one run's rows into the next when a fetch fails.
+function createEmptyReport() {
+  return {
+    // `list` is the raw directory rows, kept alongside the counts so the
+    // Employees panel can export the full staff list (the counts alone can't
+    // reproduce names, phones or assigned devices).
+    employees: { total: 0, bySex: [], list: [] },
+    departments: { total: 0, rows: [], list: [] },
+    equipment: { total: 0, byStatus: [], byCategory: [], byAssignment: [], list: [] },
+    licenses: { total: 0, byStatus: [], list: [] },
+    // The borrow rows are kept alongside their counts so the Equipments panel
+    // can open and export the records behind "Currently Borrowed" and friends.
+    borrow: {
+      currentlyBorrowed: 0,
+      overdue: 0,
+      historyTotal: 0,
+      currentList: [],
+      overdueList: [],
+      historyList: [],
+    },
+    replacement: { total: 0, list: [] },
+    partStock: { lineCount: 0, totalQuantity: 0, list: [] },
+    partBorrow: { current: 0, list: [] },
+    serverUsage: { total: 0, list: [] },
+    managements: {
+      statuses: 0,
+      partStatuses: 0,
+      categories: 0,
+      partTypes: 0,
+      // The rows themselves, so each line can be exported on its own -
+      // the counts alone can't reproduce names or descriptions.
+      lists: { statuses: [], partStatuses: [], categories: [], partTypes: [] },
+    },
+  };
+}
+
+const EMPTY_REPORT = createEmptyReport();
 
 // Each of these endpoints answers with either a bare array or a single
 // wrapper key, so the count goes through one place rather than four.
@@ -110,7 +125,7 @@ function loadReport() {
       categoriesResult,
       partTypesResult,
     ]) => {
-      const report = { ...EMPTY_REPORT };
+      const report = createEmptyReport();
 
       if (employeesResult.status === "fulfilled") {
         const employees = Array.isArray(employeesResult.value) ? employeesResult.value : [];
@@ -163,12 +178,15 @@ function loadReport() {
       if (currentBorrowsResult.status === "fulfilled") {
         const borrowed = Array.isArray(currentBorrowsResult.value?.borrowed) ? currentBorrowsResult.value.borrowed : [];
         report.borrow.currentlyBorrowed = borrowed.length;
-        report.borrow.overdue = borrowed.filter((record) => record.is_overdue).length;
+        report.borrow.currentList = borrowed;
+        report.borrow.overdueList = borrowed.filter((record) => record.is_overdue);
+        report.borrow.overdue = report.borrow.overdueList.length;
       }
 
       if (borrowHistoryResult.status === "fulfilled") {
         const history = Array.isArray(borrowHistoryResult.value?.history) ? borrowHistoryResult.value.history : [];
         report.borrow.historyTotal = history.length;
+        report.borrow.historyList = history;
       }
 
       if (replacementsResult.status === "fulfilled") {
@@ -195,7 +213,9 @@ function loadReport() {
       }
 
       if (serverUsageResult.status === "fulfilled") {
-        report.serverUsage.total = normalizeRecordList(serverUsageResult.value).length;
+        const usage = normalizeRecordList(serverUsageResult.value);
+        report.serverUsage.total = usage.length;
+        report.serverUsage.list = usage;
       }
 
       const managementLists = {
@@ -218,6 +238,60 @@ function loadReport() {
   );
 }
 
+// Export titles for the Equipments rows that aren't named by their data - the
+// status and category rows carry their own label instead.
+const EQUIPMENT_GROUP_TITLES = {
+  assigned: "Assigned Equipment",
+  unassigned: "Unassigned Equipment",
+  borrowed: "Currently Borrowed",
+  overdue: "Overdue Borrows",
+  history: "Borrow History",
+};
+
+// The records behind one Equipments-panel row. The popup and that row's export
+// both read this, so a group can never list one set of records and download
+// another. `isEquipment` says which shape the rows carry - the borrow groups
+// hand back borrow records, not devices.
+export function getEquipmentGroup(report, detail) {
+  const { group, label } = detail;
+  const equipment = report.equipment.list;
+
+  switch (group) {
+    // countBy() buckets a blank status/category as "Unspecified", so the
+    // filters fall back to the same word the row was labelled with.
+    case "status":
+      return {
+        key: `status-${label}`,
+        title: `Equipment - ${label}`,
+        isEquipment: true,
+        rows: equipment.filter((item) => (item.status_name || item.status || "Unspecified") === label),
+      };
+    case "category":
+      return {
+        key: `category-${label}`,
+        title: `Equipment - ${label}`,
+        isEquipment: true,
+        rows: equipment.filter((item) => (item.category_name || item.category || "Unspecified") === label),
+      };
+    case "assigned":
+    case "unassigned":
+      return {
+        key: group,
+        title: EQUIPMENT_GROUP_TITLES[group],
+        isEquipment: true,
+        rows: equipment.filter((item) => Boolean(item.owner_name) === (group === "assigned")),
+      };
+    case "borrowed":
+      return { key: group, title: EQUIPMENT_GROUP_TITLES[group], isEquipment: false, rows: report.borrow.currentList };
+    case "overdue":
+      return { key: group, title: EQUIPMENT_GROUP_TITLES[group], isEquipment: false, rows: report.borrow.overdueList };
+    case "history":
+      return { key: group, title: EQUIPMENT_GROUP_TITLES[group], isEquipment: false, rows: report.borrow.historyList };
+    default:
+      return { key: group, title: label, isEquipment: false, rows: [] };
+  }
+}
+
 export function useReport({ isActive }) {
   const [report, setReport] = useState(EMPTY_REPORT);
   const [isLoading, setIsLoading] = useState(isActive);
@@ -234,6 +308,10 @@ export function useReport({ isActive }) {
   // "<row key>-pdf" / "-excel" for the Replacement and Software License rows.
   const [downloadingReplacement, setDownloadingReplacement] = useState("");
   const [downloadingLicense, setDownloadingLicense] = useState("");
+  // "<group key>-pdf" / "-excel" for the Equipments rows, "pdf" / "excel" for
+  // Server Usage - that panel has a single row.
+  const [downloadingEquipmentGroup, setDownloadingEquipmentGroup] = useState("");
+  const [downloadingServerUsage, setDownloadingServerUsage] = useState("");
 
   useEffect(() => {
     if (!isActive) return;
@@ -354,16 +432,21 @@ export function useReport({ isActive }) {
     ];
   }
 
-  // The equipment side of a department row, shaped for export: the display
-  // name the tables use, plus the fields worth reading in a sheet.
-  function departmentEquipmentRows(row) {
-    return report.equipment.list.filter(matchesEquipmentDepartment(row)).map((item) => ({
+  // Equipment shaped for export: the display name the tables use, plus the
+  // fields worth reading in a sheet.
+  function toEquipmentExportRows(items) {
+    return items.map((item) => ({
       device: getEquipmentDisplayName(item),
       category: item.category_name || item.category || "",
       asset_code: item.asset_code || "",
       status: item.status_name || item.status || "",
       owner: item.owner_name || "",
     }));
+  }
+
+  // The equipment side of a department row.
+  function departmentEquipmentRows(row) {
+    return toEquipmentExportRows(report.equipment.list.filter(matchesEquipmentDepartment(row)));
   }
 
   function handleDownloadDepartmentEquipmentPdf(row) {
@@ -432,6 +515,38 @@ export function useReport({ isActive }) {
     exportRecordListToExcel("tplus-licenses", "Software License", report.licenses.list);
   }
 
+  // Devices go out through the shared shaping; the borrow groups keep their
+  // own fields, which the record exporter reads off the rows.
+  function equipmentGroupExportRows(group) {
+    return group.isEquipment ? toEquipmentExportRows(group.rows) : group.rows;
+  }
+
+  function handleDownloadEquipmentGroupPdf(detail) {
+    const group = getEquipmentGroup(report, detail);
+    setDownloadingEquipmentGroup(`${group.key}-pdf`);
+    exportRecordListToPdf(`tplus-${group.key}`, group.title, equipmentGroupExportRows(group));
+    setDownloadingEquipmentGroup("");
+  }
+
+  function handleDownloadEquipmentGroupExcel(detail) {
+    const group = getEquipmentGroup(report, detail);
+    setDownloadingEquipmentGroup(`${group.key}-excel`);
+    exportRecordListToExcel(`tplus-${group.key}`, group.title, equipmentGroupExportRows(group));
+    setDownloadingEquipmentGroup("");
+  }
+
+  function handleDownloadServerUsagePdf() {
+    setDownloadingServerUsage("pdf");
+    exportRecordListToPdf("tplus-server-usage", "Server Usage", report.serverUsage.list);
+    setDownloadingServerUsage("");
+  }
+
+  function handleDownloadServerUsageExcel() {
+    setDownloadingServerUsage("excel");
+    exportRecordListToExcel("tplus-server-usage", "Server Usage", report.serverUsage.list);
+    setDownloadingServerUsage("");
+  }
+
   function handleDownloadManagementPdf(listKey) {
     setDownloadingManagement(`${listKey}-pdf`);
     exportManagementListToPdf(listKey, report.managements.lists[listKey]);
@@ -486,6 +601,12 @@ export function useReport({ isActive }) {
     handleDownloadLicensesPdf,
     handleDownloadLicensesExcel,
     downloadingLicense,
+    handleDownloadEquipmentGroupPdf,
+    handleDownloadEquipmentGroupExcel,
+    downloadingEquipmentGroup,
+    handleDownloadServerUsagePdf,
+    handleDownloadServerUsageExcel,
+    downloadingServerUsage,
     handleDownloadManagementPdf,
     handleDownloadManagementExcel,
     handleDownloadManagementsPdf,

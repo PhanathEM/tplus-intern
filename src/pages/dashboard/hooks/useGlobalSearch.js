@@ -19,10 +19,10 @@ function createEmptyResults() {
 // other hooks' already-loaded lists — a deliberate existing product decision
 // (search must work across categories the user hasn't visited yet), not
 // something this pass unifies.
-// `isSuspended` is set on pages that filter their own list from the same search
-// box (Employees) — the dropdown is hidden there, so fetching results for it
-// would be four API calls per keystroke pause with nothing to show them in.
-export function useGlobalSearch({ user, onSelectView, onSelectEquipmentCategory, isSuspended = false }) {
+// The dropdown is available on every page, so the search runs on every page
+// too - the pages that also filter their own table from this box (Employees,
+// Departments, Equipment) do both at once.
+export function useGlobalSearch({ user, onSelectView, onSelectEquipmentCategory }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(createEmptyResults);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,7 +38,7 @@ export function useGlobalSearch({ user, onSelectView, onSelectEquipmentCategory,
 
   useEffect(() => {
     const term = query.trim();
-    if (term.length < 2 || isSuspended) return;
+    if (term.length < 2) return;
 
     let ignore = false;
     const lowerTerm = term.toLowerCase();
@@ -154,7 +154,7 @@ export function useGlobalSearch({ user, onSelectView, onSelectEquipmentCategory,
       ignore = true;
       window.clearTimeout(timeoutId);
     };
-  }, [query, user, isSuspended]);
+  }, [query, user]);
 
   function handleSelectResult(type, item) {
     setResults(createEmptyResults());

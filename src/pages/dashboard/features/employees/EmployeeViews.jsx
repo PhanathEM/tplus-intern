@@ -21,7 +21,7 @@ import {
   formatFieldValue,
   getEmployeeDepartmentCode,
 } from "../../dashboard.utils";
-import { EmptyState, FormField, formInputClass, Pagination, RadioSelect, RollingText } from "../../components/SharedControls";
+import { EmptyState, FormField, formInputClass, formInvalidClass, Pagination, RadioSelect, RollingText } from "../../components/SharedControls";
 
 export function EmployeeFormModal({
   isOpen,
@@ -33,8 +33,13 @@ export function EmployeeFormModal({
   isSubmitting,
   error,
   departments,
+  missingFields = [],
 }) {
   const { t } = useTranslation();
+  // Our own "required" message, in place of the browser's bubble - the form
+  // is noValidate below so only this one ever shows.
+  const fieldError = (key) => (missingFields.includes(key) ? t("This field is required.") : null);
+  const inputClass = (key) => (missingFields.includes(key) ? `${formInputClass} ${formInvalidClass}` : formInputClass);
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === "Escape") onClose();
@@ -72,7 +77,7 @@ export function EmployeeFormModal({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off" noValidate>
           <div className="overflow-y-auto px-6 py-5">
             {error && (
               <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
@@ -82,7 +87,7 @@ export function EmployeeFormModal({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <FormField label={t("Full Name *")} htmlFor="employee-full_name">
+                <FormField label={`${t("Full Name")} *`} htmlFor="employee-full_name" error={fieldError("full_name")}>
                   <input
                     id="employee-full_name"
                     type="text"
@@ -91,76 +96,81 @@ export function EmployeeFormModal({
                     value={values.full_name}
                     onChange={(e) => onChange("full_name", e.target.value)}
                     placeholder={t("e.g. John Sey")}
-                    className={formInputClass}
+                    className={inputClass("full_name")}
                     disabled={isSubmitting}
                   />
                 </FormField>
               </div>
 
-              <FormField label={t("Position")} htmlFor="employee-position">
+              <FormField label={`${t("Position")} *`} htmlFor="employee-position" error={fieldError("position")}>
                 <input
                   id="employee-position"
                   type="text"
+                  required
                   autoComplete="off"
                   value={values.position}
                   onChange={(e) => onChange("position", e.target.value)}
                   placeholder={t("e.g. Sales Executive")}
-                  className={formInputClass}
+                  className={inputClass("position")}
                   disabled={isSubmitting}
                 />
               </FormField>
 
-              <FormField label={t("Department")} htmlFor="employee-department">
+              <FormField label={`${t("Department")} *`} htmlFor="employee-department" error={fieldError("department")}>
                 <RadioSelect
                   id="employee-department"
                   options={departments.map((dept) => ({ value: dept.department_code, label: dept.department_name }))}
                   value={values.department}
                   onSelect={(value) => onChange("department", value)}
+                  invalid={missingFields.includes("department")}
                   placeholder={t("Select Department")}
                   disabled={isSubmitting}
                 />
               </FormField>
 
-              <FormField label={t("Location")} htmlFor="employee-location">
+              <FormField label={`${t("Location")} *`} htmlFor="employee-location" error={fieldError("location")}>
                 <input
                   id="employee-location"
                   type="text"
+                  required
                   autoComplete="off"
                   value={values.location}
                   onChange={(e) => onChange("location", e.target.value)}
                   placeholder={t("e.g. VTE")}
-                  className={formInputClass}
+                  className={inputClass("location")}
                   disabled={isSubmitting}
                 />
               </FormField>
 
-              <FormField label={t("Staff Code")} htmlFor="employee-staff_code">
+              <FormField label={`${t("Staff Code")} *`} htmlFor="employee-staff_code" error={fieldError("staff_code")}>
                 <input
                   id="employee-staff_code"
                   type="text"
+                  required
                   autoComplete="off"
                   value={values.staff_code}
                   onChange={(e) => onChange("staff_code", e.target.value)}
                   placeholder={t("e.g. 1234dev")}
-                  className={formInputClass}
+                  className={inputClass("staff_code")}
                   disabled={isSubmitting}
                 />
               </FormField>
 
-              <FormField label={t("Phone")} htmlFor="employee-phone">
+              <FormField label={`${t("Phone")} *`} htmlFor="employee-phone" error={fieldError("phone")}>
                 <input
                   id="employee-phone"
                   type="text"
+                  required
                   autoComplete="off"
                   value={values.phone}
                   onChange={(e) => onChange("phone", e.target.value)}
                   placeholder={t("e.g. 0885564345")}
-                  className={formInputClass}
+                  className={inputClass("phone")}
                   disabled={isSubmitting}
                 />
               </FormField>
 
-              <FormField label={t("Sex")} htmlFor="employee-sex">
+              <FormField label={`${t("Sex")} *`} htmlFor="employee-sex" error={fieldError("sex")}>
                 <RadioSelect
                   id="employee-sex"
                   options={[
@@ -169,6 +179,7 @@ export function EmployeeFormModal({
                   ]}
                   value={values.sex}
                   onSelect={(value) => onChange("sex", value)}
+                  invalid={missingFields.includes("sex")}
                   placeholder={t("Select Sex")}
                   disabled={isSubmitting}
                 />

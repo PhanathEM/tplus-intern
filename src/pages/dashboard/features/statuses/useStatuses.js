@@ -29,6 +29,10 @@ const STATUS_FORM_INITIAL_VALUES = {
   is_active: true,
 };
 
+// Both fields on the status form are required. Which ones are blank is all
+// this hook decides - the modal owns the wording and where it shows.
+const REQUIRED_FORM_FIELDS = ["status_name", "description"];
+
 export function useStatuses({ isActive, user }) {
   const [statuses, setStatuses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,6 +44,8 @@ export function useStatuses({ isActive, user }) {
   const [formValues, setFormValues] = useState(STATUS_FORM_INITIAL_VALUES);
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState(null);
+  // The blank required fields as of the last submit attempt.
+  const [missingFields, setMissingFields] = useState([]);
   const [statusToDelete, setStatusToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
@@ -90,6 +96,7 @@ export function useStatuses({ isActive, user }) {
     setFormTarget(null);
     setFormValues(STATUS_FORM_INITIAL_VALUES);
     setFormError(null);
+    setMissingFields([]);
     setIsFormOpen(true);
   }
 
@@ -106,6 +113,7 @@ export function useStatuses({ isActive, user }) {
       is_active: status.is_active !== false,
     });
     setFormError(null);
+    setMissingFields([]);
     setIsFormOpen(true);
   }
 
@@ -116,15 +124,16 @@ export function useStatuses({ isActive, user }) {
 
   function handleFormFieldChange(key, value) {
     setFormValues((current) => ({ ...current, [key]: value }));
+    // Filling a flagged field clears its message as you type.
+    setMissingFields((current) => (current.includes(key) ? current.filter((item) => item !== key) : current));
   }
 
   function handleSubmitForm(event) {
     event.preventDefault();
 
-    if (!formValues.status_name.trim()) {
-      setFormError("Please enter a status name.");
-      return;
-    }
+    const missing = REQUIRED_FORM_FIELDS.filter((key) => !String(formValues[key] ?? "").trim());
+    setMissingFields(missing);
+    if (missing.length > 0) return;
 
     setIsSaving(true);
     setFormError(null);
@@ -309,6 +318,7 @@ export function useStatuses({ isActive, user }) {
     formValues,
     isSaving,
     formError,
+    missingFields,
     handleOpenAdd,
     handleOpenEdit,
     handleCloseForm,

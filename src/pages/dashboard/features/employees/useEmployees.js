@@ -4,6 +4,10 @@ import { getEmployeeDepartmentCode } from "../../dashboard.utils";
 import { EMPLOYEE_FORM_INITIAL_VALUES, EMPLOYEES_PAGE_SIZE } from "../../dashboard.config";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 
+// Every field on the form is required. Which ones are blank is all this hook
+// decides - the modal owns the wording and where it shows.
+const REQUIRED_FORM_FIELDS = ["full_name", "position", "department", "location", "staff_code", "phone", "sex"];
+
 // `searchTerm` comes from the header's global search bar — the directory has no
 // search box of its own, so typing up there filters this table in place.
 export function useEmployees({ isActive, user, loadDepartments, searchTerm = "" }) {
@@ -23,6 +27,8 @@ export function useEmployees({ isActive, user, loadDepartments, searchTerm = "" 
   const [formValues, setFormValues] = useState(EMPLOYEE_FORM_INITIAL_VALUES);
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState(null);
+  // The blank required fields as of the last submit attempt.
+  const [missingFields, setMissingFields] = useState([]);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
@@ -95,6 +101,7 @@ export function useEmployees({ isActive, user, loadDepartments, searchTerm = "" 
     setFormTarget(null);
     setFormValues(EMPLOYEE_FORM_INITIAL_VALUES);
     setFormError(null);
+    setMissingFields([]);
     setIsFormOpen(true);
 
     loadDepartments();
@@ -113,6 +120,7 @@ export function useEmployees({ isActive, user, loadDepartments, searchTerm = "" 
       sex: employee.sex || "",
     });
     setFormError(null);
+    setMissingFields([]);
     setIsFormOpen(true);
 
     loadDepartments();
@@ -124,15 +132,16 @@ export function useEmployees({ isActive, user, loadDepartments, searchTerm = "" 
 
   function handleFormFieldChange(key, value) {
     setFormValues((current) => ({ ...current, [key]: value }));
+    // Filling a flagged field clears its message as you type.
+    setMissingFields((current) => (current.includes(key) ? current.filter((item) => item !== key) : current));
   }
 
   function handleSubmitForm(event) {
     event.preventDefault();
 
-    if (!formValues.full_name.trim()) {
-      setFormError("Please enter a full name.");
-      return;
-    }
+    const missing = REQUIRED_FORM_FIELDS.filter((key) => !String(formValues[key] ?? "").trim());
+    setMissingFields(missing);
+    if (missing.length > 0) return;
 
     setIsSaving(true);
     setFormError(null);
@@ -266,6 +275,7 @@ export function useEmployees({ isActive, user, loadDepartments, searchTerm = "" 
     formValues,
     isSaving,
     formError,
+    missingFields,
     handleFormFieldChange,
     handleSubmitForm,
     employeeToDelete,

@@ -26,7 +26,7 @@ import { getExtraStockColumns, getStockColumns, hasStockColumn } from "../../das
 import { RecordsTableView } from "../../components/RecordsTableView";
 import { CategoryTabs } from "../../components/CategoryTabs";
 
-import { EmptyState, FormField, formInputClass, RadioSelect, RollingText } from "../../components/SharedControls";
+import { EmptyState, FormField, formInputClass, formInvalidClass, RadioSelect, RollingText } from "../../components/SharedControls";
 
 import { AddStockDialog } from "../../components/AddStockDialog";
 import { AddCustomFieldControl } from "../equipment/EquipmentModals";
@@ -143,8 +143,13 @@ export function PartTypeFormModal({
   onClose,
   isSubmitting,
   error,
+  missingFields = [],
 }) {
   const { t } = useTranslation();
+  // Our own "required" message, in place of the browser's bubble - the form
+  // is noValidate below so only this one ever shows.
+  const fieldError = (key) => (missingFields.includes(key) ? t("This field is required.") : null);
+  const inputClass = (key) => (missingFields.includes(key) ? `${formInputClass} ${formInvalidClass}` : formInputClass);
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -179,7 +184,7 @@ export function PartTypeFormModal({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off" noValidate>
           <div className="overflow-y-auto px-6 py-5">
             {error && (
               <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
@@ -188,7 +193,7 @@ export function PartTypeFormModal({
             )}
 
             <div className="flex flex-col gap-4">
-              <FormField label={t("Part Name *")} htmlFor="part-type-name">
+              <FormField label={t("Part Name *")} htmlFor="part-type-name" error={fieldError("part_name")}>
                 <input
                   id="part-type-name"
                   type="text"
@@ -196,19 +201,22 @@ export function PartTypeFormModal({
                   autoComplete="off"
                   value={values.part_name}
                   onChange={(e) => onChange("part_name", e.target.value)}
-                  className={formInputClass}
+                  placeholder={t("e.g. RAM")}
+                  className={inputClass("part_name")}
                   disabled={isSubmitting}
                 />
               </FormField>
 
-              <FormField label={t("Description")} htmlFor="part-type-description">
+              <FormField label={`${t("Description")} *`} htmlFor="part-type-description" error={fieldError("description")}>
                 <input
                   id="part-type-description"
                   type="text"
+                  required
                   autoComplete="off"
                   value={values.description}
                   onChange={(e) => onChange("description", e.target.value)}
-                  className={formInputClass}
+                  placeholder={t("e.g. Memory modules kept for replacements.")}
+                  className={inputClass("description")}
                   disabled={isSubmitting}
                 />
               </FormField>

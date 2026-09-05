@@ -8,7 +8,7 @@ import {
   FiX as X,
 } from "react-icons/fi";
 import { departmentColumns, DEPARTMENTS_PAGE_SIZE } from "../../dashboard.config";
-import { FormField, formInputClass, RollingText } from "../../components/SharedControls";
+import { FormField, formInputClass, formInvalidClass, RollingText } from "../../components/SharedControls";
 import { RecordsTableView } from "../../components/RecordsTableView";
 
 export function DepartmentsView({
@@ -105,8 +105,13 @@ export function DepartmentFormModal({
   onClose,
   isSubmitting,
   error,
+  missingFields = [],
 }) {
   const { t } = useTranslation();
+  // Our own "required" message, in place of the browser's bubble - the form
+  // is noValidate below so only this one ever shows.
+  const fieldError = (key) => (missingFields.includes(key) ? t("This field is required.") : null);
+  const inputClass = (key) => (missingFields.includes(key) ? `${formInputClass} ${formInvalidClass}` : formInputClass);
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -145,7 +150,7 @@ return (
           </button>
         </div>
 
-<form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+<form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off" noValidate>
           <div className="overflow-y-auto px-6 py-5">
             {error && (
               <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
@@ -153,7 +158,7 @@ return (
               </div>
             )}
             <div className="grid gap-4">
-              <FormField label={t("Department Code *")} htmlFor="department-code">
+              <FormField label={t("Department Code *")} htmlFor="department-code" error={fieldError("department_code")}>
                 <input
                   id="department-code"
                   type="text"
@@ -162,11 +167,11 @@ return (
                   value={values.department_code}
                   onChange={(e) => onChange("department_code", e.target.value)}
                   placeholder={t("e.g. ADM")}
-                  className={formInputClass}
+                  className={inputClass("department_code")}
                   disabled={isSubmitting}
                 />
               </FormField>
-              <FormField label={t("Department Name *")} htmlFor="department-name">
+              <FormField label={t("Department Name *")} htmlFor="department-name" error={fieldError("department_name")}>
                 <input
                   id="department-name"
                   type="text"
@@ -175,7 +180,7 @@ return (
                   value={values.department_name}
                   onChange={(e) => onChange("department_name", e.target.value)}
                   placeholder={t("e.g. Administration")}
-                  className={formInputClass}
+                  className={inputClass("department_name")}
                   disabled={isSubmitting}
                 />
               </FormField>
@@ -214,8 +219,13 @@ export function CategoryFormModal({
   onClose,
   isSubmitting,
   error,
+  missingFields = [],
 }) {
   const { t } = useTranslation();
+  // Our own "required" message, in place of the browser's bubble - the form
+  // is noValidate below so only this one ever shows.
+  const fieldError = (key) => (missingFields.includes(key) ? t("This field is required.") : null);
+  const inputClass = (key) => (missingFields.includes(key) ? `${formInputClass} ${formInvalidClass}` : formInputClass);
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -257,7 +267,7 @@ return (
           </button>
         </div>
 
-<form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+<form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off" noValidate>
           <div className="overflow-y-auto px-6 py-5">
             {error && (
               <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
@@ -265,7 +275,7 @@ return (
               </div>
             )}
             <div className="grid gap-4">
-              <FormField label={t("Category Name *")} htmlFor="category-name">
+              <FormField label={t("Category Name *")} htmlFor="category-name" error={fieldError("category_name")}>
                 <input
                   id="category-name"
                   type="text"
@@ -273,19 +283,22 @@ return (
                   autoComplete="off"
                   value={values.category_name}
                   onChange={(e) => onChange("category_name", e.target.value)}
-                  className={formInputClass}
+                  placeholder={t("e.g. Laptop")}
+                  className={inputClass("category_name")}
                   disabled={isSubmitting}
                 />
               </FormField>
 
-<FormField label={t("Description")} htmlFor="category-description">
+<FormField label={`${t("Description")} *`} htmlFor="category-description" error={fieldError("description")}>
                 <input
                   id="category-description"
                   type="text"
+                  required
                   autoComplete="off"
                   value={values.description}
                   onChange={(e) => onChange("description", e.target.value)}
-                  className={formInputClass}
+                  placeholder={t("e.g. Staff laptops and notebooks.")}
+                  className={inputClass("description")}
                   disabled={isSubmitting}
                 />
               </FormField>

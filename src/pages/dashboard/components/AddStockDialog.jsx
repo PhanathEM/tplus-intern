@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FiX as X } from "react-icons/fi";
 import {
@@ -10,7 +11,7 @@ import {
   RAM_TYPE_OPTIONS,
 } from "../dashboard.config";
 import { getExtraStockColumns, hasStockColumn } from "../dashboard.utils";
-import { FormField, formInputClass, RadioSelect, RollingText } from "./SharedControls";
+import { FormField, formInputClass, formInvalidClass, RadioSelect, RollingText } from "./SharedControls";
 
 // Shared between the Part Stock page's "Add to stock" action and Device
 // Replacement's "add to stock" shortcut (shown inline when fitting a part
@@ -28,6 +29,10 @@ export function AddStockDialog({
   error,
 }) {
   const { t } = useTranslation();
+  // The blank fields as of the last submit attempt. Validation lives here
+  // rather than in the hook because which fields exist depends on the part
+  // type's configured stock columns, which only this dialog resolves.
+  const [missingFields, setMissingFields] = useState([]);
 
   if (!isOpen) return null;
 
@@ -47,21 +52,42 @@ export function AddStockDialog({
   const capacityOptions = isRam ? RAM_CAPACITY_OPTIONS : isHardDisk ? HD_CAPACITY_OPTIONS : null;
   // Custom fields beyond the ones with a dedicated widget above.
   const extraColumns = getExtraStockColumns(selectedPartType, customFieldCatalog);
-  const missingRequiredExtra = extraColumns.some(
-    (field) => field.field_type !== "boolean" && !String(values[field.field_key] || "").trim()
-  );
+  // Every field the part type puts on screen has to be filled in. Checkboxes
+  // are excluded: an unticked box is an answer, not a blank.
+  const requiredKeys = [
+    "part_type_id",
+    ...(needsModelName ? ["model_name"] : []),
+    ...(needsModelNumber ? ["model_number"] : []),
+    ...(needsDiskType ? ["disk_type"] : []),
+    ...(needsDiskInterface ? ["disk_interface"] : []),
+    ...(needsRamType ? ["ram_type"] : []),
+    ...(needsValue ? ["part_value"] : []),
+    ...extraColumns.filter((field) => field.field_type !== "boolean").map((field) => field.field_key),
+    "quantity",
+    "remark",
+  ];
 
-  const canSubmit = Boolean(
-    values.part_type_id &&
-      values.quantity &&
-      (!needsValue || values.part_value?.trim()) &&
-      (!needsRamType || values.ram_type?.trim()) &&
-      (!needsModelName || values.model_name?.trim()) &&
-      (!needsModelNumber || values.model_number?.trim()) &&
-      (!needsDiskType || values.disk_type?.trim()) &&
-      (!needsDiskInterface || values.disk_interface?.trim()) &&
-      !missingRequiredExtra
-  );
+  // Our own "required" message, in place of the browser's bubble.
+  const fieldError = (key) => (missingFields.includes(key) ? t("This field is required.") : null);
+  const inputClass = (key) => (missingFields.includes(key) ? `${formInputClass} ${formInvalidClass}` : formInputClass);
+
+  // Filling a flagged field clears its message as you type or pick.
+  function handleChange(key, value) {
+    setMissingFields((current) => (current.includes(key) ? current.filter((item) => item !== key) : current));
+    onChange(key, value);
+  }
+
+  // The submit button stays live so a click says what is missing, rather than
+  // going grey and leaving the reason to guesswork.
+  function handleSubmit(event) {
+    const missing = requiredKeys.filter((key) => !String(values[key] ?? "").trim());
+    setMissingFields(missing);
+    if (missing.length > 0) {
+      event.preventDefault();
+      return;
+    }
+    onSubmit(event);
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -87,13 +113,13 @@ export function AddStockDialog({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} autoComplete="off">
+        <form onSubmit={handleSubmit} autoComplete="off" noValidate>
           <div className="flex flex-col gap-4 px-6 py-5">
             {error && (
               <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">{error}</div>
             )}
 
-            <FormField label={t("Part Name")} htmlFor="add-stock-part">
+            <FormField label={`${t("Part Name")} *`} htmlFor="add-stock-part" error={fieldError("part_type_id")}>
               {isPartLocked ? (
                 <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                   {selectedPartType?.part_name || "—"}
@@ -102,86 +128,91 @@ export function AddStockDialog({
                 <RadioSelect
                   id="add-stock-part"
                   value={values.part_type_id || ""}
-                  onSelect={(value) => onChange("part_type_id", value)}
+                  onSelect={(value) => handleChange("part_type_id", value)}
                   options={partTypes.map((partType) => ({ value: partType.part_type_id, label: partType.part_name }))}
                   placeholder={t("Select a part...")}
+                  invalid={missingFields.includes("part_type_id")}
                 />
               )}
             </FormField>
 
             {needsModelName && (
-              <FormField label={t("Model Name")} htmlFor="add-stock-model-name">
+              <FormField label={`${t("Model Name")} *`} htmlFor="add-stock-model-name" error={fieldError("model_name")}>
                 <input
                   id="add-stock-model-name"
                   type="text"
                   autoComplete="off"
                   value={values.model_name || ""}
-                  onChange={(e) => onChange("model_name", e.target.value)}
+                  onChange={(e) => handleChange("model_name", e.target.value)}
                   placeholder={MODEL_NAME_PLACEHOLDER_BY_PART[normalizedName] || t("e.g. Model name...")}
-                  className={formInputClass}
+                  className={inputClass("model_name")}
                 />
               </FormField>
             )}
 
             {needsModelNumber && (
-              <FormField label={t("Model Number")} htmlFor="add-stock-model-number">
+              <FormField label={`${t("Model Number")} *`} htmlFor="add-stock-model-number" error={fieldError("model_number")}>
                 <input
                   id="add-stock-model-number"
                   type="text"
                   autoComplete="off"
                   value={values.model_number || ""}
-                  onChange={(e) => onChange("model_number", e.target.value)}
+                  onChange={(e) => handleChange("model_number", e.target.value)}
                   placeholder={MODEL_NUMBER_PLACEHOLDER_BY_PART[normalizedName] || t("e.g. Model number...")}
-                  className={formInputClass}
+                  className={inputClass("model_number")}
                 />
               </FormField>
             )}
 
             {needsDiskType && (
-              <FormField label={t("Disk Type")} htmlFor="add-stock-disk-type">
+              <FormField label={`${t("Disk Type")} *`} htmlFor="add-stock-disk-type" error={fieldError("disk_type")}>
                 <RadioSelect
                   id="add-stock-disk-type"
                   value={values.disk_type || ""}
-                  onSelect={(value) => onChange("disk_type", value)}
+                  onSelect={(value) => handleChange("disk_type", value)}
                   options={DISK_TYPE_OPTIONS.map((type) => ({ value: type, label: type }))}
                   placeholder={t("Select disk type...")}
+                  invalid={missingFields.includes("disk_type")}
                 />
               </FormField>
             )}
 
             {needsDiskInterface && (
-              <FormField label={t("Disk Interface")} htmlFor="add-stock-disk-interface">
+              <FormField label={`${t("Disk Interface")} *`} htmlFor="add-stock-disk-interface" error={fieldError("disk_interface")}>
                 <RadioSelect
                   id="add-stock-disk-interface"
                   value={values.disk_interface || ""}
-                  onSelect={(value) => onChange("disk_interface", value)}
+                  onSelect={(value) => handleChange("disk_interface", value)}
                   options={DISK_INTERFACE_OPTIONS.map((type) => ({ value: type, label: type }))}
                   placeholder={t("Select disk interface...")}
+                  invalid={missingFields.includes("disk_interface")}
                 />
               </FormField>
             )}
 
             {needsRamType && (
-              <FormField label={t("RAM Type")} htmlFor="add-stock-ram-type">
+              <FormField label={`${t("RAM Type")} *`} htmlFor="add-stock-ram-type" error={fieldError("ram_type")}>
                 <RadioSelect
                   id="add-stock-ram-type"
                   value={values.ram_type || ""}
-                  onSelect={(value) => onChange("ram_type", value)}
+                  onSelect={(value) => handleChange("ram_type", value)}
                   options={RAM_TYPE_OPTIONS.map((type) => ({ value: type, label: type }))}
                   placeholder={t("Select RAM type...")}
+                  invalid={missingFields.includes("ram_type")}
                 />
               </FormField>
             )}
 
             {needsValue && (
-              <FormField label={t("Value")} htmlFor="add-stock-value">
+              <FormField label={`${t("Value")} *`} htmlFor="add-stock-value" error={fieldError("part_value")}>
                 {capacityOptions ? (
                   <RadioSelect
                     id="add-stock-value"
                     value={values.part_value || ""}
-                    onSelect={(value) => onChange("part_value", value)}
+                    onSelect={(value) => handleChange("part_value", value)}
                     options={capacityOptions.map((option) => ({ value: option, label: option }))}
                     placeholder={t("Select capacity...")}
+                    invalid={missingFields.includes("part_value")}
                   />
                 ) : (
                   <input
@@ -189,9 +220,9 @@ export function AddStockDialog({
                     type="text"
                     autoComplete="off"
                     value={values.part_value || ""}
-                    onChange={(e) => onChange("part_value", e.target.value)}
+                    onChange={(e) => handleChange("part_value", e.target.value)}
                     placeholder={t("e.g. 16 GB")}
-                    className={formInputClass}
+                    className={inputClass("part_value")}
                   />
                 )}
               </FormField>
@@ -206,45 +237,52 @@ export function AddStockDialog({
                   <input
                     type="checkbox"
                     checked={Boolean(values[field.field_key])}
-                    onChange={(e) => onChange(field.field_key, e.target.checked)}
+                    onChange={(e) => handleChange(field.field_key, e.target.checked)}
                     className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400 dark:border-slate-600 dark:bg-slate-800"
                   />
                   {field.field_label}
                 </label>
               ) : (
-                <FormField key={field.field_key} label={field.field_label} htmlFor={`add-stock-${field.field_key}`}>
+                <FormField
+                  key={field.field_key}
+                  label={`${field.field_label} *`}
+                  htmlFor={`add-stock-${field.field_key}`}
+                  error={fieldError(field.field_key)}
+                >
                   <input
                     id={`add-stock-${field.field_key}`}
                     type={field.field_type === "number" ? "number" : field.field_type === "date" ? "date" : "text"}
                     autoComplete="off"
                     value={values[field.field_key] || ""}
-                    onChange={(e) => onChange(field.field_key, e.target.value)}
-                    className={formInputClass}
+                    onChange={(e) => handleChange(field.field_key, e.target.value)}
+                    placeholder={field.field_type === "date" ? undefined : t("enter_field", { label: field.field_label })}
+                    className={inputClass(field.field_key)}
                   />
                 </FormField>
               )
             )}
 
-            <FormField label={t("Quantity")} htmlFor="add-stock-quantity">
+            <FormField label={`${t("Quantity")} *`} htmlFor="add-stock-quantity" error={fieldError("quantity")}>
               <input
                 id="add-stock-quantity"
                 type="number"
                 min="1"
                 step="1"
                 value={values.quantity || ""}
-                onChange={(e) => onChange("quantity", e.target.value)}
-                className={formInputClass}
+                onChange={(e) => handleChange("quantity", e.target.value)}
+                placeholder="1"
+                className={inputClass("quantity")}
               />
             </FormField>
 
-            <FormField label={t("Remark")} htmlFor="add-stock-remark">
+            <FormField label={`${t("Remark")} *`} htmlFor="add-stock-remark" error={fieldError("remark")}>
               <textarea
                 id="add-stock-remark"
                 rows={3}
                 value={values.remark || ""}
-                onChange={(e) => onChange("remark", e.target.value)}
+                onChange={(e) => handleChange("remark", e.target.value)}
                 placeholder={t("Enter remark...")}
-                className={`${formInputClass} min-h-20 resize-none py-2`}
+                className={`${inputClass("remark")} min-h-20 resize-none py-2`}
               />
             </FormField>
           </div>
@@ -260,7 +298,7 @@ export function AddStockDialog({
             </button>
             <button
               type="submit"
-              disabled={!canSubmit || isSubmitting}
+              disabled={isSubmitting}
               className="group/roll inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#fddd1c] px-3.5 text-[13px] font-semibold text-slate-900 outline-none transition hover:bg-[#e5c518] focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#fddd1c] dark:text-slate-900 dark:hover:bg-[#e5c518] dark:focus-visible:ring-offset-slate-900"
             >
               <RollingText text={isSubmitting ? t("Adding...") : isRam ? t("Add RAM") : t("Add")} />

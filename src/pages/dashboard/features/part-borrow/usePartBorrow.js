@@ -12,6 +12,17 @@ import {
 import { PART_BORROW_INITIAL_VALUES, PART_RETURN_INITIAL_VALUES } from "../../dashboard.config";
 import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 
+// Every field on the borrow form is required. Which ones are blank is all
+// this hook decides - the dialog owns the wording and where it shows.
+const REQUIRED_BORROW_FIELDS = [
+  "part_type_id",
+  "stock_id",
+  "borrower_id",
+  "condition_on_borrow",
+  "quantity",
+  "borrow_date",
+];
+
 export function usePartBorrow({ isActive, user }) {
   const [borrows, setBorrows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,6 +93,8 @@ export function usePartBorrow({ isActive, user }) {
   const [borrowValues, setBorrowValues] = useState(PART_BORROW_INITIAL_VALUES);
   const [isSubmittingBorrow, setIsSubmittingBorrow] = useState(false);
   const [borrowError, setBorrowError] = useState(null);
+  // The blank required fields as of the last submit attempt.
+  const [borrowMissingFields, setBorrowMissingFields] = useState([]);
   const [partTypes, setPartTypes] = useState([]);
   const [employeeOptions, setEmployeeOptions] = useState([]);
 
@@ -112,6 +125,7 @@ export function usePartBorrow({ isActive, user }) {
     setIsBorrowDialogOpen(true);
     setBorrowValues({ ...PART_BORROW_INITIAL_VALUES, borrow_date: new Date().toISOString().slice(0, 10) });
     setBorrowError(null);
+    setBorrowMissingFields([]);
     setAvailableStock([]);
     setAvailableStockError(null);
 
@@ -131,12 +145,18 @@ export function usePartBorrow({ isActive, user }) {
     setIsBorrowDialogOpen(false);
   }
 
+  function clearBorrowMissingField(key) {
+    setBorrowMissingFields((current) => (current.includes(key) ? current.filter((item) => item !== key) : current));
+  }
+
   function handleBorrowFieldChange(key, value) {
     setBorrowValues((current) => ({ ...current, [key]: value }));
+    clearBorrowMissingField(key);
   }
 
   function handleSelectBorrowPartType(partTypeId) {
     setBorrowValues((current) => ({ ...current, part_type_id: partTypeId, stock_id: "" }));
+    clearBorrowMissingField("part_type_id");
     setAvailableStock([]);
     setAvailableStockError(null);
     if (partTypeId) loadAvailableStock(partTypeId);
@@ -144,27 +164,22 @@ export function usePartBorrow({ isActive, user }) {
 
   function handleSelectBorrowStock(stockId) {
     setBorrowValues((current) => ({ ...current, stock_id: stockId }));
+    clearBorrowMissingField("stock_id");
   }
 
   function handleSelectBorrowEmployee(employee) {
     setBorrowValues((current) => ({ ...current, borrower_id: String(employee.employee_id) }));
+    clearBorrowMissingField("borrower_id");
   }
 
   function handleSubmitBorrow(event) {
     event.preventDefault();
 
-    if (!borrowValues.stock_id) {
-      setBorrowError("Please select a stock line.");
-      return;
-    }
-    if (!borrowValues.borrower_id) {
-      setBorrowError("Please select a borrower.");
-      return;
-    }
-    if (!borrowValues.borrow_date) {
-      setBorrowError("Please set a borrow date.");
-      return;
-    }
+    const missing = REQUIRED_BORROW_FIELDS.filter((key) => !String(borrowValues[key] ?? "").trim());
+    setBorrowMissingFields(missing);
+    if (missing.length > 0) return;
+
+    // Filled in, but still has to be a real count.
     const quantity = Number(borrowValues.quantity);
     if (!quantity || quantity < 1) {
       setBorrowError("Please enter a valid quantity.");
@@ -342,6 +357,7 @@ export function usePartBorrow({ isActive, user }) {
     borrowValues,
     isSubmittingBorrow,
     borrowError,
+    borrowMissingFields,
     partTypes,
     employeeOptions,
     handleOpenBorrowDialog,

@@ -314,19 +314,38 @@ export function CategoryDropdown({ options, selected, onSelect, label = "Select"
   );
 }
 
-export function FormField({ label, htmlFor, children }) {
+// `error` replaces the browser's own validation bubble: the message sits
+// under the field, in the app's type and colour, and the control it belongs
+// to turns red through formInvalidClass.
+export function FormField({ label, htmlFor, error, children }) {
   return (
     <div>
       <label className="mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-400" htmlFor={htmlFor}>
         {label}
       </label>
       {children}
+      <FieldError id={htmlFor ? `${htmlFor}-error` : undefined}>{error}</FieldError>
     </div>
+  );
+}
+
+// The validation message itself, for fields that build their own label row
+// rather than going through FormField.
+export function FieldError({ id, children }) {
+  if (!children) return null;
+  return (
+    <p id={id} className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+      <AlertTriangle size={12} className="shrink-0" />
+      {children}
+    </p>
   );
 }
 
 export const formInputClass =
   "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100";
+
+// Appended to formInputClass - the later border- wins over the base one.
+export const formInvalidClass = "border-rose-400 bg-rose-50/40 dark:border-rose-500 dark:bg-rose-950/20";
 
 export function ConfirmDialog({
   isOpen,
@@ -424,7 +443,7 @@ export function ConfirmDialog({
 // Portal-based with fixed positioning so it isn't clipped by a dialog's own
 // scrolling content area, the way an absolutely-positioned panel would be.
 // `options`: [{ value, label }]
-export function RadioSelect({ id, options, value, onSelect, placeholder = "Select...", disabled = false }) {
+export function RadioSelect({ id, options, value, onSelect, placeholder = "Select...", disabled = false, invalid = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuRect, setMenuRect] = useState(null);
   const containerRef = useRef(null);
@@ -495,8 +514,10 @@ export function RadioSelect({ id, options, value, onSelect, placeholder = "Selec
         type="button"
         id={id}
         disabled={disabled}
+        aria-invalid={invalid || undefined}
         onClick={() => setIsOpen((current) => !current)}
-        className="flex h-10 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 text-left text-sm outline-none transition disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800"
+        className={`flex h-10 w-full items-center justify-between rounded-lg border bg-white px-3 text-left text-sm outline-none transition disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-800 ${invalid ? "border-rose-400 bg-rose-50/40 dark:border-rose-500 dark:bg-rose-950/20" : "border-slate-200 dark:border-slate-700"
+          }`}
       >
         <span className={`truncate ${selectedOption ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"}`}>
           {selectedOption ? selectedOption.label : placeholder}
@@ -550,7 +571,7 @@ export function RadioSelect({ id, options, value, onSelect, placeholder = "Selec
   );
 }
 
-export function EmployeeSelectDropdown({ employees, selectedId, onSelect, disabled, placeholder = "Select employee" }) {
+export function EmployeeSelectDropdown({ employees, selectedId, onSelect, disabled, placeholder = "Select employee", invalid = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef(null);
@@ -588,7 +609,8 @@ export function EmployeeSelectDropdown({ employees, selectedId, onSelect, disabl
         type="button"
         onClick={() => setIsOpen((value) => !value)}
         disabled={disabled}
-        className={`${formInputClass} flex items-center justify-between text-left disabled:cursor-not-allowed disabled:opacity-50`}
+        aria-invalid={invalid || undefined}
+        className={`${formInputClass} ${invalid ? formInvalidClass : ""} flex items-center justify-between text-left disabled:cursor-not-allowed disabled:opacity-50`}
       >
         <span className={`truncate ${selectedEmployee ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"}`}>
           {selectedEmployee

@@ -46,7 +46,65 @@
   }
 
   .dark body {
-    background: #0b1120;
+    background: #0f172b;
+  }
+
+  /* Scrollbars follow the theme. Without color-scheme the browser paints its
+     light track and thumb inside dark panels - the notifications list, long
+     tables, any overflow area. scrollbar-color is inherited, so setting it on
+     the root dresses every scroller in the app palette (slate-600 thumb on a
+     slate-800 track) rather than the browser default grey. */
+  html {
+    color-scheme: light;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
+
+  html.dark {
+    color-scheme: dark;
+    scrollbar-color: #475569 #1e293b;
+  }
+
+  /* Chromium only started honouring scrollbar-color in 121, so the same look
+     is spelled out with the webkit pseudo-elements too. The `*` selector is
+     what reaches every scroller in the app - dropdowns, modal bodies, table
+     wrappers - not just the page itself. */
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+
+  /* The border fakes padding around the thumb, so it reads as a rounded pill
+     floating in the track rather than filling it edge to edge. */
+  *::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border: 2px solid #f1f5f9;
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: #f1f5f9;
+  }
+
+  .dark *::-webkit-scrollbar-track,
+  .dark *::-webkit-scrollbar-corner {
+    background: #1e293b;
+  }
+
+  .dark *::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-color: #1e293b;
+  }
+
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
   }
 
   button,

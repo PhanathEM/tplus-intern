@@ -11,7 +11,7 @@ export function AssignationView({ activeTab, onTabChange, assignProps, unassignP
 
   return (
     <div className="space-y-6">
-      <div className="sticky top-14 z-20 bg-white px-4 pt-6 dark:bg-slate-950 sm:px-6 lg:px-8">
+      <div className="sticky top-14 z-20 bg-white px-4 pt-6 dark:bg-slate-900 sm:px-6 lg:px-8">
         <div className="flex justify-center">
           {/* The divider line sits behind the tabs (z-10 on the active one)
               instead of being a border that needs to color-match or overlap
@@ -26,7 +26,7 @@ export function AssignationView({ activeTab, onTabChange, assignProps, unassignP
                   type="button"
                   onClick={() => onTabChange(tab)}
                   className={`relative rounded-t-lg border px-5 py-2 text-[13px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isActive
-                    ? "z-10 border-slate-200 border-b-transparent bg-white text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    ? "z-10 -mb-px border-slate-200 border-b-transparent bg-white text-slate-900 dark:border-slate-800 dark:border-b-transparent dark:bg-slate-900 dark:text-white"
                     : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
                     }`}
                 >

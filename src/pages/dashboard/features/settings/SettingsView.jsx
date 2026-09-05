@@ -53,7 +53,7 @@ export function SettingsView({
                   type="button"
                   onClick={() => onTabChange(tab.key)}
                   className={`relative rounded-t-lg border px-5 py-2 text-[13px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-orange-400 ${isActive
-                    ? "z-10 border-slate-200 border-b-transparent bg-white text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    ? "z-10 -mb-px border-slate-200 border-b-transparent bg-white text-slate-900 dark:border-slate-800 dark:border-b-transparent dark:bg-slate-900 dark:text-white"
                     : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
                     }`}
                 >

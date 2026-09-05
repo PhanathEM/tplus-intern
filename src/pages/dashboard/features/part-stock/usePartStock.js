@@ -50,6 +50,11 @@ const ADD_FORM_INITIAL_VALUES = {
   remark: "",
 };
 
+// The two typed fields on the part form are required. The checkbox groups
+// below them (stock columns, categories) stay optional - a part can start with
+// none and gain them later. Which fields are blank is all this hook decides.
+const REQUIRED_PART_TYPE_FIELDS = ["part_name", "description"];
+
 export function usePartStock({ isActive, user }) {
   const [stock, setStock] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -215,6 +220,8 @@ export function usePartStock({ isActive, user }) {
   const [partTypeFormValues, setPartTypeFormValues] = useState(PART_TYPE_FORM_INITIAL_VALUES);
   const [isSavingPartType, setIsSavingPartType] = useState(false);
   const [partTypeFormError, setPartTypeFormError] = useState(null);
+  // The blank required fields as of the last submit attempt.
+  const [partTypeMissingFields, setPartTypeMissingFields] = useState([]);
   const [isLoadingPartTypeCategories, setIsLoadingPartTypeCategories] = useState(false);
   // The currently-ticked stock columns for whichever part type is open in
   // the form — {field, header} pairs, saved as a whole via
@@ -228,6 +235,7 @@ export function usePartStock({ isActive, user }) {
     setPartTypeFormTarget(null);
     setPartTypeFormValues(PART_TYPE_FORM_INITIAL_VALUES);
     setPartTypeFormError(null);
+    setPartTypeMissingFields([]);
     setSelectedStockColumns([]);
     setStockColumnsError(null);
     setIsPartTypeFormOpen(true);
@@ -237,6 +245,7 @@ export function usePartStock({ isActive, user }) {
     setPartTypeFormMode("edit");
     setPartTypeFormTarget(partType);
     setPartTypeFormError(null);
+    setPartTypeMissingFields([]);
     setPartTypeFormValues({
       part_name: partType.part_name || "",
       description: partType.description || "",
@@ -298,6 +307,10 @@ export function usePartStock({ isActive, user }) {
 
   function handlePartTypeFormFieldChange(field, value) {
     setPartTypeFormValues((current) => ({ ...current, [field]: value }));
+    // Filling a flagged field clears its message as you type.
+    setPartTypeMissingFields((current) =>
+      current.includes(field) ? current.filter((item) => item !== field) : current
+    );
   }
 
   function handleTogglePartTypeCategory(categoryId) {
@@ -347,10 +360,9 @@ export function usePartStock({ isActive, user }) {
   function handleSubmitPartTypeForm(event) {
     event.preventDefault();
 
-    if (!partTypeFormValues.part_name.trim()) {
-      setPartTypeFormError("Please enter a part name.");
-      return;
-    }
+    const missing = REQUIRED_PART_TYPE_FIELDS.filter((key) => !String(partTypeFormValues[key] ?? "").trim());
+    setPartTypeMissingFields(missing);
+    if (missing.length > 0) return;
 
     setIsSavingPartType(true);
     setPartTypeFormError(null);
@@ -701,6 +713,7 @@ export function usePartStock({ isActive, user }) {
     partTypeFormValues,
     isSavingPartType,
     partTypeFormError,
+    partTypeMissingFields,
     isLoadingPartTypeCategories,
     stockColumnBuiltInOptions,
     stockColumnCustomFieldOptions,

@@ -3,21 +3,16 @@ import { getActivityLog, subscribeActivityLog } from "../../../../lib/activityLo
 
 export function useActivityLog() {
   const [entries, setEntries] = useState(() => getActivityLog());
-  const [filters, setFilters] = useState({ module: "All", action: "All", search: "" });
+  const [filters, setFilters] = useState({ module: "All", action: "All" });
 
   useEffect(() => subscribeActivityLog(() => setEntries(getActivityLog())), []);
 
   const filteredEntries = useMemo(() => {
-    const { module, action, search } = filters;
-    const term = search.trim().toLowerCase();
+    const { module, action } = filters;
 
     return entries.filter((entry) => {
       if (module !== "All" && entry.module !== module) return false;
       if (action !== "All" && entry.action !== action) return false;
-      if (term) {
-        const haystack = `${entry.actorName} ${entry.entityLabel}`.toLowerCase();
-        if (!haystack.includes(term)) return false;
-      }
       return true;
     });
   }, [entries, filters]);

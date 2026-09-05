@@ -9,6 +9,10 @@ import { ACTIVITY_MODULES, logActivity } from "../../../../lib/activityLog";
 
 // `searchTerm` comes from the header search bar — the directory has no search
 // box of its own, so typing up there filters this table in place.
+// Both fields are required. Which ones are blank is all this hook decides -
+// the modal owns the wording and where it shows.
+const REQUIRED_FORM_FIELDS = ["department_code", "department_name"];
+
 export function useDepartments({ isActive, user, searchTerm = "" }) {
   const [departments, setDepartments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,6 +24,8 @@ export function useDepartments({ isActive, user, searchTerm = "" }) {
   const [formValues, setFormValues] = useState({ department_code: "", department_name: "" });
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState(null);
+  // The blank required fields as of the last submit attempt.
+  const [missingFields, setMissingFields] = useState([]);
   const [departmentToDelete, setDepartmentToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
@@ -85,6 +91,7 @@ export function useDepartments({ isActive, user, searchTerm = "" }) {
     setFormTarget(null);
     setFormValues({ department_code: "", department_name: "" });
     setFormError(null);
+    setMissingFields([]);
     setIsFormOpen(true);
   }
 
@@ -96,6 +103,7 @@ export function useDepartments({ isActive, user, searchTerm = "" }) {
       department_name: department.department_name || "",
     });
     setFormError(null);
+    setMissingFields([]);
     setIsFormOpen(true);
   }
 
@@ -105,15 +113,16 @@ export function useDepartments({ isActive, user, searchTerm = "" }) {
 
   function handleFormFieldChange(key, value) {
     setFormValues((current) => ({ ...current, [key]: value }));
+    // Filling a flagged field clears its message as you type.
+    setMissingFields((current) => (current.includes(key) ? current.filter((item) => item !== key) : current));
   }
 
   function handleSubmitForm(event) {
     event.preventDefault();
 
-    if (!formValues.department_code.trim() || !formValues.department_name.trim()) {
-      setFormError("Please enter both department code and name.");
-      return;
-    }
+    const missing = REQUIRED_FORM_FIELDS.filter((key) => !String(formValues[key] ?? "").trim());
+    setMissingFields(missing);
+    if (missing.length > 0) return;
 
     setIsSaving(true);
     setFormError(null);
@@ -190,6 +199,7 @@ export function useDepartments({ isActive, user, searchTerm = "" }) {
     formValues,
     isSaving,
     formError,
+    missingFields,
     handleOpenAdd,
     handleOpenEdit,
     handleCloseForm,

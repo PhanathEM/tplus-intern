@@ -8,7 +8,7 @@ import {
   FiX as X,
 } from "react-icons/fi";
 import { formatDate } from "../dashboard.utils";
-import { formInputClass } from "./SharedControls";
+import { formInvalidClass, formInputClass } from "./SharedControls";
 
 // One calendar, two pickers: DatePicker for a single day (Borrow's expected
 // return date) and DateRangePicker for a from/to pair (Borrow History's
@@ -248,7 +248,7 @@ function CalendarGrid({ month, weekdays, days, isSelected, isInRange, onSelectDa
 // Single date
 // ---------------------------------------------------------------------------
 
-export function DatePicker({ id, value, onChange, placeholder }) {
+export function DatePicker({ id, value, onChange, placeholder, disabled = false, invalid = false }) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [month, setMonth] = useState(() => startOfMonth(parseDate(value) || new Date()));
@@ -276,7 +276,9 @@ export function DatePicker({ id, value, onChange, placeholder }) {
         type="button"
         id={id}
         onClick={() => (isOpen ? setIsOpen(false) : handleOpen())}
-        className={`${formInputClass} flex items-center justify-between gap-2 text-left focus-visible:ring-2 focus-visible:ring-orange-400 ${value ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"
+        disabled={disabled}
+        aria-invalid={invalid || undefined}
+        className={`${formInputClass} ${invalid ? formInvalidClass : ""} flex items-center justify-between gap-2 text-left focus-visible:ring-2 focus-visible:ring-orange-400 disabled:cursor-not-allowed disabled:opacity-50 ${value ? "text-slate-900 dark:text-slate-100" : "text-slate-400 dark:text-slate-500"
           }`}
       >
         <span className="truncate">{value ? formatLong(value) : placeholder || t("Select a date")}</span>

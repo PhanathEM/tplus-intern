@@ -81,13 +81,13 @@ import { useUnassign } from "./features/assign/useUnassign";
 import { useActivityLog } from "./features/activity/useActivityLog";
 import { useMyActivity } from "./features/activity/useMyActivity";
 import { getAccessProfileLabel } from "../../lib/permissions";
+import { translateLabel } from "../../lib/i18nLabel";
 import { useDashboardPermissions } from "./hooks/useDashboardPermissions";
 import { ACTIVITY_ACTION_VALUES, ACTIVITY_MODULE_VALUES } from "../../lib/activityLog";
 import { useRecycleBin } from "./features/recycle-bin/useRecycleBin";
 import { SettingsView } from "./features/settings/SettingsView";
 import { ReportView } from "./features/report/ReportView";
 import { useReport } from "./features/report/useReport";
-import { exportReportToExcel, exportReportToPdf } from "./features/report/reportExport";
 import { DashboardHomeView } from "./features/home/DashboardHomeView";
 
 const SIDEBAR_WIDTH_STORAGE_KEY = "tplus-sidebar-width";
@@ -101,8 +101,59 @@ function readStoredSidebarWidth() {
   return stored >= MIN_SIDEBAR_WIDTH && stored <= MAX_SIDEBAR_WIDTH ? stored : DEFAULT_SIDEBAR_WIDTH;
 }
 
+// The Equipment search hint names these columns and no others, in this
+// order - the fields that identify a device. Everything else the table shows
+// (Status, the owner's details, dates) stays searchable, it is just not
+// advertised in the box. Each entry lists the spellings the API uses for that
+// column; they are compared with separators and case stripped, so
+// "device_type", "Device Type" and "devicetype" all land on the same entry.
+const EQUIPMENT_SEARCH_HINT_FIELDS = [
+  ["devicename"],
+  ["computername"],
+  ["devicetype"],
+  ["devicemodel"],
+  ["assetcode", "asetcode"],
+  ["serialnumber"],
+  ["macaddress"],
+  ["ipaddress"],
+  ["model"],
+];
+
+function normalizeHintKey(value) {
+  return String(value || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
+}
+
+// Categories whose Device Type only ever holds the maker's name (HIP, ZKT,
+// HIKVISION), which nobody searches by - it stays out of their hint.
+const EQUIPMENT_HINT_SKIP_DEVICE_TYPE = new Set(["accesscontrol", "cctv"]);
+
+// The hint entries this category actually has, in EQUIPMENT_SEARCH_HINT_FIELDS
+// order. A column is claimed by the first entry that matches it: CCTV keys its
+// Model column "device_model" but labels it "Model", so without this it would
+// answer to both the Device Model and the Model entry and be listed twice.
+function getEquipmentHintColumns(columns, categorySlug) {
+  const skipDeviceType = EQUIPMENT_HINT_SKIP_DEVICE_TYPE.has(normalizeHintKey(categorySlug));
+  const claimed = new Set();
+
+  return EQUIPMENT_SEARCH_HINT_FIELDS.filter(
+    (aliases) => !skipDeviceType || !aliases.includes("devicetype")
+  )
+    .map((aliases) =>
+      columns.find(
+        (column) =>
+          !claimed.has(column.key) &&
+          (aliases.includes(normalizeHintKey(column.key)) || aliases.includes(normalizeHintKey(column.label)))
+      )
+    )
+    .filter((column) => {
+      if (!column) return false;
+      claimed.add(column.key);
+      return true;
+    });
+}
+
 function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLanguage }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const permissions = useDashboardPermissions({ user });
   const {
     canCreateRecords,
@@ -202,12 +253,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     user,
     onSelectView: handleSelectView,
     onSelectEquipmentCategory: handleSelectEquipmentCategory,
-    isSuspended: isEmployeeView || isDepartmentsView || isEquipmentView,
   });
-
-  const searchPlaceholder = isEmployeeView
-    ? t("employee_search_placeholder")
-    : undefined;
 
   function handleSelectGlobalSearchResult(type, item) {
     globalSearch.handleSelectResult(type, item);
@@ -413,6 +459,21 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
     onEquipmentUnassigned: employees.refreshAfterExternalEquipmentChange,
   });
 
+  // The pages that filter their own table name the columns they match on.
+  // Equipment columns differ per category, so its hint lists only the ones
+  // this category actually has, in EQUIPMENT_SEARCH_HINT_FIELDS order.
+  const equipmentSearchPlaceholder = getEquipmentHintColumns(equipment.tableColumns, equipment.category)
+    .map((column) => translateLabel(t, i18n, column.label))
+    .join(" / ");
+
+  const searchPlaceholder = isEmployeeView
+    ? t("employee_search_placeholder")
+    : isDepartmentsView
+      ? t("department_search_placeholder")
+      : isEquipmentView && equipmentSearchPlaceholder
+        ? equipmentSearchPlaceholder
+        : undefined;
+
   const recycleBin = useRecycleBin({
     isActive: isRecycleBinView,
     onRestore: () => {
@@ -423,18 +484,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   });
 
   const report = useReport({ isActive: isReportView });
-  const [isExportingReportPdf, setIsExportingReportPdf] = useState(false);
-  const [isExportingReportExcel, setIsExportingReportExcel] = useState(false);
-
-  function handleDownloadReportPdf() {
-    setIsExportingReportPdf(true);
-    Promise.resolve(exportReportToPdf(report.report)).finally(() => setIsExportingReportPdf(false));
-  }
-
-  function handleDownloadReportExcel() {
-    setIsExportingReportExcel(true);
-    Promise.resolve(exportReportToExcel(report.report)).finally(() => setIsExportingReportExcel(false));
-  }
 
   const assign = useAssign({
     isActive: isAssignView,
@@ -478,7 +527,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
   });
 
   return (
-    <div className="min-h-screen bg-white text-slate-950 antialiased dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen bg-white text-slate-950 antialiased dark:bg-slate-900 dark:text-slate-100">
       <div className="flex min-h-screen">
         {/* Mobile sidebar */}
         {isMobileSidebarOpen && (
@@ -552,7 +601,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                     results={globalSearch.results}
                     isLoading={globalSearch.isLoading}
                     onSelect={handleSelectGlobalSearchResult}
-                    showResults={!isEmployeeView && !isDepartmentsView && !isEquipmentView}
                     placeholder={searchPlaceholder}
                   />
                   <button
@@ -582,7 +630,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                     results={globalSearch.results}
                     isLoading={globalSearch.isLoading}
                     onSelect={handleSelectGlobalSearchResult}
-                    showResults={!isEmployeeView && !isDepartmentsView && !isEquipmentView}
                     placeholder={searchPlaceholder}
                   />
 
@@ -608,7 +655,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                           notifications.setIsOpen((value) => !value);
                           setIsProfileMenuOpen(false);
                         }}
-                        className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-black/10 text-slate-700 outline-none transition hover:bg-black/15 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20 dark:focus-visible:ring-offset-slate-900"
+                        className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-950/10 text-slate-900 outline-none transition hover:bg-slate-950/20 focus-visible:ring-2 focus-visible:ring-slate-950/40"
                         aria-label="Notifications"
                         aria-haspopup="true"
                         aria-expanded={notifications.isOpen}
@@ -699,7 +746,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                           setIsProfileMenuOpen((value) => !value);
                           notifications.setIsOpen(false);
                         }}
-                        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-black/10 text-slate-700 outline-none transition hover:bg-black/15 focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/20 dark:focus-visible:ring-offset-slate-900"
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-950/10 text-slate-900 outline-none transition hover:bg-slate-950/20 focus-visible:ring-2 focus-visible:ring-slate-950/40"
                         aria-haspopup="true"
                         aria-expanded={isProfileMenuOpen}
                         aria-label={displayName}
@@ -813,7 +860,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
             <>
               {/* Pinned under the page header (h-14) so the category tabs stay
                   reachable while scrolling a long device list. */}
-              <div className="sticky top-14 z-20 bg-white px-4 pt-6 dark:bg-slate-950 sm:px-6 lg:px-8">
+              <div className="sticky top-14 z-20 bg-white px-4 pt-6 dark:bg-slate-900 sm:px-6 lg:px-8">
                 <DeviceReplacementCategoryBar
                   categories={replacements.categories}
                   selected={replacements.selectedCategory}
@@ -1301,10 +1348,6 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                 isLoading={report.isLoading}
                 error={report.error}
                 onRetry={report.handleRetry}
-                onDownloadPdf={handleDownloadReportPdf}
-                onDownloadExcel={handleDownloadReportExcel}
-                isExportingPdf={isExportingReportPdf}
-                isExportingExcel={isExportingReportExcel}
                 onDownloadEmployeesPdf={report.handleDownloadEmployeesPdf}
                 onDownloadEmployeesExcel={report.handleDownloadEmployeesExcel}
                 onDownloadEmployeesBySexPdf={report.handleDownloadEmployeesBySexPdf}
@@ -1338,6 +1381,12 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
                 onDownloadEquipmentExcel={equipment.handleDownloadAllEquipmentExcel}
                 isDownloadingEquipmentPdf={equipment.isDownloadingAllPdf}
                 isDownloadingEquipmentExcel={equipment.isDownloadingAllExcel}
+                onDownloadEquipmentGroupPdf={report.handleDownloadEquipmentGroupPdf}
+                onDownloadEquipmentGroupExcel={report.handleDownloadEquipmentGroupExcel}
+                downloadingEquipmentGroup={report.downloadingEquipmentGroup}
+                onDownloadServerUsagePdf={report.handleDownloadServerUsagePdf}
+                onDownloadServerUsageExcel={report.handleDownloadServerUsageExcel}
+                downloadingServerUsage={report.downloadingServerUsage}
               />
             ) : (
               <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -1371,6 +1420,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         onClose={equipment.handleCloseForm}
         isSubmitting={equipment.isSaving}
         error={equipment.formError}
+        missingFields={equipment.missingFields}
         departments={departments.departments}
         employees={equipment.formEmployees}
         statuses={equipment.statuses}
@@ -1446,6 +1496,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         availableStock={partBorrow.availableStock}
         isAvailableStockLoading={partBorrow.isAvailableStockLoading}
         availableStockError={partBorrow.availableStockError}
+        missingFields={partBorrow.borrowMissingFields}
       />
 
       <ReturnPartDialog
@@ -1476,6 +1527,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         onClose={employees.handleCloseForm}
         isSubmitting={employees.isSaving}
         error={employees.formError}
+        missingFields={employees.missingFields}
         departments={departments.departments}
       />
 
@@ -1488,6 +1540,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         onClose={departments.handleCloseForm}
         isSubmitting={departments.isSaving}
         error={departments.formError}
+        missingFields={departments.missingFields}
       />
 
       <UserPermissionsModal
@@ -1538,6 +1591,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         onClose={equipment.handleCloseCategoryForm}
         isSubmitting={equipment.isSavingCategory}
         error={equipment.categoryFormError}
+        missingFields={equipment.categoryMissingFields}
       />
 
       <PartTypeFormModal
@@ -1560,6 +1614,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         onClose={partStock.handleClosePartTypeForm}
         isSubmitting={partStock.isSavingPartType}
         error={partStock.partTypeFormError}
+        missingFields={partStock.partTypeMissingFields}
       />
 
       <ConfirmDialog
@@ -1625,6 +1680,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         onClose={licenses.handleCloseForm}
         isSubmitting={licenses.isSaving}
         error={licenses.formError}
+        missingFields={licenses.missingFields}
       />
 
       <ServerUsageEditModal
@@ -1661,6 +1717,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         onClose={statuses.handleCloseForm}
         isSubmitting={statuses.isSaving}
         error={statuses.formError}
+        missingFields={statuses.missingFields}
       />
 
       <ConfirmDialog
@@ -1690,6 +1747,7 @@ function Dashboard({ user, onLogout, theme, onToggleTheme, language, onToggleLan
         onClose={partStatuses.handleCloseForm}
         isSubmitting={partStatuses.isSaving}
         error={partStatuses.formError}
+        missingFields={partStatuses.missingFields}
       />
 
       <ConfirmDialog

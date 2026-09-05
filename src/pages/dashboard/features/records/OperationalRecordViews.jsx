@@ -16,8 +16,8 @@ import { getLicenseExpiryInfo } from "../../dashboard.notifications";
 import { formatFieldValue } from "../../dashboard.utils";
 import { translateLabel } from "../../../../lib/i18nLabel";
 import { RecordCellValue, RecordsTableView } from "../../components/RecordsTableView";
-import { DateRangePicker } from "../../components/DatePickers";
-import { EmptyState, FormField, formInputClass, Pagination, RadioSelect, RollingText, RowActionsMenu } from "../../components/SharedControls";
+import { DatePicker, DateRangePicker } from "../../components/DatePickers";
+import { EmptyState, FormField, formInputClass, formInvalidClass, Pagination, RadioSelect, RollingText } from "../../components/SharedControls";
 
 function LicenseStatusCell({ license }) {
   const { t, i18n } = useTranslation();
@@ -42,6 +42,7 @@ function LicenseStatusCell({ license }) {
 }
 
 export function LicenseFormModal({
+  missingFields = [],
   isOpen,
   mode,
   values,
@@ -65,6 +66,10 @@ export function LicenseFormModal({
 
   const isEdit = mode === "edit";
   const requiresExpiry = values.license_type === "Annual Subscription";
+  // Our own "required" message, in place of the browser's bubble - the form
+  // is noValidate below so only this one ever shows.
+  const fieldError = (key) => (missingFields.includes(key) ? t("This field is required.") : null);
+  const inputClass = (key) => (missingFields.includes(key) ? `${formInputClass} ${formInvalidClass}` : formInputClass);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -94,7 +99,7 @@ export function LicenseFormModal({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off" noValidate>
           <div className="overflow-y-auto px-6 py-5">
             {error && (
               <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
@@ -103,32 +108,23 @@ export function LicenseFormModal({
             )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField label={t("Product Name *")} htmlFor="license-product-name">
-                <input
-                  id="license-product-name"
-                  type="text"
-                  required
-                  autoComplete="off"
-                  value={values.product_name}
-                  onChange={(e) => onChange("product_name", e.target.value)}
-                  className={formInputClass}
-                  disabled={isSubmitting}
-                />
-              </FormField>
+              <div className="sm:col-span-2">
+                <FormField label={t("Product Name *")} htmlFor="license-product-name" error={fieldError("product_name")}>
+                  <input
+                    id="license-product-name"
+                    type="text"
+                    required
+                    autoComplete="off"
+                    value={values.product_name}
+                    onChange={(e) => onChange("product_name", e.target.value)}
+                    placeholder={t("e.g. Kaspersky")}
+                    className={inputClass("product_name")}
+                    disabled={isSubmitting}
+                  />
+                </FormField>
+              </div>
 
-              <FormField label={t("Product Type")} htmlFor="license-product-type">
-                <input
-                  id="license-product-type"
-                  type="text"
-                  autoComplete="off"
-                  value={values.product_type}
-                  onChange={(e) => onChange("product_type", e.target.value)}
-                  className={formInputClass}
-                  disabled={isSubmitting}
-                />
-              </FormField>
-
-              <FormField label={t("License Type *")} htmlFor="license-license-type">
+              <FormField label={t("License Type *")} htmlFor="license-license-type" error={fieldError("license_type")}>
                 <RadioSelect
                   id="license-license-type"
                   options={[
@@ -140,32 +136,60 @@ export function LicenseFormModal({
                   onSelect={(value) => onChange("license_type", value)}
                   placeholder={t("Select license type...")}
                   disabled={isSubmitting}
+                  invalid={missingFields.includes("license_type")}
                 />
               </FormField>
 
-              <FormField label={t("Date Start")} htmlFor="license-date-start">
+              <FormField label={`${t("Product Type")} *`} htmlFor="license-product-type" error={fieldError("product_type")}>
                 <input
-                  id="license-date-start"
-                  type="date"
-                  value={values.date_start}
-                  onChange={(e) => onChange("date_start", e.target.value)}
-                  className={formInputClass}
+                  id="license-product-type"
+                  type="text"
+                  required
+                  autoComplete="off"
+                  value={values.product_type}
+                  onChange={(e) => onChange("product_type", e.target.value)}
+                  placeholder={t("e.g. Antivirus")}
+                  className={inputClass("product_type")}
                   disabled={isSubmitting}
+                />
+              </FormField>
+
+              <div className="sm:col-span-2">
+                <FormField label={`${t("Remark")} *`} htmlFor="license-remark" error={fieldError("remark")}>
+                  <textarea
+                    id="license-remark"
+                    rows={3}
+                    required
+                    value={values.remark}
+                    onChange={(e) => onChange("remark", e.target.value)}
+                    placeholder={t("e.g. This license is for the company only.")}
+                    className={`${inputClass("remark")} h-auto min-h-24 py-2`}
+                    disabled={isSubmitting}
+                  />
+                </FormField>
+              </div>
+
+              <FormField label={`${t("Date Start")} *`} htmlFor="license-date-start" error={fieldError("date_start")}>
+                <DatePicker
+                  id="license-date-start"
+                  value={values.date_start}
+                  onChange={(day) => onChange("date_start", day)}
+                  disabled={isSubmitting}
+                  invalid={missingFields.includes("date_start")}
                 />
               </FormField>
 
               <FormField
                 label={requiresExpiry ? t("Date Expire *") : t("Date Expire")}
                 htmlFor="license-date-expire"
+                error={fieldError("date_expire")}
               >
-                <input
+                <DatePicker
                   id="license-date-expire"
-                  type="date"
-                  required={requiresExpiry}
                   value={values.date_expire}
-                  onChange={(e) => onChange("date_expire", e.target.value)}
-                  className={formInputClass}
+                  onChange={(day) => onChange("date_expire", day)}
                   disabled={isSubmitting || !requiresExpiry}
+                  invalid={missingFields.includes("date_expire")}
                 />
               </FormField>
 
@@ -176,19 +200,6 @@ export function LicenseFormModal({
                     : t("Free licenses are always active, so no expiry date is needed.")}
                 </div>
               )}
-
-              <div className="sm:col-span-2">
-                <FormField label={t("Remark")} htmlFor="license-remark">
-                  <textarea
-                    id="license-remark"
-                    rows={3}
-                    value={values.remark}
-                    onChange={(e) => onChange("remark", e.target.value)}
-                    className={`${formInputClass} h-auto min-h-24 py-2`}
-                    disabled={isSubmitting}
-                  />
-                </FormField>
-              </div>
             </div>
           </div>
 
@@ -301,13 +312,25 @@ export function LicensesView({
       renderRowActions={
         canManage &&
         ((license) => (
-          <div className="flex items-center justify-end">
-            <RowActionsMenu
-              items={[
-                { icon: Edit2, label: t("Edit"), onClick: () => onEdit(license) },
-                { icon: Trash2, label: t("Delete"), onClick: () => onDelete(license), destructive: true },
-              ]}
-            />
+          <div className="flex items-center justify-end gap-1">
+            <button
+              type="button"
+              onClick={() => onEdit(license)}
+              title={t("Edit")}
+              aria-label={t("Edit")}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+            >
+              <Edit2 size={14} className="block" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(license)}
+              title={t("Delete")}
+              aria-label={t("Delete")}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-slate-500 outline-none transition hover:bg-rose-50 hover:text-rose-600 focus-visible:ring-2 focus-visible:ring-orange-400 dark:text-slate-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-400"
+            >
+              <Trash2 size={14} className="block" />
+            </button>
           </div>
         ))
       }

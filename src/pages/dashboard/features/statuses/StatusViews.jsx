@@ -10,7 +10,7 @@ import {
   FiTrash2 as Trash2,
   FiX as X,
 } from "react-icons/fi";
-import { EmptyState, FormField, formInputClass, RollingText } from "../../components/SharedControls";
+import { EmptyState, FormField, formInputClass, formInvalidClass, RollingText } from "../../components/SharedControls";
 
 const STATUS_HEAD_CELL =
   "whitespace-nowrap border-y border-slate-100 px-5 py-2 leading-none dark:border-slate-800";
@@ -153,7 +153,7 @@ export function StatusesView({
   );
 }
 
-export function StatusFormModal({ isOpen, mode, values, onChange, onSubmit, onClose, isSubmitting, error }) {
+export function StatusFormModal({ isOpen, mode, values, onChange, onSubmit, onClose, isSubmitting, error, missingFields = [] }) {
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -167,6 +167,10 @@ export function StatusFormModal({ isOpen, mode, values, onChange, onSubmit, onCl
   if (!isOpen) return null;
 
   const isEdit = mode === "edit";
+  // Our own "required" message, in place of the browser's bubble - the form
+  // is noValidate below so only this one ever shows.
+  const fieldError = (key) => (missingFields.includes(key) ? t("This field is required.") : null);
+  const inputClass = (key) => (missingFields.includes(key) ? `${formInputClass} ${formInvalidClass}` : formInputClass);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -194,7 +198,7 @@ export function StatusFormModal({ isOpen, mode, values, onChange, onSubmit, onCl
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off" noValidate>
           <div className="overflow-y-auto px-6 py-5">
             {error && (
               <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
@@ -204,7 +208,7 @@ export function StatusFormModal({ isOpen, mode, values, onChange, onSubmit, onCl
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <FormField label={t("Status Name *")} htmlFor="status-name">
+                <FormField label={t("Status Name *")} htmlFor="status-name" error={fieldError("status_name")}>
                   <input
                     id="status-name"
                     type="text"
@@ -212,20 +216,23 @@ export function StatusFormModal({ isOpen, mode, values, onChange, onSubmit, onCl
                     autoComplete="off"
                     value={values.status_name}
                     onChange={(e) => onChange("status_name", e.target.value)}
-                    className={formInputClass}
+                    placeholder={t("e.g. Working/Using")}
+                    className={inputClass("status_name")}
                     disabled={isSubmitting}
                   />
                 </FormField>
               </div>
 
               <div className="sm:col-span-2">
-                <FormField label={t("Description")} htmlFor="status-description">
+                <FormField label={`${t("Description")} *`} htmlFor="status-description" error={fieldError("description")}>
                   <textarea
                     id="status-description"
                     rows={2}
+                    required
                     value={values.description}
                     onChange={(e) => onChange("description", e.target.value)}
-                    className={`${formInputClass} h-auto min-h-16 py-2`}
+                    placeholder={t("e.g. Devices currently in use by staff.")}
+                    className={`${inputClass("description")} h-auto min-h-16 py-2`}
                     disabled={isSubmitting}
                   />
                 </FormField>

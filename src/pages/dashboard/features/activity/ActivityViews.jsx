@@ -6,7 +6,6 @@ import {
   FiChevronDown as ChevronDown,
   FiClock as Clock,
   FiGrid as Grid,
-  FiSearch as Search,
   FiSettings as Settings,
   FiUser as UserIcon,
   FiZap as Zap,
@@ -263,11 +262,7 @@ export function ActivityLogView({
   // Adjusted during render (not an effect) per React's guidance for
   // resetting state when a prop changes.
   const [prevFilters, setPrevFilters] = useState(filters);
-  if (
-    filters.module !== prevFilters.module ||
-    filters.action !== prevFilters.action ||
-    filters.search !== prevFilters.search
-  ) {
+  if (filters.module !== prevFilters.module || filters.action !== prevFilters.action) {
     setPrevFilters(filters);
     setPage(1);
   }
@@ -292,21 +287,6 @@ export function ActivityLogView({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-52">
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={14} />
-              <input
-                type="text"
-                value={filters.search}
-                onChange={(event) => onFilterChange("search", event.target.value)}
-                placeholder={t("Search...")}
-                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-14 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:bg-white dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-800 "
-              />
-              {!filters.search && (
-                <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
-                  Ctrl K
-                </kbd>
-              )}
-            </div>
             <div className="w-56">
               <RadioSelect
                 id="activity-log-module-filter"

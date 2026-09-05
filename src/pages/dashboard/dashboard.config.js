@@ -1,4 +1,4 @@
-import { FiClock as Clock, FiUser as UserIcon, FiHash as Hash, FiTag as TagIcon, FiType as TypeIcon, FiBox as BoxIcon, FiActivity as Activity, FiBarChart2 as BarChart2, FiBox as Box, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiSettings as SettingsIcon, FiSliders as Sliders, FiTag as Tag, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
+import { FiClock as Clock, FiUser as UserIcon, FiHash as Hash, FiTag as TagIcon, FiBox as BoxIcon, FiActivity as Activity, FiBarChart2 as BarChart2, FiBox as Box, FiHome as Home, FiKey as Key, FiRefreshCw as RefreshCw, FiSearch as Search, FiSettings as SettingsIcon, FiSliders as Sliders, FiTag as Tag, FiTool as Tool, FiTrash2 as Trash2, FiUsers as Users, FiUserCheck as UserCheck, FiUserPlus as UserPlus, FiLayers as Layers } from "react-icons/fi";
 import { PERMISSIONS } from "../../lib/permissions";
 
 export const navSections = [
@@ -247,7 +247,7 @@ export const DEFAULT_PART_STOCK_STATUS = "Working - IT Stock";
 export const departmentColumns = [
   { key: "department_id", label: "Department ID", icon: Hash },
   { key: "department_code", label: "Department Code", icon: TagIcon },
-  { key: "department_name", label: "Department Name", icon: TypeIcon },
+  { key: "department_name", label: "Department Name", icon: Layers },
   { key: "employee_count", label: "Employees", icon: Users },
   { key: "equipment_count", label: "Equipment", icon: BoxIcon },
 ];

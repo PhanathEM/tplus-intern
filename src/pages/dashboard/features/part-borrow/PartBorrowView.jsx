@@ -8,7 +8,7 @@ import {
 } from "react-icons/fi";
 import { partBorrowColumns } from "../../dashboard.config";
 import { DatePicker } from "../../components/DatePickers";
-import { ConfirmDialog, EmployeeSelectDropdown, FormField, formInputClass, RadioSelect, RollingText } from "../../components/SharedControls";
+import { ConfirmDialog, EmployeeSelectDropdown, FormField, formInputClass, formInvalidClass, RadioSelect, RollingText } from "../../components/SharedControls";
 import { RecordCellValue, RecordsTableView } from "../../components/RecordsTableView";
 
 function getBorrowedItemLabel(record, t) {
@@ -126,8 +126,13 @@ export function BorrowPartDialog({
   availableStock,
   isAvailableStockLoading,
   availableStockError,
+  missingFields = [],
 }) {
   const { t } = useTranslation();
+  // Our own "required" message, in place of the browser's bubble - the form
+  // is noValidate below so only this one ever shows.
+  const fieldError = (key) => (missingFields.includes(key) ? t("This field is required.") : null);
+  const inputClass = (key) => (missingFields.includes(key) ? `${formInputClass} ${formInvalidClass}` : formInputClass);
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -161,7 +166,7 @@ export function BorrowPartDialog({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off">
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col" autoComplete="off" noValidate>
           <div className="overflow-y-auto px-6 py-5">
             {error && (
               <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">{error}</div>
@@ -169,7 +174,7 @@ export function BorrowPartDialog({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <FormField label={t("Part *")} htmlFor="part-borrow-part_type_id">
+                <FormField label={t("Part *")} htmlFor="part-borrow-part_type_id" error={fieldError("part_type_id")}>
                   <RadioSelect
                     id="part-borrow-part_type_id"
                     options={partTypeOptions}
@@ -177,6 +182,7 @@ export function BorrowPartDialog({
                     onSelect={onSelectPartType}
                     placeholder={t("Select a part...")}
                     disabled={isSubmitting}
+                    invalid={missingFields.includes("part_type_id")}
                   />
                 </FormField>
               </div>
@@ -186,7 +192,7 @@ export function BorrowPartDialog({
                   Part selector above it already implies. */}
               {values.part_type_id && (
               <div className="sm:col-span-2">
-                <FormField label={t("Stock line *")} htmlFor="part-borrow-stock_id">
+                <FormField label={t("Stock line *")} htmlFor="part-borrow-stock_id" error={fieldError("stock_id")}>
                   {isAvailableStockLoading ? (
                     <p className="text-[13px] text-slate-500 dark:text-slate-400">{t("Loading stock...")}</p>
                   ) : availableStockError ? (
@@ -201,6 +207,7 @@ export function BorrowPartDialog({
                       onSelect={onSelectStock}
                       placeholder={t("Select a stock line...")}
                       disabled={isSubmitting}
+                      invalid={missingFields.includes("stock_id")}
                     />
                   )}
                 </FormField>
@@ -208,31 +215,37 @@ export function BorrowPartDialog({
               )}
 
               <div className="sm:col-span-2">
-                <FormField label={t("Borrower *")} htmlFor="part-borrow-borrower_id">
+                <FormField label={t("Borrower *")} htmlFor="part-borrow-borrower_id" error={fieldError("borrower_id")}>
                   <EmployeeSelectDropdown
                     employees={employees}
                     selectedId={values.borrower_id}
                     onSelect={onSelectEmployee}
                     disabled={isSubmitting}
+                    invalid={missingFields.includes("borrower_id")}
                   />
                 </FormField>
               </div>
 
               <div className="sm:col-span-2">
-                <FormField label={t("Condition at Borrowing")} htmlFor="part-borrow-condition_on_borrow">
+                <FormField
+                  label={`${t("Condition at Borrowing")} *`}
+                  htmlFor="part-borrow-condition_on_borrow"
+                  error={fieldError("condition_on_borrow")}
+                >
                   <input
                     id="part-borrow-condition_on_borrow"
                     type="text"
+                    required
                     autoComplete="off"
                     value={values.condition_on_borrow}
                     onChange={(e) => onChange("condition_on_borrow", e.target.value)}
-                    className={formInputClass}
+                    className={inputClass("condition_on_borrow")}
                     disabled={isSubmitting}
                   />
                 </FormField>
               </div>
 
-              <FormField label={t("Quantity *")} htmlFor="part-borrow-quantity">
+              <FormField label={t("Quantity *")} htmlFor="part-borrow-quantity" error={fieldError("quantity")}>
                 <input
                   id="part-borrow-quantity"
                   type="number"
@@ -241,12 +254,12 @@ export function BorrowPartDialog({
                   autoComplete="off"
                   value={values.quantity}
                   onChange={(e) => onChange("quantity", e.target.value)}
-                  className={formInputClass}
+                  className={inputClass("quantity")}
                   disabled={isSubmitting}
                 />
               </FormField>
 
-              <FormField label={t("Borrow Date *")} htmlFor="part-borrow-borrow_date">
+              <FormField label={t("Borrow Date *")} htmlFor="part-borrow-borrow_date" error={fieldError("borrow_date")}>
                 <DatePicker
                   id="part-borrow-borrow_date"
                   value={values.borrow_date}

@@ -6,7 +6,7 @@ import { ThemeToggle } from "../../components/ThemeToggle";
 // inside this, so a link between them never feels like a different app.
 export function AuthLayout({ theme, onToggleTheme, children }) {
     return (
-        <main className="relative min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-100">
+        <main className="relative min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-900 dark:text-slate-100">
             <div className="absolute right-5 top-5 z-10">
                 <ThemeToggle theme={theme} onToggle={onToggleTheme} />
             </div>

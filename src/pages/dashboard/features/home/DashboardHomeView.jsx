@@ -221,6 +221,11 @@ export function DashboardHomeView({
 
   return (
     <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <div>
+        <h2 className="text-[15px] font-semibold text-slate-950 dark:text-white">{t("Dashboard")}</h2>
+        <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">{t("dashboard_subtitle")}</p>
+      </div>
+
       {cards.length === 0 ? (
         <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
           <EmptyState

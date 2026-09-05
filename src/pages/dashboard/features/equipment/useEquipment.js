@@ -52,6 +52,30 @@ function excludeBrokenStatuses(data) {
   return list.filter((status) => !/broken/i.test(status?.status_name || ""));
 }
 
+// Both fields on the category form are required. Which ones are blank is all
+// this hook decides - the modal owns the wording and where it shows.
+const REQUIRED_CATEGORY_FIELDS = ["category_name", "description"];
+
+// Everything on the equipment form must be filled in. Owner-derived boxes
+// (Sex, Department, Position, ...) are the one exception, and not really an
+// exception: they are read-only text the backend fills from whoever the owner
+// is, so there is nothing to type - requiring one would deadlock the form
+// whenever the chosen employee has that detail blank. The modal reads this to
+// decide which labels carry a star.
+export function isEquipmentFieldRequired(field) {
+  return field.type !== "owner-derived";
+}
+
+// Category is implied by the view when editing, so it is only asked for on add.
+function requiredEquipmentKeys(fields, formMode) {
+  return [
+    ...(formMode === "edit" ? [] : ["category"]),
+    ...fields.filter(isEquipmentFieldRequired).map((field) => field.key),
+    "status",
+    "remark",
+  ];
+}
+
 export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutated, onEquipmentUnassigned }) {
   const [categories, setCategories] = useState([]);
   // No more "All categories" tab — defaults to the first real category once
@@ -77,6 +101,8 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
   const [formValues, setFormValues] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState(null);
+  // The blank required fields as of the last submit attempt.
+  const [missingFields, setMissingFields] = useState([]);
   const [equipmentToUnassign, setEquipmentToUnassign] = useState(null);
   const [isUnassigning, setIsUnassigning] = useState(false);
   const [unassignError, setUnassignError] = useState(null);
@@ -95,6 +121,8 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
   const [categoryFormValues, setCategoryFormValues] = useState({ category_name: "", description: "" });
   const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [categoryFormError, setCategoryFormError] = useState(null);
+  // The blank required category fields as of the last submit attempt.
+  const [categoryMissingFields, setCategoryMissingFields] = useState([]);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
   const [deleteCategoryError, setDeleteCategoryError] = useState(null);
@@ -314,6 +342,7 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     setFormFields(fields);
     setFormValues({ ...buildEquipmentFormValues(fields, {}), category: activeCategoryLabel });
     setFormError(null);
+    setMissingFields([]);
     setLicenseSelectedIds([]);
     setLicenseInitialIds([]);
     setIsFormOpen(true);
@@ -352,6 +381,7 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     setFormFields(fields);
     setFormValues(buildEquipmentFormValues(fields, item));
     setFormError(null);
+    setMissingFields([]);
     // Equipment list rows already carry their assigned licenses (software_licenses),
     // so the picker's initial selection can be read straight off item — no extra fetch.
     const currentLicenseIds = Array.isArray(item.software_licenses)
@@ -402,6 +432,8 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
 
   function handleFormFieldChange(key, value) {
     setFormValues((current) => ({ ...current, [key]: value }));
+    // Filling a flagged field clears its message as you type.
+    setMissingFields((current) => (current.includes(key) ? current.filter((item) => item !== key) : current));
   }
 
   // Licenses now show as an inline checklist inside the Add/Edit Equipment
@@ -532,12 +564,11 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
   function handleSubmitForm(event) {
     event.preventDefault();
 
-    // The category picker is a custom dropdown, not a native <select required>,
-    // so this check replaces the browser's own required-field validation.
-    if (formMode !== "edit" && !formValues.category?.trim()) {
-      setFormError("Please choose a category.");
-      return;
-    }
+    const missing = requiredEquipmentKeys(formFields, formMode).filter(
+      (key) => !String(formValues[key] ?? "").trim()
+    );
+    setMissingFields(missing);
+    if (missing.length > 0) return;
 
     setIsSaving(true);
     setFormError(null);
@@ -699,6 +730,7 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     setCategoryFormTarget(null);
     setCategoryFormValues({ category_name: "", description: "" });
     setCategoryFormError(null);
+    setCategoryMissingFields([]);
     setIsCategoryFormOpen(true);
   }
 
@@ -710,6 +742,7 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
       description: categoryRecord.description || "",
     });
     setCategoryFormError(null);
+    setCategoryMissingFields([]);
     setIsCategoryFormOpen(true);
   }
 
@@ -719,15 +752,18 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
 
   function handleCategoryFormFieldChange(key, value) {
     setCategoryFormValues((current) => ({ ...current, [key]: value }));
+    // Filling a flagged field clears its message as you type.
+    setCategoryMissingFields((current) =>
+      current.includes(key) ? current.filter((item) => item !== key) : current
+    );
   }
 
   function handleSubmitCategoryForm(event) {
     event.preventDefault();
 
-    if (!categoryFormValues.category_name.trim()) {
-      setCategoryFormError("Please enter a category name.");
-      return;
-    }
+    const missing = REQUIRED_CATEGORY_FIELDS.filter((key) => !String(categoryFormValues[key] ?? "").trim());
+    setCategoryMissingFields(missing);
+    if (missing.length > 0) return;
 
     setIsSavingCategory(true);
     setCategoryFormError(null);
@@ -933,6 +969,7 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     formValues,
     isSaving,
     formError,
+    missingFields,
     handleOpenAddItem,
     handleOpenEditItem,
     handleCloseForm,
@@ -962,6 +999,7 @@ export function useEquipment({ isActive, user, loadDepartments, onEquipmentMutat
     categoryFormValues,
     isSavingCategory,
     categoryFormError,
+    categoryMissingFields,
     handleOpenAddCategory,
     handleOpenEditCategory,
     handleCloseCategoryForm,
